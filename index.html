@@ -1,4 +1,4 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#111827"><title>Кототанки — Защити дом! HD</title><style>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#098cc4"><title>Кототанки — Защити дом! HD</title><style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}html,body{margin:0;min-height:100%;background:#101728;color:#fff;font:600 14px system-ui,Arial;touch-action:none}body{background:radial-gradient(circle at 50% -15%,#254359,#101728 65%);display:flex;justify-content:center}.app{width:min(100%,540px);padding:8px 9px max(8px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:7px;min-height:100dvh}.top{display:flex;align-items:center;justify-content:space-between;gap:8px}.brand{font-size:20px;font-weight:1000;letter-spacing:.3px;color:#ffe5a2;text-shadow:0 2px #923e43}.buttons{display:flex;gap:7px}button{background:#263a52;border:2px solid #48607b;color:#fff;border-radius:13px;font-weight:900;touch-action:none;cursor:pointer}.sm{padding:7px 10px;min-height:34px}.stats{display:flex;gap:6px;justify-content:space-between}.stat{background:#1a2a3d;border:1px solid #385069;border-radius:8px;padding:7px 5px;flex:1;text-align:center;font-size:11px;min-width:0}.stat strong{color:#fbd879;font-size:14px}.stage{position:relative;border:5px solid #456b63;background:#2c624e;box-shadow:0 8px 0 #10252d,0 0 26px #0b141a;border-radius:7px;overflow:hidden;width:100%;flex-shrink:0}canvas{width:100%;aspect-ratio:13/16;display:block;image-rendering:pixelated;background:#315f47}.overlay{position:absolute;inset:0;background:#0e1724d9;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:13px;padding:20px}.overlay[hidden]{display:none}.overlay h1{font-size:clamp(23px,7vw,36px);margin:0;color:#ffd975;text-shadow:2px 3px #9c5435}.overlay p{line-height:1.55;font-weight:600;max-width:350px;margin:0;color:#e2ecf6}.overlay button{padding:14px 26px;background:linear-gradient(#ffd56a,#db844e);border-color:#fff0ad;color:#2c1d1f;font-size:18px}.tips{display:flex;min-height:23px;justify-content:space-between;gap:5px;font-size:11px;color:#d5dbe5}.bonus{color:#ffe18b}.controls{display:flex;justify-content:space-between;gap:10px;align-items:center;flex:1;min-height:120px}.pad{width:146px;height:126px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px}.pad button{font-size:24px;border-bottom:4px solid #182536;background:#31475d;min-width:0}.pad .empty{visibility:hidden}.pad .middle{background:#1a3149;color:#ffe197;font-size:18px}.pad button:active,.act:active{filter:brightness(1.3);transform:translateY(2px)}.actions{display:flex;gap:8px;align-items:center}.act{font-size:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#b75444;border:3px solid #f4a961;width:87px;height:87px;box-shadow:0 6px #622e32}.bomb{font-size:27px;width:68px;height:68px;background:#7251a6;border-color:#c0a3f0;box-shadow:0 6px #443063;position:relative}.bomb span{position:absolute;bottom:2px;right:10px;font-size:13px;background:#1e2340;border-radius:9px;padding:0 5px}.hint{color:#788da3;text-align:center;font-size:10px}.pressed{background:#69855c!important}@media(max-height:790px){.app{gap:4px;padding-top:4px}.brand{font-size:18px}.stat{padding:3px}.controls{min-height:93px}.pad{height:98px;width:116px}.act{width:68px;height:68px}.bomb{width:58px;height:58px}.hint{display:none}}@media(min-width:750px){.app{max-width:530px}}
 
 /* Responsive layout v3: portrait and landscape on phones. Game coordinates stay 416x512. */
@@ -129,6 +129,72 @@ html,body{overscroll-behavior:none}
   .pad{height:min(100%,132px)}
 }
 
+
+/* Bright arcade palette · 2026-10-22 · colorful, high contrast, no gameplay changes */
+html,body{background:#0c9ad0!important}
+body{
+  background:radial-gradient(ellipse at 50% 0%,#64dcff 0%,#30bfe7 39%,#0b8ec8 73%,#12659d 100%)!important;
+}
+.app{filter:drop-shadow(0 10px 18px rgba(3,65,109,.20))}
+.brand{
+  color:#fff6a9!important;
+  text-shadow:0 3px 0 #db6c3a,0 0 17px #fff4a9a1!important
+}
+.stage{
+  border-color:#ffec93!important;
+  background:#65d56e!important;
+  box-shadow:0 0 0 2px #fff6b54d,0 11px 25px #12638e5e,0 0 26px #7dfa9266!important
+}
+.stage canvas{filter:saturate(1.16) contrast(1.015) brightness(1.035)!important}
+.stage::after{border-color:#fffcaf59;box-shadow:inset 0 0 19px #ffffba24}
+.stat{
+  border-color:#a4f2ff!important;
+  background:linear-gradient(160deg,#158ac3,#075e9a)!important;
+  box-shadow:inset 0 2px 0 #ffffff50,0 3px 7px #07527a35!important
+}
+.stat strong{color:#fff3a8!important;text-shadow:0 1px 3px #003e7c!important}
+.buttons .sm{
+  color:#fff!important;
+  background:linear-gradient(145deg,#1aaedf,#0861ad)!important;
+  border-color:#bff4ff!important;
+  box-shadow:inset 0 2px 0 #ffffff70,0 3px 0 #064c83!important
+}
+#fullScreenFx{color:#fff8bb!important}
+.pad button{
+  color:#fff!important;
+  background:linear-gradient(155deg,#40caff,#118ada)!important;
+  border-color:#c2f7ff!important;
+  border-bottom-color:#0b64a7!important;
+  box-shadow:inset 0 2px 0 #ffffff6c,0 4px 0 #075b91!important;
+  text-shadow:0 1px 3px #05639f
+}
+.pad .middle{background:linear-gradient(150deg,#1b9cca,#0861ad)!important}
+.actions #fire{
+  background:linear-gradient(145deg,#ffcb50,#ff633e)!important;
+  border-color:#fff1a4!important;
+  box-shadow:0 6px #b8383e,0 0 24px #ffdb736b!important
+}
+.actions #bomb{
+  background:linear-gradient(145deg,#eea4fb,#9551df)!important;
+  border-color:#ffe5ff!important;
+  box-shadow:0 6px #6837a7,0 0 21px #e4a1ff72!important
+}
+.overlay{
+  background:radial-gradient(ellipse at 50% 33%,#116e9aef,#063e74f2)!important;
+  backdrop-filter:blur(3px)
+}
+.overlay h1{color:#fff5a1!important;text-shadow:0 3px #e26c43,0 0 22px #fff9ab74!important}
+.overlay p{color:#efffff!important}
+.overlay button{
+  color:#642a22!important;
+  background:linear-gradient(#fff5aa,#ffac4b)!important;
+  border-color:#fff9d2!important;
+  box-shadow:0 5px 0 #be603b,0 0 22px #ffe47f7a!important
+}
+.bonus{color:#fff8b2!important;text-shadow:0 1px 2px #07547f}
+.tips{color:#f4fcff!important}
+.hint{color:#d9f7ff!important}
+
 </style></head><body><div class="app"><div class="top"><div class="brand">🐱 КОТОТАНКИ</div><div class="buttons"><button class="sm" id="fullScreenFx" aria-label="Включить полноэкранный режим">⛶ ЭКРАН</button><button class="sm" id="sound">🔊</button><button class="sm" id="pause">Ⅱ ПАУЗА</button></div></div><div class="stats"><div class="stat">УРОВЕНЬ<br><strong id="lvl">1 / 30</strong></div><div class="stat">ДОМИК<br><strong id="home">❤❤❤</strong></div><div class="stat">ЖИЗНИ<br><strong id="lives">❤❤❤</strong></div><div class="stat">СОБАКИ<br><strong id="left">0</strong></div><div class="stat">СЧЁТ<br><strong id="score">0</strong></div></div><div class="stage"><canvas id="field" width="416" height="512"></canvas><div id="overlay" class="overlay"><h1 id="heading">КОТОТАНКИ</h1><p id="desc">Защити кошачий домик от собак! Управляй котом стрелками и бросай сосиски. Лови бонусы: двойные сосиски, бомбы и валерьянку.</p><button id="start">ИГРАТЬ ▶</button></div></div><div class="tips"><div id="buff" class="bonus">🐾 Защити свой домик!</div><div id="feedback">30 уровней · без боссов</div></div><div class="controls"><div class="pad" id="pad"><span class="empty"></span><button data-dir="up">▲</button><span class="empty"></span><button data-dir="left">◀</button><button class="middle" id="center">🐾</button><button data-dir="right">▶</button><span class="empty"></span><button data-dir="down">▼</button><span class="empty"></span></div><div class="actions"><button id="bomb" class="act bomb" aria-label="Колбасная бомба">💣<span id="bombCount">0</span></button><button id="fire" class="act" aria-label="Бросать сосиски">🌭</button></div></div><div class="hint">Слева движение · справа сосиски и колбасная бомба</div></div>
 <script>
 (()=>{'use strict';
@@ -184,61 +250,61 @@ function poly(points,fill,stroke=null,sw=1){ctx.beginPath();ctx.moveTo(points[0]
 function ellipse(x,y,rx,ry,col){ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
 function randAt(x,y,n=0){let seed=Math.imul((x+1)*15731+(y+7)*789221+(n+3)*1376312589, 374761393);seed=(seed^(seed>>>13))*1274126177;return ((seed^(seed>>>16))>>>0)/4294967295}
 function grassTile(X,Y,x,y){
- const alt=randAt(x,y);rect(X,Y,32,32,alt>.5?'#3f8857':'#458a59');
+ const alt=randAt(x,y);rect(X,Y,32,32,alt>.5?'#48c75d':'#58d56b');
 
- for(let z=0;z<3;z++){let xx=X+4+randAt(x,y,z+11)*24, yy=Y+4+randAt(x,y,z+22)*23;rect(xx,yy,2,4,z%2?'#4b9b5c':'#2c774a');rect(xx+2,yy+1,2,2,'#67a768')}
- if(randAt(x,y,50)>.955){rect(X+15,Y+14,2,7,'#2d7950');ellipse(X+15,Y+12,3,2,'#ffd784');ellipse(X+18,Y+12,2,2,'#fff1cc')}
+ for(let z=0;z<3;z++){let xx=X+4+randAt(x,y,z+11)*24, yy=Y+4+randAt(x,y,z+22)*23;rect(xx,yy,2,4,z%2?'#82e783':'#25ad4d');rect(xx+2,yy+1,2,2,'#b0ed8c')}
+ if(randAt(x,y,50)>.955){rect(X+15,Y+14,2,7,'#229a49');ellipse(X+15,Y+12,3,2,'#ffd784');ellipse(X+18,Y+12,2,2,'#fff1cc')}
  else if(randAt(x,y,51)>.945){ellipse(X+15,Y+18,3,2,'#fff1b0');ellipse(X+15,Y+16,1,1,'#d8a464')}
 }
 function brickTile(X,Y,a){
- rect(X+1,Y+2,30,28,'#633f3c');rect(X,Y+2,32,3,'#bb7958');
+ rect(X+1,Y+2,30,28,'#a14f37');rect(X,Y+2,32,3,'#f7a151');
  for(let row=0;row<3;row++){
   const yy=Y+5+row*9;
   for(let q=0;q<3;q++){
    let bx=X+(row%2? -5:0)+q*13;
    let xx=Math.max(X+2,bx+2), ww=Math.min(X+29,bx+14)-xx;
    if(ww<=0)continue;
-   rect(xx,yy,ww,8,(row+q)%3?'#b96349':'#d47952');rect(xx,yy,ww,2,'#ec9862');rect(xx,yy+6,ww,2,'#88433e');
-   rect(xx+3,yy+3,2,2,'#e59967');
+   rect(xx,yy,ww,8,(row+q)%3?'#ed6e40':'#fa8c52');rect(xx,yy,ww,2,'#ffd08a');rect(xx,yy+6,ww,2,'#a84434');
+   rect(xx+3,yy+3,2,2,'#ffe0a0');
   }
  }
  if(a.hp<=1){rect(X+14,Y+2,2,22,'#412e32');rect(X+13,Y+15,10,2,'#412e32')}
 }
 function fenceTile(X,Y,a){
- rect(X+1,Y+21,30,5,'#724a30');rect(X+1,Y+10,30,5,'#815434');
+ rect(X+1,Y+21,30,5,'#aa661f');rect(X+1,Y+10,30,5,'#c77a24');
  for(let i=0;i<4;i++){
   let x=X+3+i*8;
-  poly([[x,Y+7],[x+3,Y+2],[x+6,Y+7],[x+6,Y+27],[x,Y+27]],'#c9955d','#74432f',1.5);
-  rect(x+1,Y+8,2,15,'#f1bf7a');rect(x+4,Y+12,2,12,'#a6663b');
+  poly([[x,Y+7],[x+3,Y+2],[x+6,Y+7],[x+6,Y+27],[x,Y+27]],'#f0b34d','#9c5622',1.5);
+  rect(x+1,Y+8,2,15,'#ffde88');rect(x+4,Y+12,2,12,'#c58335');
  }
- if(a.hp===1){rect(X+9,Y+15,6,4,'#302b29');rect(X+10,Y+17,12,2,'#d3ac78')}
+ if(a.hp===1){rect(X+9,Y+15,6,4,'#302b29');rect(X+10,Y+17,12,2,'#ffdf89')}
 }
 function bushTile(X,Y,x,y){
- rect(X+1,Y+21,30,9,'#265f36');
+ rect(X+1,Y+21,30,9,'#168347');
  for(let i=0;i<5;i++){let cx=X+4+i*6, cy=Y+16+Math.sin(i*3+x+y)*5;
-   ellipse(cx,cy,8,10,i%2?'#246c36':'#2e7b41');ellipse(cx-2,cy-4,4,3,'#4c9d52');ellipse(cx+3,cy+2,2,3,'#205f35');
+   ellipse(cx,cy,8,10,i%2?'#169e50':'#20b95b');ellipse(cx-2,cy-4,4,3,'#80ec87');ellipse(cx+3,cy+2,2,3,'#0e8f46');
  }
- if(randAt(x,y)>.5){ellipse(X+11,Y+15,2,2,'#a9d66e');ellipse(X+24,Y+17,2,2,'#cce17f')}
+ if(randAt(x,y)>.5){ellipse(X+11,Y+15,2,2,'#dafb96');ellipse(X+24,Y+17,2,2,'#fff5a2')}
 }
 function pondTile(X,Y,x,y,t){
- rect(X,Y,32,32,'#175d92');rect(X+1,Y+1,30,3,'#4eaed3');
+ rect(X,Y,32,32,'#078dd4');rect(X+1,Y+1,30,3,'#7fe7ff');
  for(let i=0;i<3;i++){
   const shift=(t*13+i*13+x*5)%24;
-  rect(X+3+shift,Y+6+i*9,8,2,'#8bd8e4');rect(X+Math.max(1,28-shift),Y+10+i*7,4,1,'#388bb9');
+  rect(X+3+shift,Y+6+i*9,8,2,'#d4ffff');rect(X+Math.max(1,28-shift),Y+10+i*7,4,1,'#34bde9');
  }
- if(x%3===0){ellipse(X+7,Y+27,5,2,'#3ba2c3')}
+ if(x%3===0){ellipse(X+7,Y+27,5,2,'#64d8f7')}
 }
 function houseSprite(x,y,hp){
  ctx.save();ctx.translate(x,y);
- ellipse(0,23,29,8,'#1b583d');
- rect(-22,3,44,31,'#563f33');rect(-20,4,40,28,'#f8dfb1');
- for(let i=0;i<3;i++){rect(-18,12+i*7,36,1,'#dfbb83')}
- poly([[-26,5],[0,-22],[26,5],[19,10],[0,-9],[-19,10]],'#b2473e','#442a30',3);
- for(let i=0;i<5;i++)rect(-20+i*9,1-i*1.1,7,3,'#d76c51');
- rect(-8,12,16,21,'#81513e');rect(-5,15,10,18,'#5e3b35');ellipse(3,25,2,2,'#e9bf6b');
- rect(-17,14,7,8,'#6ac7d3');rect(10,14,7,8,'#6ac7d3');
+ ellipse(0,23,29,8,'#168f4e');
+ rect(-22,3,44,31,'#945532');rect(-20,4,40,28,'#ffebc1');
+ for(let i=0;i<3;i++){rect(-18,12+i*7,36,1,'#f7c77f')}
+ poly([[-26,5],[0,-22],[26,5],[19,10],[0,-9],[-19,10]],'#e74e57','#442a30',3);
+ for(let i=0;i<5;i++)rect(-20+i*9,1-i*1.1,7,3,'#fc7b68');
+ rect(-8,12,16,21,'#a86740');rect(-5,15,10,18,'#80503b');ellipse(3,25,2,2,'#e9bf6b');
+ rect(-17,14,7,8,'#55cfee');rect(10,14,7,8,'#55cfee');
  rect(-13,13,1,11,'#fef4d2');rect(13,13,1,11,'#fef4d2');
- rect(-20,32,40,3,'#a88054');
+ rect(-20,32,40,3,'#d7a55f');
  ctx.fillStyle='#fff7dc';ctx.font='bold 14px system-ui';ctx.textAlign='center';ctx.fillText('🐾',0,0);
  if(hp<=1){rect(-6,3,3,9,'#c86254')}
  ctx.restore();
@@ -250,11 +316,11 @@ function creature(x,y,type,dir=2,time=0){
  if(im&&im.complete&&im.naturalWidth){
   ctx.save();ctx.translate(x,y+movement);ctx.rotate((dir-2)*Math.PI/2);
   const size=type==='cat'?46:type===2?49:type===0?41:type===4?46:45;
-  ctx.drawImage(im,-size/2,-size/2-2,size,size);ctx.restore();
+  ctx.filter='saturate(1.28) brightness(1.10)';ctx.drawImage(im,-size/2,-size/2-2,size,size);ctx.restore();
  }else {ctx.textAlign='center';ctx.font='bold 29px sans-serif';ctx.fillText(type==='cat'?'🐱':'🐶',x,y+10)}
 }
 function draw(){if(!g)return;const t=g.time;
- rect(0,0,W*T,H*T,'#408052');
+ rect(0,0,W*T,H*T,'#59d46e');
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
   const a=cell(x,y),X=x*T,Y=y*T;
   grassTile(X,Y,x,y);
@@ -264,9 +330,9 @@ function draw(){if(!g)return;const t=g.time;
   if(a.t===4)pondTile(X,Y,x,y,t);
  }
  houseSprite(g.home.x,g.home.y,g.home.hp);
- for(const b of g.bonuses){ellipse(b.x,b.y+3,14,13,'#1d594f');ellipse(b.x,b.y,13+Math.sin(t*5)*1.5,13,'#f9d982');ellipse(b.x,b.y,10,10,'#5b3c5c');ctx.textAlign='center';ctx.font='19px sans-serif';const icons={double:'🌭',rapid:'⚡',shield:'🛡️',bomb:'💣',valerian:'🧪',heal:'❤️'};ctx.fillText(icons[b.type],b.x,b.y+6)}
+ for(const b of g.bonuses){ellipse(b.x,b.y+3,14,13,'#198b5b');ellipse(b.x,b.y,13+Math.sin(t*5)*1.5,13,'#fff090');ellipse(b.x,b.y,10,10,'#7f4db2');ctx.textAlign='center';ctx.font='19px sans-serif';const icons={double:'🌭',rapid:'⚡',shield:'🛡️',bomb:'💣',valerian:'🧪',heal:'❤️'};ctx.fillText(icons[b.type],b.x,b.y+6)}
  for(const d of g.dogs){creature(d.x,d.y,d.type,d.dir,t);if(d.hp>1){rect(d.x-13,d.y-20,26,4,'#4a2525');rect(d.x-13,d.y-20,26*clamp(d.hp/TYPES[d.type].hp,0,1),4,'#ffcf77')}}
- for(const s of g.shots){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));ellipse(0,2,9,5,'rgba(30,22,22,.4)');ellipse(0,0,9,5,'#672a29');ellipse(0,-1,8,4,'#e67d42');rect(-2,-3,5,2,'#f9b56b');ctx.restore()}
+ for(const s of g.shots){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(Math.atan2(s.vy,s.vx));ellipse(0,2,9,5,'rgba(30,22,22,.4)');ellipse(0,0,9,5,'#672a29');ellipse(0,-1,8,4,'#ffab3c');rect(-2,-3,5,2,'#ffe486');ctx.restore()}
  const p=g.cat;
  if(!(p.inv>0&&Math.floor(t*9)%2===0)){
  if(p.valerian>0){ellipse(p.x,p.y,23+Math.sin(t*9)*2,23,'#c1f77c66');ctx.strokeStyle='#a2ec70';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,21,0,Math.PI*2);ctx.stroke()}
@@ -335,10 +401,10 @@ function maxPostProcess(time){
  }
  ctx.globalAlpha=1;
  const grade=ctx.createLinearGradient(0,0,416,512);
- grade.addColorStop(0,'rgba(255,235,190,.075)');grade.addColorStop(.48,'rgba(255,255,255,0)');grade.addColorStop(1,'rgba(10,51,86,.15)');
+ grade.addColorStop(0,'rgba(255,250,187,.085)');grade.addColorStop(.48,'rgba(255,255,255,0)');grade.addColorStop(1,'rgba(20,129,220,.035)');
  ctx.fillStyle=grade;ctx.fillRect(0,0,416,512);
  const shade=ctx.createRadialGradient(208,225,126,208,235,358);
- shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(5,18,31,.33)');
+ shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(10,66,95,.14)');
  ctx.fillStyle=shade;ctx.fillRect(0,0,416,512);
  if(maxFlash>0){ctx.fillStyle='rgba(255,225,162,'+Math.min(.29,maxFlash)+')';ctx.fillRect(0,0,416,512);maxFlash=Math.max(0,maxFlash-dt)}
  ctx.restore();
