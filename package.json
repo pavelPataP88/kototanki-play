@@ -1,0 +1,8 @@
+{
+  "name":"kototanki-commercial-candidate",
+  "version":"0.9.0-preview",
+  "private":true,
+  "description":"Kototanki HTML5 arcade game candidate",
+  "scripts":{"test":"node --test tests/smoke.test.cjs"},
+  "engines":{"node":">=20"}
+}
