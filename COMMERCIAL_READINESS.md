@@ -46,3 +46,13 @@ A native Android sale would additionally require packaging, review and Play Cons
 - \`SALE_READY\`: **NO**.
 
 No money spent, no user-facing storefront created, and \`main\` unchanged.
+
+## Verified browser test — 2026-10-22
+
+- GitHub Actions: https://github.com/pavelPataP88/kototanki-play/actions/runs/39771895709
+- Node gameplay tests: SUCCESS.
+- Real Chromium mobile-viewpoint end-to-end: SUCCESS (390×844 portrait and 844×390 landscape).
+- Verified screen snapshots were inspected: menu originally cramped, then fixed to full-screen; verification passed after fix.
+- Tested stage start, movement, win reward, reload and persisted progress; no uncaught JS page errors in inspected runs.
+- **Device test remains outstanding:** real Android/iOS touch hardware not directly tested.
+- Final sales status remains NOT RELEASED / NOT LICENSE-CLEARED.
