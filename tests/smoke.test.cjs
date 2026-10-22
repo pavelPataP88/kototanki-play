@@ -16,7 +16,7 @@ function boot(memory = new Map(), options = {}) {
       classList: {add() {}, remove() {}, contains() { return false; }},
       addEventListener(type, cb) { this.listeners ??= {}; this.listeners[type] = cb; },
       setAttribute() {}, setPointerCapture() {},
-      appendChild(value) { this.children.push(value); return value; },
+      appendChild(value) { this.children.push(value); value.parentElement=this; return value; },
       replaceChildren(...values) { this.children = [...values]; },
       textContent: '', type: 'button'
     };
@@ -32,6 +32,7 @@ function boot(memory = new Map(), options = {}) {
   const document = {
     hidden: false,
     getElementById: el,
+    querySelector(selector) {return selector==='.app'||selector==='.stage'?el(selector):null;},
     querySelectorAll(selector) {
       if(selector !== '[data-dir]') return [];
       return ['up','down','left','right'].map(dir => {
