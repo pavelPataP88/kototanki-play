@@ -195,7 +195,69 @@ body{
 .tips{color:#f4fcff!important}
 .hint{color:#d9f7ff!important}
 
-</style></head><body><div class="app"><div class="top"><div class="brand">🐱 КОТОТАНКИ</div><div class="buttons"><button class="sm" id="fullScreenFx" aria-label="Включить полноэкранный режим">⛶ ЭКРАН</button><button class="sm" id="sound">🔊</button><button class="sm" id="pause">Ⅱ ПАУЗА</button></div></div><div class="stats"><div class="stat">УРОВЕНЬ<br><strong id="lvl">1 / 30</strong></div><div class="stat">ДОМИК<br><strong id="home">❤❤❤</strong></div><div class="stat">ЖИЗНИ<br><strong id="lives">❤❤❤</strong></div><div class="stat">СОБАКИ<br><strong id="left">0</strong></div><div class="stat">СЧЁТ<br><strong id="score">0</strong></div></div><div class="stage"><canvas id="field" width="416" height="512"></canvas><div id="overlay" class="overlay"><h1 id="heading">КОТОТАНКИ</h1><p id="desc">Защити кошачий домик от собак! Управляй котом стрелками и бросай сосиски. Лови бонусы: двойные сосиски, бомбы и валерьянку.</p><button id="start">ИГРАТЬ ▶</button></div></div><div class="tips"><div id="buff" class="bonus">🐾 Защити свой домик!</div><div id="feedback">30 уровней · без боссов</div></div><div class="controls"><div class="pad" id="pad"><span class="empty"></span><button data-dir="up">▲</button><span class="empty"></span><button data-dir="left">◀</button><button class="middle" id="center">🐾</button><button data-dir="right">▶</button><span class="empty"></span><button data-dir="down">▼</button><span class="empty"></span></div><div class="actions"><button id="bomb" class="act bomb" aria-label="Колбасная бомба">💣<span id="bombCount">0</span></button><button id="fire" class="act" aria-label="Бросать сосиски">🌭</button></div></div><div class="hint">Слева движение · справа сосиски и колбасная бомба</div></div>
+
+/* Premium candidate: progressive player UX. No ads, no purchases. */
+.overlay{overflow-y:auto;justify-content:flex-start;gap:8px;padding:clamp(9px,2.2vw,17px)}
+.overlay h1{font-size:clamp(22px,6.2vw,32px);line-height:1.1}
+.overlay p{font-size:clamp(11px,2.8vw,14px);line-height:1.4}
+.overlay button{min-height:43px;padding:9px 15px;font-size:clamp(12px,3.3vw,16px);touch-action:manipulation}
+#metaPanel{width:100%;max-width:375px;color:#fff;display:grid;gap:7px;text-align:center}
+#metaPanel[hidden]{display:none}
+.metaCard{background:linear-gradient(150deg,#1779b4eb,#084475ee);border:1px solid #b5ebffb8;border-radius:13px;padding:9px;box-shadow:inset 0 2px #ffffff33}
+.metaStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;font-size:clamp(10px,2.5vw,12px)}
+.metaStats strong{display:block;color:#fff4a1;font-size:clamp(14px,3.3vw,19px)}
+.metaLabel{font-size:clamp(11px,2.8vw,13px);font-weight:900;letter-spacing:.3px;color:#fff3a8}
+.metaGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.overlay .metaGrid button{min-height:33px;padding:2px;font-size:12px;border-radius:8px;background:linear-gradient(#6de5fe,#188acb);border-color:#b0f4ff;color:#033457}
+.overlay .metaGrid button.locked{background:#315572;border-color:#47708b;color:#9bafbf;opacity:.7}
+.overlay .metaGrid button.selected{border-color:#fff18e;background:linear-gradient(#fff6a2,#ffad56)}
+.metaRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
+.overlay .metaRow button{flex:1 1 100px;min-height:37px;font-size:12px;padding:5px 8px;border-radius:10px}
+.overlay .metaRow button:disabled{filter:grayscale(.6);opacity:.55;cursor:not-allowed}
+.metaSmall{font-size:10px;color:#e0f7ff;font-weight:600}
+.metaHelp{font-size:11px;color:#fff4bf;line-height:1.38;font-weight:650}
+.overlay button:focus-visible,button:focus-visible{outline:3px solid #fff2a8;outline-offset:2px}
+.overlay button[disabled]{cursor:not-allowed}
+@media (orientation:landscape) and (max-height:720px) {
+  .overlay{padding:4px 7px;gap:3px}
+  #metaPanel{gap:3px;max-width:385px}
+  .metaCard{padding:4px 7px}
+  .metaGrid{gap:2px}
+  .overlay .metaGrid button{min-height:25px}
+  .overlay button{min-height:29px;padding:4px 8px}
+  .metaHelp{font-size:10px}
+}
+
+
+/* Commercial candidate: full-size navigation, isolated from battlefield. */
+.app{position:relative}
+.app > .overlay.fullScreenMenu{
+  position:absolute;z-index:120;inset:0;width:100%;height:100%;max-height:100dvh;
+  background:radial-gradient(ellipse at 50% 0%,#258fd6 0%,#09519b 44%,#073f79 100%)!important;
+  border:3px solid #ffe78a;border-radius:19px;
+  box-shadow:inset 0 0 60px #aeeeff20,0 12px 30px #052f5c66;
+  overflow-y:auto;overscroll-behavior:contain;display:flex;justify-content:flex-start;
+  gap:12px;padding:clamp(11px,3vw,24px) clamp(9px,3vw,22px);
+}
+.app > .overlay.fullScreenMenu[hidden]{display:none}
+.app > .overlay.fullScreenMenu #metaPanel{max-width:520px;gap:9px}
+.app > .overlay.fullScreenMenu .metaCard{padding:9px 12px}
+.app > .overlay.fullScreenMenu .metaGrid button{min-height:40px;font-size:14px}
+.app > .overlay.fullScreenMenu .metaRow button{min-height:39px}
+.app > .overlay.fullScreenMenu h1{font-size:clamp(30px,8vw,49px);letter-spacing:1px}
+.app > .overlay.fullScreenMenu p{max-width:495px;font-size:clamp(12px,3.4vw,16px)}
+.app > .overlay.fullScreenMenu #start{font-size:clamp(16px,4vw,22px);min-height:50px}
+@media(orientation:landscape) and (max-height:720px){
+ .app > .overlay.fullScreenMenu{gap:5px;padding:6px 12px}
+ .app > .overlay.fullScreenMenu h1{font-size:26px}
+ .app > .overlay.fullScreenMenu p{font-size:11px}
+ .app > .overlay.fullScreenMenu #start{min-height:33px;font-size:15px}
+ .app > .overlay.fullScreenMenu .metaCard{padding:5px 8px}
+ .app > .overlay.fullScreenMenu .metaGrid button{min-height:28px}
+ .app > .overlay.fullScreenMenu .metaRow button{min-height:30px}
+}
+
+</style></head><body><div class="app"><div class="top"><div class="brand">🐱 КОТОТАНКИ</div><div class="buttons"><button class="sm" id="fullScreenFx" aria-label="Включить полноэкранный режим">⛶ ЭКРАН</button><button class="sm" id="sound">🔊</button><button class="sm" id="pause">Ⅱ ПАУЗА</button></div></div><div class="stats"><div class="stat">УРОВЕНЬ<br><strong id="lvl">1 / 30</strong></div><div class="stat">ДОМИК<br><strong id="home">❤❤❤</strong></div><div class="stat">ЖИЗНИ<br><strong id="lives">❤❤❤</strong></div><div class="stat">СОБАКИ<br><strong id="left">0</strong></div><div class="stat">СЧЁТ<br><strong id="score">0</strong></div></div><div class="stage"><canvas id="field" width="416" height="512"></canvas><div id="overlay" class="overlay"><h1 id="heading">КОТОТАНКИ</h1><p id="desc">Защити кошачий домик от собак! Управляй котом стрелками и бросай сосиски. Лови бонусы: двойные сосиски, бомбы и валерьянку.</p><button id="start">ИГРАТЬ ▶</button><div id="metaPanel" hidden aria-live="polite"></div></div></div><div class="tips"><div id="buff" class="bonus">🐾 Защити свой домик!</div><div id="feedback">30 уровней · без боссов</div></div><div class="controls"><div class="pad" id="pad"><span class="empty"></span><button data-dir="up">▲</button><span class="empty"></span><button data-dir="left">◀</button><button class="middle" id="center" aria-label="Открыть игровое меню" title="Меню">☰</button><button data-dir="right">▶</button><span class="empty"></span><button data-dir="down">▼</button><span class="empty"></span></div><div class="actions"><button id="bomb" class="act bomb" aria-label="Колбасная бомба">💣<span id="bombCount">0</span></button><button id="fire" class="act" aria-label="Бросать сосиски">🌭</button></div></div><div class="hint">Слева движение · справа сосиски и колбасная бомба</div></div>
 <script>
 (()=>{'use strict';
 const W=13,H=16,T=32, c=document.getElementById('field'),ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;
@@ -208,22 +270,162 @@ c.width=Math.round(416*MAX_SCALE);c.height=Math.round(512*MAX_SCALE);
 ctx.setTransform(MAX_SCALE,0,0,MAX_SCALE,0,0);ctx.imageSmoothingEnabled=true;
 
 const el=id=>document.getElementById(id), overlay=el('overlay');const TILE={CLEAR:0,BRICK:1,FENCE:2,GRASS:3,WATER:4};const TYPES=[{name:'Такса',hp:1,speed:59,col:'#e0a368',points:10},{name:'Бигль',hp:2,speed:45,col:'#d2b68b',points:20},{name:'Бульдог',hp:4,speed:32,col:'#bca7a5',points:40},{name:'Овчарка',hp:3,speed:58,col:'#cca54e',points:50},{name:'Доберман',hp:3,speed:74,col:'#67463e',points:70}];
-let g=null,keys=new Set(),holdingFire=false,phase=0,last=0,music=true,audio=null,raf=null;
+
+/* All progress is kept on this device; intentionally no tracking or accounts. */
+const SAVE_KEY='kototanki.save.v1';
+function newSave(){return {version:1,unlocked:1,coins:0,bestScore:0,stars:{},cleared:{},upgrades:{armor:0,fort:0,rapid:0},skin:'ginger',audio:true,losses:0,finishes:0}}
+function loadSave(){
+  let data;
+  try{data=JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch(e){}
+  const fresh=newSave();
+  if(!data||data.version!==1||typeof data!=='object')return fresh;
+  const safeInt=(v,min,max)=>Number.isFinite(v)?Math.max(min,Math.min(max,Math.floor(v))):min;
+  fresh.unlocked=safeInt(data.unlocked,1,30);
+  fresh.coins=safeInt(data.coins,0,1000000);
+  fresh.bestScore=safeInt(data.bestScore,0,100000000);
+  fresh.losses=safeInt(data.losses,0,1000000);
+  fresh.finishes=safeInt(data.finishes,0,1000000);
+  for(const name of ['armor','fort','rapid'])fresh.upgrades[name]=safeInt(data.upgrades?.[name],0,2);
+  if(data.stars&&typeof data.stars==='object')for(let n=1;n<=30;n++)fresh.stars[n]=safeInt(data.stars[n],0,3);
+  if(data.cleared&&typeof data.cleared==='object')for(let n=1;n<=30;n++)if(data.cleared[n]===true)fresh.cleared[n]=true;
+  fresh.skin=['ginger','ocean','violet'].includes(data.skin)?data.skin:'ginger';
+  fresh.audio=data.audio!==false;
+  return fresh;
+}
+const save=loadSave();
+function saveProgress(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save))}catch(e){/* private mode / quota: play anyway */}}
+function starsTotal(){return Object.values(save.stars).reduce((sum,value)=>sum+value,0)}
+function canUseSkin(name){return name==='ginger'||(name==='ocean'&&starsTotal()>=12)||(name==='violet'&&starsTotal()>=35)}
+const SHOP=[
+  {id:'armor',name:'Доп. жизнь',icon:'❤️',cost:[110,240]},
+  {id:'fort',name:'Крепкий дом',icon:'🏠',cost:[120,250]},
+  {id:'rapid',name:'Быстрый выстрел',icon:'🌭',cost:[140,270]}
+];
+function buyUpgrade(id){
+  if(!SHOP.some(item=>item.id===id))return false;
+  const item=SHOP.find(item=>item.id===id),rank=save.upgrades[id],cost=item.cost[rank];
+  if(rank>=2||!Number.isInteger(cost)||save.coins<cost)return false;
+  save.coins-=cost;save.upgrades[id]++;saveProgress();return true;
+}
+function elButton(text,fn,locked=false){
+  const button=document.createElement('button');
+  button.type='button';button.textContent=text;button.disabled=locked;
+  if(!locked)button.addEventListener('click',fn);
+  return button;
+}
+function metaCard(parent,label,bodyClass){
+  const card=document.createElement('section');card.className='metaCard';
+  if(label){const labelEl=document.createElement('div');labelEl.className='metaLabel';labelEl.textContent=label;card.appendChild(labelEl)}
+  const content=document.createElement('div');content.className=bodyClass||'metaRow';card.appendChild(content);parent.appendChild(card);
+  return content;
+}
+function renderMetaPanel(mode){
+  const panel=el('metaPanel');panel.replaceChildren();panel.hidden=false;
+  const stats=metaCard(panel,mode==='menu'?'ТВОЯ ИГРА':'ПРОГРЕСС','metaStats');
+  for(const [label,value] of [['Открыто',save.unlocked+'/30'],['Звёзды',starsTotal()+' ⭐'],['Монеты',save.coins+' 🪙']]){
+    const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=value;
+    div.appendChild(strong);div.appendChild(document.createTextNode(label));stats.appendChild(div);
+  }
+  if(mode==='menu'){
+    const levels=metaCard(panel,'ВЫБЕРИ УРОВЕНЬ','metaGrid');
+    for(let n=1;n<=30;n++){
+      const locked=n>save.unlocked,b=elButton(locked?'🔒':String(n),()=>{g=null;level(n);begin()},locked);
+      if(locked)b.className='locked';else if(n===save.unlocked)b.className='selected';
+      b.setAttribute('aria-label',locked?'Уровень '+n+' закрыт':'Играть уровень '+n);
+      levels.appendChild(b);
+    }
+    const skins=metaCard(panel,'ОБЛИК КОТА','metaRow');
+    for(const [id,name,unlock] of [['ginger','🐱 Рыжик',0],['ocean','💠 Лазурь',12],['violet','💜 Фиалка',35]]){
+      const enabled=canUseSkin(id);
+      const btn=elButton(enabled?(save.skin===id?'✓ ':'')+name:'🔒 '+unlock+' ⭐',()=>{
+        save.skin=id;saveProgress();renderMetaPanel('menu');
+      },!enabled);skins.appendChild(btn);
+    }
+  }
+  if(mode==='menu'||mode==='between'){
+    const shop=metaCard(panel,'УЛУЧШЕНИЯ ЗА МОНЕТЫ','metaRow');
+    for(const item of SHOP){
+      const rank=save.upgrades[item.id],cost=item.cost[rank],max=rank>=2;
+      const label=item.icon+' '+item.name+' '+(max?'MAX':(rank+'/2 · '+cost+' 🪙'));
+      shop.appendChild(elButton(label,()=>{if(buyUpgrade(item.id))renderMetaPanel(mode)},max||save.coins<cost));
+    }
+  }
+  if(mode!=='menu'){
+    const footer=metaCard(panel,'','metaRow');
+    footer.appendChild(elButton('☰ В главное меню',showMenu));
+  }else{
+    const guide=metaCard(panel,'ПРАВИЛА','metaHelp');
+    guide.textContent='Стрелки / WASD или кнопки слева — движение. 🌭 / пробел — стрелять. 💣 / B — бомба. Не дай собакам разрушить дом! Побеждай, получай звёзды и улучшай кота.';
+    const record=metaCard(panel,'','metaSmall');
+    record.textContent='Лучший счёт: '+save.bestScore+' · Прохождений: '+save.finishes+' · Без рекламы и платных покупок.';
+  }
+}
+function showMenu(){
+  holdingFire=false;keys.clear();if(g)g.state='menu';
+  el('pause').textContent='Ⅱ ПАУЗА';
+  show('КОТОТАНКИ 🐾','Защити домик! 30 этапов, награды, облики и улучшения. Всё сохраняется на этом устройстве.',save.unlocked>1?'ПРОДОЛЖИТЬ ▶':'ИГРАТЬ ▶',()=>{g=null;level(save.unlocked);begin()});
+  renderMetaPanel('menu');
+  makeFullScreenMenu();
+}
+function showPause(){
+  if(!g||g.state!=='playing')return;
+  g.state='paused';holdingFire=false;keys.clear();el('pause').textContent='▶ ПУСК';
+  show('ПАУЗА','Игра остановлена. Можешь продолжить или вернуться в меню.','ПРОДОЛЖИТЬ ▶',()=>{el('pause').textContent='Ⅱ ПАУЗА';begin()});
+  renderMetaPanel('pause');
+  makeFullScreenMenu();
+}
+function makeFullScreenMenu(){
+  const app=document.querySelector('.app');
+  if(app){app.appendChild(overlay);overlay.classList.add('fullScreenMenu');}
+}
+
+let g=null,keys=new Set(),holdingFire=false,phase=0,last=0,music=save.audio,audio=null,raf=null;
 const rnd=(a,b)=>a+Math.random()*(b-a), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));const idx=(x,y)=>y*W+x;function cell(x,y){return x>=0&&y>=0&&x<W&&y<H?g.map[idx(x,y)]:{t:9,hp:999}}function tileAt(x,y){return cell(Math.floor(x/T),Math.floor(y/T))}function near(x,y,a,b){return Math.hypot(x-a,y-b)}
 function beep(freq=450,dur=.07,type='square'){if(!music)return;try{audio ||= new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),gain=audio.createGain();o.type=type;o.frequency.value=freq;gain.gain.setValueAtTime(.035,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(gain);gain.connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(e){}}
 function free(x,y,ghost=false){const [tx,ty]=[Math.floor(x/T),Math.floor(y/T)];if(tx<0||ty<0||tx>=W||ty>=H)return false;const t=cell(tx,ty).t;return ghost||t===0||t===3}
 function clearArea(x,y,r=1){for(let yy=y-r;yy<=y+r;yy++)for(let xx=x-r;xx<=x+r;xx++)if(xx>=0&&xx<W&&yy>=0&&yy<H)g.map[idx(xx,yy)]={t:0,hp:0}}
-function level(n){const score=g?.score||0;g={n,score,map:Array.from({length:W*H},()=>({t:0,hp:0})),cat:{x:6.5*T,y:12.5*T,dir:0,lives:3,inv:0,shot:0,double:0,rapid:0,shield:0,valerian:0,bombs:0},dogs:[],shots:[],bonuses:[],sparks:[],home:{x:6.5*T,y:14.5*T,hp:3},remaining:6+Math.floor(n*1.7),toSpawn:6+Math.floor(n*1.7),timer:1.2,spawnRate:Math.max(.55,2.6-n*.065),state:'playing',time:0,tip:0};
+function level(n){const score=g?.score||0;g={n,score,map:Array.from({length:W*H},()=>({t:0,hp:0})),cat:{x:6.5*T,y:12.5*T,dir:0,lives:3+save.upgrades.armor,inv:0,shot:0,double:0,rapid:0,shield:0,valerian:0,bombs:0},dogs:[],shots:[],bonuses:[],sparks:[],home:{x:6.5*T,y:14.5*T,hp:3+save.upgrades.fort},remaining:6+Math.floor(n*1.7),toSpawn:6+Math.floor(n*1.7),timer:1.2,spawnRate:Math.max(.55,2.6-n*.065),state:'playing',time:0,tip:0};
 for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){if(y<3||y>13)continue;if(near(x,y,6,12)<3.3)continue;const s=(x*11+y*7+n*13)%19;let t=0;if((x===2||x===10)&&y>4&&y<11&&s%4!==0)t=TILE.WATER;else if(s===0||s===2)t=TILE.BRICK;else if(s===5||s===8||s===13)t=TILE.FENCE;else if(s===11||s===15)t=TILE.GRASS;if(t)g.map[idx(x,y)]={t,hp:t===1?4:t===2?2:0}}
 clearArea(6,13,1);clearArea(6,12,1);clearArea(6,14,0);clearArea(6,15,0);
 for(const [x,y] of [[5,14],[7,14],[5,15],[7,15]])g.map[idx(x,y)]={t:2,hp:2};
 const p=g.cat;p.x=6.5*T;p.y=12.5*T;for(const x of [0,1,5,6,7,11,12])clearArea(x,0,0);for(const x of [0,12])clearArea(x,3,0);updateHud()}
-function begin(){if(!g)level(1);hide();g.state='playing';last=performance.now();if(!raf)raf=requestAnimationFrame(frame)}function show(title,desc,btn,fn){el('heading').textContent=title;el('desc').textContent=desc;el('start').textContent=btn;el('start').onclick=fn;overlay.hidden=false}function hide(){overlay.hidden=true}
-function gameOver(win=false){g.state='end';holdingFire=false;keys.clear();beep(win?660:110,.27);show(win?'ПОБЕДА! 🎉':'ДОМИК ПОТЕРЯН!',win?'Ты защитил котов на всех 30 уровнях! Счёт: '+g.score:'Собаки прорвались! Пробуй другую тактику. Счёт: '+g.score,'ИГРАТЬ СНАЧАЛА',()=>{level(1);begin()})}
-function finish(){g.state='next';holdingFire=false;beep(760,.14);if(g.n>=30){gameOver(true);return}show('УРОВЕНЬ '+g.n+' ПРОЙДЕН!', 'Домик цел! Следующий уровень: больше собак и новые породы.','ДАЛЬШЕ ▶',()=>{level(g.n+1);begin()})}
+function begin(){if(!g)level(1);hide();g.state='playing';last=performance.now();if(!raf)raf=requestAnimationFrame(frame)}function show(title,desc,btn,fn){el('heading').textContent=title;el('desc').textContent=desc;el('start').textContent=btn;el('start').onclick=fn;overlay.hidden=false}function hide(){
+  overlay.hidden=true;el('metaPanel').hidden=true;
+  overlay.classList.remove('fullScreenMenu');
+  const stage=document.querySelector('.stage');
+  if(stage&&overlay.parentElement!==stage)stage.appendChild(overlay);
+}
+function gameOver(win=false){
+  if(!win)save.losses++;else save.finishes++;
+  save.bestScore=Math.max(save.bestScore,g.score);saveProgress();
+  g.state='end';holdingFire=false;keys.clear();beep(win?660:110,.27);
+  show(win?'ПОБЕДА! 🎉':'ДОМИК ПОТЕРЯН!',
+  win?'Ты прошёл все 30 уровней! Рекорд: '+save.bestScore+' очков.':'Собаки прорвались. Попробуй ещё раз — улучшения и звёзды сохранены.',
+  win?'ГЛАВНОЕ МЕНЮ':'ПОВТОРИТЬ ▶',
+  ()=>{if(win){showMenu();return}const n=g.n;g=null;level(n);begin()});
+  renderMetaPanel('end');
+}
+function finish(){
+  g.state='next';holdingFire=false;beep(760,.14);
+  const stars=g.home.hp===3+save.upgrades.fort&&g.cat.lives===3+save.upgrades.armor?3:
+    (g.home.hp>=2&&g.cat.lives>=2?2:1);
+  const firstClear=save.cleared[g.n]!==true;
+  const baseReward=25+g.n*3+stars*15;
+  const reward=firstClear?baseReward:Math.max(7,Math.floor(baseReward*.2));
+  save.coins=Math.min(1000000,save.coins+reward);
+  save.stars[g.n]=Math.max(save.stars[g.n]||0,stars);
+  save.cleared[g.n]=true;
+  save.unlocked=Math.max(save.unlocked,Math.min(30,g.n+1));
+  save.bestScore=Math.max(save.bestScore,g.score);
+  saveProgress();
+  if(g.n>=30){gameOver(true);return}
+  show('УРОВЕНЬ '+g.n+' ПРОЙДЕН!','Получено: '+'⭐'.repeat(stars)+' · +'+reward+' монет. Следующий уровень открылся.',
+  'ДАЛЬШЕ ▶',()=>{level(g.n+1);begin()});
+  renderMetaPanel('between');
+}
 function spawn(){let poss=[[.5,.5],[6.5,.5],[12.5,.5],[.5,3.5],[12.5,3.5]],k=Math.floor(Math.random()*poss.length),p=poss[k];let allowed=Math.min(5,1+Math.floor((g.n-1)/5)),type=Math.floor(Math.random()*allowed);g.dogs.push({x:p[0]*T,y:p[1]*T,type,hp:TYPES[type].hp,dir:2,bite:0,think:0,target:null});g.toSpawn--}
 function hitTerrain(x,y,damage=1){const a=tileAt(x,y);if(a.t===1||a.t===2){a.hp-=damage;if(a.hp<=0){a.t=0;g.sparks.push({x,y,ttl:.4})}return true}return a.t===4}
-function shoot(){const p=g.cat;if(g.state!=='playing'||p.shot>0)return;const multi=p.double>0, dirs=multi?[-.23,.23]:[0];for(const theta of dirs){const base=p.dir*Math.PI/2 - Math.PI/2,angle=base+theta;g.shots.push({x:p.x+Math.cos(angle)*13,y:p.y+Math.sin(angle)*13,vx:Math.cos(angle)*270,vy:Math.sin(angle)*270,life:1.3})}p.shot=p.rapid>0?.13:.31;beep(440,.04)}
+function shoot(){const p=g.cat;if(g.state!=='playing'||p.shot>0)return;const multi=p.double>0, dirs=multi?[-.23,.23]:[0];for(const theta of dirs){const base=p.dir*Math.PI/2 - Math.PI/2,angle=base+theta;g.shots.push({x:p.x+Math.cos(angle)*13,y:p.y+Math.sin(angle)*13,vx:Math.cos(angle)*270,vy:Math.sin(angle)*270,life:1.3})}p.shot=p.rapid>0?.13:Math.max(.19,.31-.04*save.upgrades.rapid);beep(440,.04)}
 function explode(){const p=g.cat;if(g.state!=='playing'||p.bombs<1)return;p.bombs--;let x=p.x+Math.cos(p.dir*Math.PI/2-Math.PI/2)*T*2.1,y=p.y+Math.sin(p.dir*Math.PI/2-Math.PI/2)*T*2.1;x=clamp(x,16,W*T-16);y=clamp(y,16,H*T-16);g.sparks.push({x,y,ttl:.85,bomb:true});for(const d of [...g.dogs])if(near(x,y,d.x,d.y)<105){d.hp-=10;if(d.hp<=0)kill(d)}for(let yy=Math.floor((y-65)/T);yy<=Math.floor((y+65)/T);yy++)for(let xx=Math.floor((x-65)/T);xx<=Math.floor((x+65)/T);xx++)if(xx>=0&&xx<W&&yy>=0&&yy<H&&near(x,y,(xx+.5)*T,(yy+.5)*T)<73){const a=cell(xx,yy);if(a.t===1||a.t===2){a.t=0;a.hp=0}}beep(110,.35,'sawtooth');updateHud()}
 function kill(d){let i=g.dogs.indexOf(d);if(i<0)return;g.dogs.splice(i,1);g.remaining--;g.score+=TYPES[d.type].points;g.sparks.push({x:d.x,y:d.y,ttl:.45});if(Math.random()<.29)drop(d.x,d.y);updateHud()}
 function drop(x,y){const options=['double','rapid','shield','bomb','valerian','heal'],type=options[Math.floor(Math.random()*options.length)];g.bonuses.push({x,y,type,t:11});if(g.bonuses.length>5)g.bonuses.shift()}
@@ -316,7 +518,7 @@ function creature(x,y,type,dir=2,time=0){
  if(im&&im.complete&&im.naturalWidth){
   ctx.save();ctx.translate(x,y+movement);ctx.rotate((dir-2)*Math.PI/2);
   const size=type==='cat'?46:type===2?49:type===0?41:type===4?46:45;
-  ctx.filter='saturate(1.28) brightness(1.10)';ctx.drawImage(im,-size/2,-size/2-2,size,size);ctx.restore();
+  ctx.filter=(type==='cat'?(save.skin==='ocean'?'hue-rotate(140deg) saturate(1.5) brightness(1.13)':save.skin==='violet'?'hue-rotate(242deg) saturate(1.5) brightness(1.14)':'saturate(1.28) brightness(1.10)'):'saturate(1.28) brightness(1.10)');ctx.drawImage(im,-size/2,-size/2-2,size,size);ctx.restore();
  }else {ctx.textAlign='center';ctx.font='bold 29px sans-serif';ctx.fillText(type==='cat'?'🐱':'🐶',x,y+10)}
 }
 function draw(){if(!g)return;const t=g.time;
@@ -342,7 +544,7 @@ function draw(){if(!g)return;const t=g.time;
  for(const s of g.sparks){ctx.fillStyle=s.bomb?`rgba(255,209,80,${s.ttl/.85*.5})`:`rgba(255,245,153,${s.ttl/.45*.85})`;ctx.beginPath();ctx.arc(s.x,s.y,s.bomb?(1-s.ttl/.85)*110+10:(1-s.ttl/.45)*23+4,0,Math.PI*2);ctx.fill()}
  if(p.valerian>0){rect(p.x-15,p.y-31,30*(p.valerian/10),4,'#b5ff8a')}
 }
-function updateHud(){if(!g)return;el('lvl').textContent=g.n+' / 30';el('home').textContent='❤'.repeat(clamp(g.home.hp,0,3));el('lives').textContent='❤'.repeat(clamp(g.cat.lives,0,5));el('left').textContent=g.toSpawn+g.dogs.length;el('score').textContent=g.score;el('bombCount').textContent=g.cat.bombs;const p=g.cat,parts=[];if(p.valerian>0)parts.push('🧪 Сквозь ВСЁ '+Math.ceil(p.valerian)+'с');if(p.double>0)parts.push('🌭 ×2 '+Math.ceil(p.double)+'с');if(p.rapid>0)parts.push('⚡ '+Math.ceil(p.rapid)+'с');if(p.shield>0)parts.push('🛡️ '+Math.ceil(p.shield)+'с');el('buff').textContent=parts.join(' · ')||'🐾 Защити домик!';el('feedback').textContent=g.n<30?'Уровень '+g.n:'Последний уровень'}
+function updateHud(){if(!g)return;el('lvl').textContent=g.n+' / 30';el('home').textContent='❤'.repeat(clamp(g.home.hp,0,5));el('lives').textContent='❤'.repeat(clamp(g.cat.lives,0,5));el('left').textContent=g.toSpawn+g.dogs.length;el('score').textContent=g.score;el('bombCount').textContent=g.cat.bombs;const p=g.cat,parts=[];if(p.valerian>0)parts.push('🧪 Сквозь ВСЁ '+Math.ceil(p.valerian)+'с');if(p.double>0)parts.push('🌭 ×2 '+Math.ceil(p.double)+'с');if(p.rapid>0)parts.push('⚡ '+Math.ceil(p.rapid)+'с');if(p.shield>0)parts.push('🛡️ '+Math.ceil(p.shield)+'с');el('buff').textContent=parts.join(' · ')||'🐾 Защити домик!';el('feedback').textContent=g.n<30?'Уровень '+g.n:'Последний уровень'}
 
 /* Graphics MAX visual postprocess, no writes to game state */
 let maxPrevTime=performance.now(),maxLastLevel=-1,maxSeen=new WeakSet(),maxParticles=[],maxFlash=0,maxShake=0;
@@ -415,8 +617,13 @@ window.__graphicsMax={version:'2.0',getStats:()=>({scale:MAX_SCALE,fxLow:maxFxLo
 
 function frame(ts){raf=requestAnimationFrame(frame);let dt=Math.min((ts-last)/1000,.05);last=ts;if(g&&g.state==='playing')update(dt);if(g){draw();maxPostProcess(ts)}}
 function bind(id,down,up){const node=el(id);node.addEventListener('pointerdown',e=>{e.preventDefault();node.setPointerCapture(e.pointerId);node.classList.add('pressed');down();beep(300,.02)});for(const evt of ['pointerup','pointercancel','lostpointercapture'])node.addEventListener(evt,e=>{node.classList.remove('pressed');if(up)up()})}for(const button of document.querySelectorAll('[data-dir]')){let dir=button.dataset.dir;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);keys.add(dir);button.classList.add('pressed')});for(let name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>{keys.delete(dir);button.classList.remove('pressed')})}
-bind('fire',()=>{holdingFire=true;shoot()},()=>{holdingFire=false});bind('bomb',explode);el('pause').addEventListener('click',()=>{if(!g||g.state==='end'||g.state==='next')return;if(g.state==='paused'){begin();el('pause').textContent='Ⅱ ПАУЗА'}else{g.state='paused';holdingFire=false;keys.clear();el('pause').textContent='▶ ПУСК';show('ПАУЗА','Кот отдыхает. Собаки подождут.','ПРОДОЛЖИТЬ ▶',()=>{begin();el('pause').textContent='Ⅱ ПАУЗА'})}});el('sound').addEventListener('click',()=>{music=!music;el('sound').textContent=music?'🔊':'🔇'});
-window.addEventListener('keydown',e=>{let map={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(map[e.code]){keys.add(map[e.code]);e.preventDefault()}if(e.code==='Space'){holdingFire=true;e.preventDefault()}if(e.code==='KeyB'){explode();e.preventDefault()}});window.addEventListener('keyup',e=>{let map={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(map[e.code])keys.delete(map[e.code]);if(e.code==='Space')holdingFire=false});window.addEventListener('blur',()=>{keys.clear();holdingFire=false});el('start').onclick=()=>{level(1);begin()};level(1);draw();window.__gameDebug={get:()=>g,level,drop,update,explode,finish};
+bind('fire',()=>{holdingFire=true;shoot()},()=>{holdingFire=false});bind('bomb',explode);el('pause').addEventListener('click',()=>{if(!g||g.state==='end'||g.state==='next')return;if(g.state==='paused'){begin();el('pause').textContent='Ⅱ ПАУЗА'}else{g.state='paused';holdingFire=false;keys.clear();el('pause').textContent='▶ ПУСК';show('ПАУЗА','Кот отдыхает. Собаки подождут.','ПРОДОЛЖИТЬ ▶',()=>{begin();el('pause').textContent='Ⅱ ПАУЗА'})}});el('sound').addEventListener('click',()=>{music=!music;save.audio=music;saveProgress();el('sound').textContent=music?'🔊':'🔇'});
+window.addEventListener('keydown',e=>{let map={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(map[e.code]){keys.add(map[e.code]);e.preventDefault()}if(e.code==='Space'){holdingFire=true;e.preventDefault()}if(e.code==='KeyB'){explode();e.preventDefault()}});window.addEventListener('keyup',e=>{let map={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(map[e.code])keys.delete(map[e.code]);if(e.code==='Space')holdingFire=false});window.addEventListener('blur',()=>{keys.clear();holdingFire=false});el('center').addEventListener('click',()=>{if(g?.state==='playing')showPause();else showMenu()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)showPause()});
+el('sound').textContent=music?'🔊':'🔇';
+level(1);draw();showMenu();
+window.__gameDebug={get:()=>g,level,drop,update,explode,finish};
+window.__premiumDebug={getSave:()=>JSON.parse(JSON.stringify(save)),showMenu,buyUpgrade,saveProgress};
 })();
 </script>
 <script>
