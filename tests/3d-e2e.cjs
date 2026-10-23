@@ -35,7 +35,7 @@ const {resolve}=require('node:path');
     await page.waitForTimeout(760);
     await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
     const p1=await page.evaluate(()=>window.__kototanki3d.player);
-    assert.ok(Math.abs(p1.x-p0.x)>.12&&Math.abs(p1.z-p0.z)>.12);
+    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
