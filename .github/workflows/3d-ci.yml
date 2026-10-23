@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/3d-dark-fantasy-remake-20261023
+      - feature/sol-max-upgrade-20261023
   workflow_dispatch:
 permissions:
   contents: read
