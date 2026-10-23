@@ -24,7 +24,7 @@ scene.fog=new THREE.Fog(0xcfeeff,40,115);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);
 camera.position.set(0,13.5,22);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -34,7 +34,7 @@ renderer.toneMappingExposure=1.32;
 root.appendChild(renderer.domElement);
 
 const hemi=new THREE.HemisphereLight(0xdff5ff,0x6e8c43,2.15); scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xfff1c4,4.4); sun.position.set(-18,35,16); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.left=-38;sun.shadow.camera.right=38;sun.shadow.camera.top=46;sun.shadow.camera.bottom=-46;sun.shadow.bias=-.00035;scene.add(sun);
+const sun=new THREE.DirectionalLight(0xfff1c4,4.4); sun.position.set(-18,35,16); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-38;sun.shadow.camera.right=38;sun.shadow.camera.top=46;sun.shadow.camera.bottom=-46;sun.shadow.bias=-.00035;scene.add(sun);
 const fill=new THREE.DirectionalLight(0xa7d8ff,1.45);fill.position.set(22,15,-28);scene.add(fill);
 
 function std(color,rough=.72,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal})}
@@ -48,7 +48,7 @@ const M={
 };
 function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;return o}
 function box(p,sx,sy,sz,m,x=0,y=0,z=0,ry=0){const o=mesh(new THREE.BoxGeometry(sx,sy,sz),m,x,y,z);o.rotation.y=ry;p.add(o);return o}
-function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=18){const o=mesh(new THREE.SphereGeometry(r,seg,Math.max(10,seg-4)),m,x,y,z);o.scale.set(...s);p.add(o);return o}
+function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=14){const o=mesh(new THREE.SphereGeometry(r,seg,Math.max(10,seg-4)),m,x,y,z);o.scale.set(...s);p.add(o);return o}
 function cyl(p,rt,rb,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.CylinderGeometry(rt,rb,h,14),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry(r,h,12),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 
@@ -117,8 +117,8 @@ function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.i
 function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));world=new THREE.Group();scene.add(world)}
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
-  for(const side of [-1,1])for(let i=0;i<3;i++){
-    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.64+rng()*.12);h.position.set(side*(18+rng()*3),0,-18+i*13+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
+  for(const side of [-1,1])for(let i=0;i<2;i++){
+    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.64+rng()*.12);h.position.set(side*(18+rng()*3),0,-14+i*20+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
   }
   for(let i=0;i<5;i++){const f=makeFence(5+rng()*3);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f)}
   const wt=makeWatchTower();wt.position.set(-12,0,-8);wt.scale.setScalar(.72);world.add(wt);collider(-12,-8,1.5)
@@ -131,9 +131,9 @@ function buildLevel(n){
   const castle=makeCastle();castle.position.set(0,0,-43);castle.scale.setScalar(.8);world.add(castle);
   for(const x of [-25,25]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,-46);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
   addVillageSet(loc,rng);
-  for(let i=0;i<28;i++){let x=(rng()<.5?-1:1)*(8+rng()*20),z=-30+rng()*57;if(Math.hypot(x,z-23)<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<18)collider(x,z,.75)}
-  for(let i=0;i<12;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
-  for(let i=0;i<18;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
+  for(let i=0;i<18;i++){let x=(rng()<.5?-1:1)*(8+rng()*20),z=-30+rng()*57;if(Math.hypot(x,z-23)<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<18)collider(x,z,.75)}
+  for(let i=0;i<8;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
+  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
   state.level=n;state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
@@ -175,5 +175,5 @@ startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 
 function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}const desired=new THREE.Vector3(player.position.x*.42,13.2,player.position.z+21);camera.position.lerp(desired,.065);camera.lookAt(player.position.x*.28,1.5,player.position.z-5.8);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7))});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
 window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
