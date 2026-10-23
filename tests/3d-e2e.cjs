@@ -20,6 +20,7 @@ const {resolve}=require('node:path');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
+    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-reference-start.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
