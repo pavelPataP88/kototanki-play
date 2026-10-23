@@ -24,7 +24,7 @@ const tune={speed:1,fire:1,damage:1,valerian:1,bombRadius:1};
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87cfff);
 scene.fog=new THREE.Fog(0xcfeeff,40,115);
-const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);
+const camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,.1,250);
 camera.position.set(0,13.5,22);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
@@ -66,12 +66,23 @@ const sun=new THREE.DirectionalLight(0xfff1c4,4.4); sun.position.set(-18,35,16);
 const fill=new THREE.DirectionalLight(0xa7d8ff,1.45);fill.position.set(22,15,-28);scene.add(fill);
 
 function std(color,rough=.72,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal})}
+const textureCache=new Map();
+function shade(hex,f=.8){const c=new THREE.Color(hex);c.r*=f;c.g*=f;c.b*=f;return c.getHex()}
+function patternTexture(base,accent,repeat=4,kind='noise'){
+  const key=[base,accent,repeat,kind].join(':');if(textureCache.has(key))return textureCache.get(key);
+  const cv=document.createElement('canvas');cv.width=cv.height=96;const x=cv.getContext('2d'),b=new THREE.Color(base),a=new THREE.Color(accent);
+  x.fillStyle='#'+b.getHexString();x.fillRect(0,0,96,96);
+  for(let i=0;i<260;i++){const mix=Math.random(),r=Math.round((b.r*(1-mix)+a.r*mix)*255),g=Math.round((b.g*(1-mix)+a.g*mix)*255),bl=Math.round((b.b*(1-mix)+a.b*mix)*255);x.fillStyle='rgba('+r+','+g+','+bl+','+(kind==='fur'?.16:.22)+')';const px=Math.random()*96,py=Math.random()*96;if(kind==='wood')x.fillRect(px,py,10+Math.random()*22,.7+Math.random()*1.2);else if(kind==='fur')x.fillRect(px,py,.8+Math.random()*2,3+Math.random()*7);else x.fillRect(px,py,1+Math.random()*3,1+Math.random()*3)}
+  if(kind==='scratch'){x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;for(let i=0;i<14;i++){x.beginPath();x.moveTo(Math.random()*96,Math.random()*96);x.lineTo(Math.random()*96,Math.random()*96);x.stroke()}}
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeat,repeat);t.colorSpace=THREE.SRGBColorSpace;textureCache.set(key,t);return t
+}
+function texStd(base,accent,rough=.8,metal=0,repeat=4,kind='noise'){return new THREE.MeshStandardMaterial({map:patternTexture(base,accent,repeat,kind),roughness:rough,metalness:metal})}
 const M={
   orange:std(0xe77c32,.72),cream:std(0xffdfad,.78),white:std(0xfff7e8,.75),black:std(0x17191d,.65),eye:std(0x63c7ff,.2),pupil:std(0x10131a,.2),
   steel:std(0x555e69,.35,.72),darkSteel:std(0x303741,.42,.68),bronze:std(0xb26c32,.36,.62),tank:std(0xb9702d,.48,.48),tankDark:std(0x604122,.55,.45),red:std(0xd84435,.55),
-  wood:std(0x8d5c31,.8),woodLight:std(0xb77b43,.78),stone:std(0xa69e8d,.88),plaster:std(0xffe3ad,.84),grass:std(0x70ad4f,.95),road:std(0xc9a474,.96),
-  dog1:std(0x9b673f,.86),dog2:std(0x6d5140,.86),dog3:std(0x8c8b86,.86),dog4:std(0x4c403d,.88),helmet:std(0x5a6066,.52,.38),
-  bird:std(0x202a34,.8),birdWing:std(0x151d25,.82),beak:std(0xf4ad22,.58),bone:std(0xf7e6bd,.72),collar:std(0x2f77bd,.48,.12),tray:std(0x2f78a8,.48,.15),trayLight:std(0x6cb7d8,.38,.10),litter:std(0xd8c39a,.96),mouse:std(0xa8a39d,.82),mouseEar:std(0xf0a7b8,.72),raccoon:std(0x6e7278,.84),raccoonDark:std(0x2f343a,.82),trash:std(0x7b6b54,.9),
+  wood:texStd(0x8d5c31,0x5f3a20,.84,0,4,'wood'),woodLight:texStd(0xb77b43,0x7b4a27,.80,0,4,'wood'),stone:texStd(0xa69e8d,0x777064,.9,0,5,'noise'),plaster:texStd(0xffe3ad,0xd8b77c,.86,0,4,'noise'),grass:texStd(0x70ad4f,0x477d34,.98,0,10,'noise'),road:texStd(0xc9a474,0x9d754d,.97,0,9,'noise'),
+  dog1:texStd(0x9b673f,0x6c452d,.84,0,5,'fur'),dog2:texStd(0x6d5140,0x46352d,.85,0,5,'fur'),dog3:texStd(0x8c8b86,0x5f6265,.85,0,5,'fur'),dog4:texStd(0x4c403d,0x282425,.87,0,5,'fur'),helmet:texStd(0x5a6066,0x35393d,.52,.38,3,'scratch'),
+  bird:std(0x202a34,.8),birdWing:std(0x151d25,.82),beak:std(0xf4ad22,.58),bone:std(0xf7e6bd,.72),collar:std(0x2f77bd,.48,.12),tray:texStd(0x2f78a8,0x1f577a,.45,.12,3,'scratch'),trayLight:texStd(0x6cb7d8,0x3d8cb1,.38,.08,3,'scratch'),litter:texStd(0xd8c39a,0xaa9169,.98,0,8,'noise'),mouse:texStd(0xa8a39d,0x787570,.82,0,4,'fur'),mouseEar:std(0xf0a7b8,.72),raccoon:texStd(0x6e7278,0x4d5258,.84,0,5,'fur'),raccoonDark:texStd(0x2f343a,0x181b1e,.84,0,5,'fur'),trash:texStd(0x7b6b54,0x514535,.92,0,4,'noise'),
   glow:new THREE.MeshStandardMaterial({color:0xffbd57,emissive:0xff7b1f,emissiveIntensity:4,roughness:.45})
 };
 function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;return o}
@@ -275,7 +286,7 @@ function fireRaccoonPoop(r,target){
   if(!r?.parent||!target)return;const origin=r.position.clone().add(new THREE.Vector3(0,1.25,0)),aim=target.position.clone().add(new THREE.Vector3(0,1,0)),dir=aim.sub(origin).normalize(),m=makePoopBall(M.trash);m.position.copy(origin);scene.add(m);enemyPoops.push({mesh:m,v:dir.multiplyScalar(11.5),life:2.8,spin:rand(-10,10),owner:r});sfx.poop()
 }
 function spawnRaccoon(escort=null){
-  const r=makeRaccoon();r.userData.escort=escort||nearestEnemy(home.position,999);if(escort)r.position.copy(escort.position).add(new THREE.Vector3(rand(-2,2),0,rand(1.5,3)));else r.position.set(rand(-18,18),0,-28);scene.add(r);raccoons.push(r);return r
+  const r=makeRaccoon();r.userData.escort=escort||nearestEnemy(home.position,999);if(escort)r.position.copy(escort.position).add(new THREE.Vector3(rand(-2,2),0,rand(1.5,3)));else r.position.set(rand(-18,18),0,-28);r.scale.setScalar(1.10);scene.add(r);raccoons.push(r);return r
 }
 
 function makeAllyCat(i=0){
@@ -446,8 +457,8 @@ function addGardenProps(rng,n){
 function buildLevel(n){
   clearWorld();const loc=locations[Math.floor((n-1)/5)],rng=seedRng(1207+n*9137);scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
   hemi.color.setHex(0xe9f9ff);hemi.groundColor.setHex(loc.ground);sun.color.setHex(0xfff0c2);
-  ground=mesh(new THREE.PlaneGeometry(70,82),std(loc.ground,.98),0,0,0);ground.rotation.x=-Math.PI/2;world.add(ground);
-  const road=mesh(new THREE.PlaneGeometry(10,78),std(loc.road,.96),0,.025,-1);road.rotation.x=-Math.PI/2;world.add(road);
+  ground=mesh(new THREE.PlaneGeometry(70,82),texStd(loc.ground,shade(loc.ground,.70),.98,0,14,'noise'),0,0,0);ground.rotation.x=-Math.PI/2;world.add(ground);
+  const road=mesh(new THREE.PlaneGeometry(10,78),texStd(loc.road,shade(loc.road,.72),.96,0,10,'noise'),0,.025,-1);road.rotation.x=-Math.PI/2;world.add(road);
   const castle=makeCastle();castle.position.set(0,0,-43);castle.scale.setScalar(.8);world.add(castle);
   for(const x of [-25,25]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,-46);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
   addVillageSet(loc,rng);const layoutName=addLevelLayout(n,loc,rng);ui.place.textContent=loc.name+' · '+layoutName;
@@ -459,13 +470,13 @@ function buildLevel(n){
   state.level=n;cameraYaw=-.58;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.04);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.18);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.14);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.28);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
 function blocked(x,z){if(Math.abs(x)>24||z<-31||z>30)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+1.15)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
-function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
+function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);d.scale.multiplyScalar(1.10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();scene.remove(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
@@ -675,7 +686,7 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
     state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}
   }
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
-  const radius=16.8,focus=new THREE.Vector3(player.position.x,1.65,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,9.25,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
+  const radius=13.6,focus=new THREE.Vector3(player.position.x,1.72,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,7.15,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
   if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
   renderer.render(scene,camera)
 }
