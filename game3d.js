@@ -161,7 +161,7 @@ function fireBone(dog,target=player){
   const origin=dog.position.clone().add(new THREE.Vector3(0,1.65,0));
   const dir=aim.sub(origin).normalize();
   const b=makeBone();b.position.copy(origin).add(dir.clone().multiplyScalar(.9));b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
-  boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});
+  boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});sfx.bone();
 }
 
 
@@ -307,14 +307,18 @@ function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.ra
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(Math.random()<.24)spawnValerian(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function fireSausage(){
-  if(!state.playing||state.fireCooldown>0)return;state.fireCooldown=.12;let dir=new THREE.Vector3(playerFacing.x,0,playerFacing.z),target=nearestEnemy(player.position,23);if(target)dir.copy(target.position).sub(player.position).setY(0).normalize();
-  const g=new THREE.Group();const body=cyl(g,.13,.13,.72,std(0xd54f2d,.45),0,0,0,0,Math.PI/2);body.rotation.z=Math.PI/2;sph(g,.14,M.glow,0,0,-.42,[1,1,1],10);g.position.copy(player.position).add(new THREE.Vector3(0,1.45,0)).add(dir.clone().multiplyScalar(1.7));g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(18),life:1.8});
-  burst(g.position,0xffc15a,5);shake=Math.max(shake,.16)
+  if(!state.playing||state.fireCooldown>0)return;
+  const berserk=state.valerian>0?.52:1;state.fireCooldown=.12*tune.fire*berserk;
+  let dir=aimFacing.clone();
+  if(!aimInput.active){const target=nearestEnemy(player.position,22);if(target){dir.copy(target.position).sub(player.position).setY(0).normalize();aimFacing.copy(dir)}}
+  if(dir.lengthSq()<.01)dir.copy(playerFacing);dir.normalize();
+  const g=new THREE.Group();const body=cyl(g,.13,.13,.72,std(0xd54f2d,.45),0,0,0,0,Math.PI/2);body.rotation.z=Math.PI/2;sph(g,.14,M.glow,0,0,-.42,[1,1,1],10);g.position.copy(player.position).add(new THREE.Vector3(0,1.55,0)).add(dir.clone().multiplyScalar(1.9));g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
+  burst(g.position,0xffc15a,5);shake=Math.max(shake,.16);sfx.shoot()
 }
-function bomb(){if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;burst(player.position,0xff7646,36);for(const e of [...enemies])if(e.position.distanceTo(player.position)<9.5)damageEnemy(e,5)}
+function bomb(){if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;sfx.bomb();burst(player.position,0xff7646,36);const radius=9.5*tune.bombRadius;for(const e of [...enemies])if(e.position.distanceTo(player.position)<radius)damageEnemy(e,5)}
 function updateProjectiles(dt){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.v.y-=10*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}}
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=mesh(new THREE.SphereGeometry(.045,5,4),new THREE.MeshBasicMaterial({color:0xffc77a}),s.mesh.position.x,s.mesh.position.y,s.mesh.position.z);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.2,0)))<1.25){damageEnemy(e,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);shots.splice(i,1)}}
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=mesh(new THREE.SphereGeometry(.045,5,4),new THREE.MeshBasicMaterial({color:0xffc77a}),s.mesh.position.x,s.mesh.position.y,s.mesh.position.z);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.2,0)))<1.25){damageEnemy(e,s.damage||1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);shots.splice(i,1)}}
   for(let i=feathers.length-1;i>=0;i--){const s=feathers[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.1,0)))<1){damageEnemy(e,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);feathers.splice(i,1)}}
   for(let i=boneShots.length-1;i>=0;i--){const s=boneShots[i];s.mesh.position.addScaledVector(s.v,dt);s.mesh.rotation.x+=s.spin*dt;s.mesh.rotation.z+=s.spin*.7*dt;s.life-=dt;let hit=false;
     if(s.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0,1.15,0)))<1.25&&state.invuln<=0){state.lives--;state.invuln=1.15;updateUI();pulseFlash();shake=.48;burst(player.position,0xf7e6bd,12);hit=true;if(state.lives<=0)lose('Кота закидали костями')}
@@ -374,10 +378,36 @@ function updateEnemies(dt,now){for(const e of [...enemies]){
   const distPlayer=e.position.distanceTo(player.position);
   if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}
 }}
-function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);player.rotation.y=Math.atan2(wx,wz);const speed=8.7,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
-function winLevel(){state.playing=false;state.score+=state.level*120;updateUI();if(state.level>=30){showOverlay('ПОБЕДА!','Кототанк и Галчонок отбили все 30 волн. Крепость спасена.','ИГРАТЬ СНАЧАЛА',()=>{state.score=0;buildLevel(1);overlay.style.display='none'});return}showOverlay('ВОЛНА '+state.level+' ОТБИТА','Впереди новая яркая локация, больше врагов и более жёсткий бой.','ДАЛЬШЕ ▶',()=>{buildLevel(state.level+1);overlay.style.display='none'})}
+function updatePlayer(dt,now){
+  let x=moveInput.active?moveInput.x:0,z=moveInput.active?moveInput.y:0;
+  if(keys.has('left'))x-=1;if(keys.has('right'))x+=1;if(keys.has('up'))z-=1;if(keys.has('down'))z+=1;
+  const mag=Math.min(1,Math.hypot(x,z));
+  if(mag>.06){
+    const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);
+    const desiredYaw=Math.atan2(wx,wz);player.rotation.y+=normalizeAngle(desiredYaw-player.rotation.y)*Math.min(1,dt*10);
+    const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;
+    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*10*mag
+  }else{player.rotation.z=Math.sin(now*2.5)*.012}
+  player.position.y=.06+Math.sin(now*4)*.025
+}
+const upgrades=[
+  {name:'⚡ ТУРБО-ГУСЕНИЦЫ',desc:'+12% скорость',apply(){tune.speed*=1.12}},
+  {name:'🌭 СОСИСКОМЁТ',desc:'+16% темп огня',apply(){tune.fire*=.84}},
+  {name:'💥 ЖИРНАЯ СОСИСКА',desc:'+1 урон',apply(){tune.damage=Math.min(4,tune.damage+1)}},
+  {name:'🌿 ВАЛЕРЬЯНКА XL',desc:'+30% длительность',apply(){tune.valerian*=1.30}},
+  {name:'💣 БОМБА-БОЧКА',desc:'+18% радиус, +1 бомба',apply(){tune.bombRadius*=1.18;state.bombs++}}
+];
+function resetTune(){tune.speed=tune.fire=tune.damage=tune.valerian=tune.bombRadius=1}
+function showTuning(nextLevel){
+  state.playing=false;overlay.style.display='flex';overlay.querySelector('h1').textContent='🔧 ТЮНИНГ';$('subtitle').textContent='Выбери одну дурную модернизацию перед следующей волной.';startBtn.style.display='none';
+  const host=$('upgrades');host.innerHTML='';
+  const pool=[...upgrades].sort(()=>Math.random()-.5).slice(0,3);
+  for(const u of pool){const b=document.createElement('button');b.innerHTML='<b>'+u.name+'</b><br><small>'+u.desc+'</small>';b.onclick=()=>{initAudio();u.apply();sfx.pickup();host.innerHTML='';startBtn.style.display='block';overlay.style.display='none';buildLevel(nextLevel)};host.appendChild(b)}
+}
+
+function winLevel(){state.playing=false;state.score+=state.level*120;updateUI();if(state.level>=30){showOverlay('ПОБЕДА!','Кототанк и Галчонок отбили все 30 волн. Крепость спасена.','ИГРАТЬ СНАЧАЛА',()=>{state.score=0;resetTune();buildLevel(1);overlay.style.display='none'});return}showTuning(state.level+1)}
 function lose(t){state.playing=false;showOverlay('ПОРАЖЕНИЕ',t+'. Перегруппируйся и дави их снова.','ПОВТОРИТЬ',()=>{buildLevel(state.level);overlay.style.display='none'})}
-function showOverlay(title,desc,label,cb){overlay.style.display='flex';overlay.querySelector('h1').textContent=title;$('subtitle').textContent=desc;startBtn.textContent=label;startBtn.onclick=cb}
+function showOverlay(title,desc,label,cb){overlay.style.display='flex';$('upgrades').innerHTML='';startBtn.style.display='block';overlay.querySelector('h1').textContent=title;$('subtitle').textContent=desc;startBtn.textContent=label;startBtn.onclick=cb}
 
 function bindCameraOrbit(){
   const surface=renderer.domElement;
