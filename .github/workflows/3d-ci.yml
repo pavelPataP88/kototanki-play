@@ -11,6 +11,7 @@ on:
       - feature/action-rush-20261023
       - fix/dog-ai-diagonal-20261023
       - feature/twin-stick-chaos-20261023
+      - feature/litterbox-war-20261023
   workflow_dispatch:
 permissions:
   contents: read

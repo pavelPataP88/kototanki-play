@@ -16,12 +16,16 @@ const {resolve}=require('node:path');
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
     assert.equal(await page.locator('canvas').count(),1);
-    assert.equal(await page.locator('#moveStick').count(),1);
+    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.ok(await page.evaluate(()=>!!window.__kototanki3d.mouse));
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
+    await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
+    await page.waitForTimeout(1050);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
+    assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
-    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);await page.evaluate(()=>window.__kototanki3d.spawnRaccoon());await page.waitForTimeout(120);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.raccoons))>=1);
     assert.ok((await page.locator('#place').textContent()).includes('·'));
 
     const p0=await page.evaluate(()=>window.__kototanki3d.player);
@@ -40,12 +44,7 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
     await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
 
-    await page.evaluate(()=>window.__kototanki3d.spawnValerian());
-    await page.waitForTimeout(220);
-    assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
-    assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
-
-    await page.evaluate(()=>window.__kototanki3d.spawnYarn());
+    await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.spawnYarn());
     await page.waitForTimeout(220);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.yarns))>=1);
 
