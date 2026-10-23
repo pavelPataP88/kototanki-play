@@ -265,6 +265,20 @@ function updateHeroImpostor(dt=.016,now=0){
   root.position.y+=((speedBob)-root.position.y)*Math.min(1,dt*10);
   root.rotation.z+=(0-root.rotation.z)*Math.min(1,dt*8);
 }
+function updateHeroWheels(dt=.016){
+  const list=player?.userData?.tracks;if(!list?.length)return;
+  const imp=player.userData.impostor?.userData,dominant=imp?(imp.blend>.5?imp.b.userData.view:imp.a.userData.view):'front3q';
+  const layouts={
+    front:[[ -1.22,.57,.98],[1.22,.57,.98],[0,0,0]],
+    front3q:[[-1.62,.52,.92],[1.52,.64,1.00],[-.52,.38,.70]],
+    side:[[-1.95,.48,1.00],[1.70,.50,1.00],[0,0,0]],
+    rear3q:[[-1.55,.50,.90],[1.48,.55,.96],[.54,.38,.68]],
+    rear:[[-1.20,.52,.92],[1.20,.52,.92],[0,0,0]]
+  };
+  const arr=layouts[dominant]||layouts.front3q,right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).normalize(),up=new THREE.Vector3(0,1,0);
+  for(let i=0;i<list.length;i++){const w=list[i],p=arr[i]||[0,0,0];w.visible=p[2]>0;if(!w.visible)continue;const worldOff=right.clone().multiplyScalar(p[0]).addScaledVector(up,p[1]),local=worldOff.applyAxisAngle(new THREE.Vector3(0,1,0),-player.rotation.y);w.position.copy(local);w.position.z-=.10;w.scale.setScalar(p[2]);w.material.rotation=w.userData.spin||0}
+}
+
 
 function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
@@ -350,18 +364,14 @@ function makeCatTank(){
   const shcv=document.createElement('canvas');shcv.width=shcv.height=128;const shx=shcv.getContext('2d'),grad=shx.createRadialGradient(64,64,8,64,64,60);grad.addColorStop(0,'rgba(28,20,15,.40)');grad.addColorStop(.55,'rgba(28,20,15,.20)');grad.addColorStop(1,'rgba(28,20,15,0)');shx.fillStyle=grad;shx.fillRect(0,0,128,128);const sht=new THREE.CanvasTexture(shcv),shm=new THREE.MeshBasicMaterial({map:sht,transparent:true,depthWrite:false,opacity:.85});const contact=mesh(new THREE.PlaneGeometry(6.2,6.8),shm,0,.035,.18);contact.rotation.x=-Math.PI/2;contact.castShadow=false;contact.receiveShadow=false;g.add(contact);
   const impostor=makeHeroImpostor();g.add(impostor);
   vehicle.visible=false;cat.visible=false;
-  const wheelOverlay=new THREE.Group();g.add(wheelOverlay);const visualWheels=[];
-  for(const [x,z] of [[-2.18,-1.56],[2.18,-1.56],[-2.08,1.52],[2.08,1.52]]){
-    const wg=new THREE.Group();wg.position.set(x,.48,z);wheelOverlay.add(wg);
-    const tire=mesh(new THREE.TorusGeometry(.48,.17,12,28),rubber);tire.rotation.y=Math.PI/2;wg.add(tire);
-    const hub=mesh(new THREE.CylinderGeometry(.21,.21,.18,16),brass);hub.rotation.z=Math.PI/2;wg.add(hub);
-    for(let a=0;a<6;a++){const spoke=box(wg,.05,.34,.05,cream,0,Math.cos(a*Math.PI/3)*.19,Math.sin(a*Math.PI/3)*.19);spoke.rotation.x=a*Math.PI/3}
-    wg.userData={spin:0};visualWheels.push(wg)
-  }
+  const wheelOverlay=new THREE.Group();g.add(wheelOverlay);
+  const wcv=document.createElement('canvas');wcv.width=wcv.height=128;const wx=wcv.getContext('2d'),wg=wx.createRadialGradient(64,64,12,64,64,60);wg.addColorStop(0,'#d28b34');wg.addColorStop(.28,'#6b472d');wg.addColorStop(.42,'#d8b06a');wg.addColorStop(.48,'#282a2d');wg.addColorStop(1,'rgba(24,25,27,0)');wx.fillStyle=wg;wx.fillRect(0,0,128,128);wx.strokeStyle='#e2c081';wx.lineWidth=6;for(let a=0;a<8;a++){wx.beginPath();wx.moveTo(64+Math.cos(a*Math.PI/4)*18,64+Math.sin(a*Math.PI/4)*18);wx.lineTo(64+Math.cos(a*Math.PI/4)*48,64+Math.sin(a*Math.PI/4)*48);wx.stroke()}wx.strokeStyle='#232427';wx.lineWidth=8;wx.beginPath();wx.arc(64,64,48,0,Math.PI*2);wx.stroke();
+  const wtex=new THREE.CanvasTexture(wcv);wtex.colorSpace=THREE.SRGBColorSpace;const visualWheels=[];
+  for(let i=0;i<3;i++){const wm=new THREE.SpriteMaterial({map:wtex,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});const ws=new THREE.Sprite(wm);ws.renderOrder=12;ws.scale.set(.95,.95,1);wheelOverlay.add(ws);visualWheels.push(ws)}
   g.userData={tracks:visualWheels,wheels:visualWheels,cat,head,turret,barrel,vehicle,tail,impostor,wheelOverlay,catYaw:cat.rotation.y,kind:'litterbox',modelStyle:'reference-impostor-r6'};return g
 }
 function makeMouse(){
-  const g=new THREE.Group(),fur=heroFur(0x8f9196,0xc2c5c8,0x66686c),belly=heroFur(0xd9d4cc,0xf2eee8,0xb9b2a8),pink=new THREE.MeshPhysicalMaterial({color:0xf0a5b0,roughness:.62,clearcoat:.08}),eye=new THREE.MeshPhysicalMaterial({color:0x17191d,roughness:.18,clearcoat:.75});
+  const g=new THREE.Group(),fur=heroFur(0xaeb1b6,0xe0e3e6,0x74777d),belly=heroFur(0xd9d4cc,0xf2eee8,0xb9b2a8),pink=new THREE.MeshPhysicalMaterial({color:0xf0a5b0,roughness:.62,clearcoat:.08}),eye=new THREE.MeshPhysicalMaterial({color:0x17191d,roughness:.18,clearcoat:.75});
   // Pear-shaped body and chest.
   organic(g,.34,fur,0,.43,.02,[1.28,.96,1.42],'soft');
   organic(g,.22,belly,0,.45,-.28,[.86,1.16,.72],'soft');
@@ -671,7 +681,7 @@ function buildLevel(n){
   state.level=n;cameraYaw=-.58;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.16);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.30);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.16);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.58);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
@@ -780,7 +790,7 @@ function updateMouse(dt,now){
     if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return';sfx.pickup()}
     else{d.normalize();const speed=10.2;mouseCompanion.position.addScaledVector(d,dt*speed);mouseCompanion.position.y+=(.18-mouseCompanion.position.y)*Math.min(1,dt*10);mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(d.x,d.z)-mouseCompanion.rotation.y)*Math.min(1,dt*13);moving=true}
   }else{
-    const rideLocal=new THREE.Vector3(.82,1.74,.10).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y),ride=player.position.clone().add(rideLocal);
+    const rideLocal=new THREE.Vector3(1.48,2.22,-.05).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y),ride=player.position.clone().add(rideLocal);
     const d=ride.clone().sub(mouseCompanion.position);
     mouseCompanion.position.lerp(ride,1-Math.exp(-dt*11));
     mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+2.56)-mouseCompanion.rotation.y)*Math.min(1,dt*8);
@@ -816,13 +826,14 @@ function updatePlayer(dt,now){
   if(mag>.06){
     const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);
     const desiredYaw=Math.atan2(wx,wz);player.rotation.y+=normalizeAngle(desiredYaw-player.rotation.y)*Math.min(1,dt*10);
-    const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;
-    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;litterDust(now)
-  }else{player.rotation.z=Math.sin(now*2.5)*.012}
+    const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,targetV=new THREE.Vector3(wx*speed,0,wz*speed);
+    const vel=player.userData.velocity||(player.userData.velocity=new THREE.Vector3());vel.lerp(targetV,1-Math.exp(-dt*8.5));
+    const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z))player.position.x=nx;else vel.x*=.2;if(!blocked(player.position.x,nz))player.position.z=nz;else vel.z*=.2;litterDust(now)
+  }else{const vel=player.userData.velocity||(player.userData.velocity=new THREE.Vector3());vel.multiplyScalar(Math.exp(-dt*10));if(vel.lengthSq()>.002){const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz}player.rotation.z=Math.sin(now*2.5)*.012}
   const travelled=Math.hypot(player.position.x-prevX,player.position.z-prevZ),spin=travelled/.47;
-  for(const w of player.userData.tracks||[]){w.userData.spin=(w.userData.spin||0)+spin;w.rotation.x=w.userData.spin}
+  for(const w of player.userData.tracks||[])w.userData.spin=(w.userData.spin||0)+spin*2.15;
   const lean=mag>.06?clamp(normalizeAngle(Math.atan2(playerFacing.x,playerFacing.z)-player.rotation.y),-.25,.25):0;
-  if(player.userData.wheelOverlay)player.userData.wheelOverlay.rotation.z+=(lean*.22-player.userData.wheelOverlay.rotation.z)*Math.min(1,dt*8);
+  if(player.userData.impostor)player.userData.impostor.rotation.z+=(lean*.10-player.userData.impostor.rotation.z)*Math.min(1,dt*7);
   player.position.y=.06+Math.sin(now*(mag>.06?8:4))*(mag>.06?.035:.018)
 }
 const upgrades=[
@@ -896,9 +907,9 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
   const radius=16.8,focus=new THREE.Vector3(player.position.x,1.65,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,9.25,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
   if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
-  updateHeroImpostor(dt,now);
+  updateHeroImpostor(dt,now);updateHeroWheels(dt);
   renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.4))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'motion-mouse-r6',wheelCount:player.userData.tracks?.length||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'motion-mouse-r6',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
