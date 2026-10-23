@@ -240,9 +240,9 @@ function updateHeroImpostor(){
   const s=player?.userData?.impostor;if(!s)return;
   const dx=camera.position.x-player.position.x,dz=camera.position.z-player.position.z;
   const worldAng=Math.atan2(dx,dz),rel=normalizeAngle(worldAng-player.rotation.y);
-  const a=Math.abs(rel),rear=a<.42,front=a>2.62,side=a>1.02&&a<2.12;
-  let name=rear?'rear':front?'front':side?'side':(a<1.02?'rear3q':'front3q');
-  const mirror=rel<0;
+  const a=Math.abs(rel);
+  let name=a<.24?'front':a<1.05?'front3q':a<2.10?'side':a<2.82?'rear3q':'rear';
+  const mirror=rel>0;
   if(s.userData.view!==name){s.material.map=heroTextureView(name);s.material.needsUpdate=true;s.userData.view=name}
   const dims={front3q:[7.4,6.25],front:[5.0,5.95],side:[7.25,4.95],rear:[5.1,4.55],rear3q:[6.7,4.88]}[name];
   s.scale.set((mirror?-1:1)*dims[0],dims[1],1);
