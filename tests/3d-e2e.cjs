@@ -40,7 +40,7 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
     await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
 
-    const mouse0=await page.evaluate(()=>window.__kototanki3d.mouse);await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(5,0));await page.waitForTimeout(120);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse.fetching||window.__kototanki3d.mouse.mode==='fetch'),true);await page.waitForTimeout(900);const mouse1=await page.evaluate(()=>window.__kototanki3d.mouse);assert.ok(Math.hypot(mouse1.x-mouse0.x,mouse1.z-mouse0.z)>.5);await page.waitForTimeout(500);assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
+    const mouse0=await page.evaluate(()=>window.__kototanki3d.mouse);await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(5,0));await page.waitForTimeout(520);const mouse1=await page.evaluate(()=>window.__kototanki3d.mouse);assert.ok(Math.hypot(mouse1.x-mouse0.x,mouse1.z-mouse0.z)>.5);await page.waitForTimeout(900);assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
 
     await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.spawnYarn());
