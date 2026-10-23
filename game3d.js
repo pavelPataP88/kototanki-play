@@ -15,7 +15,7 @@ const locations = [
 ];
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,valerian:0,poopSlow:0,last:0};
-const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], boneShots=[], particles=[], allies=[], pickups=[], hazards=[];
+const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], boneShots=[], particles=[], allies=[], pickups=[], hazards=[], yarnBalls=[];
 let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), aimFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
 const cameraDrag={active:false,id:null,lastX:0};
 const moveInput={x:0,y:0,active:false},aimInput={x:0,y:-1,active:false};
@@ -219,7 +219,7 @@ function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6f
 function makeBase(){const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);return g}
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
-function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));boneShots.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));pickups.splice(0).forEach(p=>scene.remove(p.mesh));hazards.splice(0).forEach(h=>scene.remove(h.mesh));world=new THREE.Group();scene.add(world)}
+function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));boneShots.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));pickups.splice(0).forEach(p=>scene.remove(p.mesh));hazards.splice(0).forEach(h=>scene.remove(h.mesh));yarnBalls.splice(0).forEach(y=>scene.remove(y.mesh));world=new THREE.Group();scene.add(world)}
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
@@ -255,6 +255,20 @@ function makeValerian(){
 function spawnValerian(pos){
   const m=makeValerian();m.position.copy(pos);m.position.y=.05;scene.add(m);pickups.push({mesh:m,type:'valerian',life:12,bob:rand(0,6.28)})
 }
+function makeYarnPickup(){
+  const g=new THREE.Group(),pink=std(0xea6da8,.78);
+  sph(g,.36,pink,0,.38,0,[1,1,1],12);
+  for(let i=0;i<5;i++){const ring=mesh(new THREE.TorusGeometry(.37,.025,6,20),std(i%2?0xffd2e8:0xb94d83,.7),0,.38,0);ring.rotation.set(i*.42,i*.65,i*.31);g.add(ring)}
+  return g
+}
+function spawnYarnPickup(pos){const m=makeYarnPickup();m.position.copy(pos);scene.add(m);pickups.push({mesh:m,type:'yarn',life:12,bob:rand(0,6.28)})}
+function launchYarn(){
+  const m=new THREE.Group(),pink=std(0xe45f9d,.74);sph(m,.72,pink,0,0,0,[1,1,1],14);
+  for(let i=0;i<6;i++){const ring=mesh(new THREE.TorusGeometry(.73,.035,6,24),std(i%2?0xffd3e7:0xa84278,.7));ring.rotation.set(i*.51,i*.33,i*.77);m.add(ring)}
+  m.position.copy(player.position).add(new THREE.Vector3(0,1.0,0)).add(aimFacing.clone().multiplyScalar(1.5));scene.add(m);
+  const dir=aimFacing.clone().normalize();yarnBalls.push({mesh:m,v:dir.multiplyScalar(12),life:6,hits:new Set()});sfx.pickup();showToast('🧶 БЕШЕНЫЙ КЛУБОК!')
+}
+
 function makePoop(){
   const g=new THREE.Group(),brown=std(0x6a3c1f,.92);sph(g,.42,brown,0,.22,0,[1.3,.55,1.2],10);sph(g,.30,brown,.05,.48,0,[1,.65,1],10);sph(g,.18,brown,-.04,.68,0,[1,.7,1],10);return g
 }
@@ -263,11 +277,17 @@ function spawnPoopField(n,rng){
   for(let i=0;i<count;i++){let x=(rng()<.5?-1:1)*(4+rng()*16),z=-23+rng()*44;if(Math.hypot(x,z-18)<6)z-=8;const m=makePoop();m.position.set(x,0,z);scene.add(m);hazards.push({mesh:m,type:'poop',armed:true})}
 }
 function updateChaosItems(dt,now){
-  for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;p.mesh.rotation.y+=dt*1.8;p.mesh.position.y=.14+Math.sin(now*4+p.bob)*.12;if(player.position.distanceTo(p.mesh.position)<1.45){if(p.type==='valerian'){state.valerian=6*tune.valerian;state.lives=Math.min(5,state.lives+1);sfx.valerian();showToast('🌿 ВАЛЕРЬЯНКА! КОТОБЕРСЕРК')}scene.remove(p.mesh);pickups.splice(i,1);updateUI();continue}if(p.life<=0){scene.remove(p.mesh);pickups.splice(i,1)}}
+  for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;p.mesh.rotation.y+=dt*1.8;p.mesh.position.y=.14+Math.sin(now*4+p.bob)*.12;if(player.position.distanceTo(p.mesh.position)<1.45){if(p.type==='valerian'){state.valerian=6*tune.valerian;state.lives=Math.min(5,state.lives+1);sfx.valerian();showToast('🌿 ВАЛЕРЬЯНКА! КОТОБЕРСЕРК')}else if(p.type==='yarn'){launchYarn()}scene.remove(p.mesh);pickups.splice(i,1);updateUI();continue}if(p.life<=0){scene.remove(p.mesh);pickups.splice(i,1)}}
   for(let i=hazards.length-1;i>=0;i--){const h=hazards[i];if(!h.armed)continue;h.mesh.rotation.y+=dt*.35;
     const pd=player.position.distanceTo(h.mesh.position);
     if(pd<1.35){h.armed=false;state.lives--;state.invuln=1.0;state.poopSlow=2.8;sfx.poop();burst(h.mesh.position,0x79502b,24);shake=.8;showToast('💩 БА-БАХ! ВЛИП!');scene.remove(h.mesh);hazards.splice(i,1);updateUI();if(state.lives<=0)lose('Кот героически подорвался на какашке');continue}
     for(const e of [...enemies])if(e.position.distanceTo(h.mesh.position)<1.05){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);scene.remove(h.mesh);hazards.splice(i,1);break}
+  }
+  for(let i=yarnBalls.length-1;i>=0;i--){const y=yarnBalls[i];y.life-=dt;y.mesh.position.addScaledVector(y.v,dt);y.mesh.rotation.x+=dt*5;y.mesh.rotation.y+=dt*7;
+    if(Math.abs(y.mesh.position.x)>23){y.v.x*=-1;y.mesh.position.x=clamp(y.mesh.position.x,-23,23);sfx.hit()}
+    if(y.mesh.position.z<-29||y.mesh.position.z>29){y.v.z*=-1;y.mesh.position.z=clamp(y.mesh.position.z,-29,29);sfx.hit()}
+    for(const e of [...enemies])if(!y.hits.has(e)&&e.position.distanceTo(y.mesh.position)<1.5){y.hits.add(e);damageEnemy(e,2);burst(e.position,0xe45f9d,9)}
+    if(y.life<=0){scene.remove(y.mesh);yarnBalls.splice(i,1)}
   }
 }
 function normalizeAngle(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
@@ -305,7 +325,7 @@ function blocked(x,z){if(Math.abs(x)>24||z<-31||z>30)return true;for(const o of 
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
 function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-30);else d.position.set(side<.84?-23:23,0,rand(-26,-3));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++}
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
-function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(Math.random()<.24)spawnValerian(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
+function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function fireSausage(){
   if(!state.playing||state.fireCooldown>0)return;
   const berserk=state.valerian>0?.52:1;state.fireCooldown=.12*tune.fire*berserk;
@@ -465,4 +485,4 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,pickups:pickups.length,hazards:hazards.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
