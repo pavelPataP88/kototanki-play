@@ -189,33 +189,48 @@ test('UI has mobile controls, proper HTML, and no external dependencies', () => 
 });
 
 
-test('all 30 stages have unique map fingerprints and six visibly distinct biomes', () => {
-  const run=boot(),fingerprints=[],seen=new Set(),biomes=new Set();
+test('all 30 stages are structurally different, not recolors of the same obstacle coordinates', () => {
+  const run=boot(),seen=new Set(),biomes=new Set(),missions=new Set();
   let previous=null;
+  function pathExists(state,sx,sy){
+    const q=[[sx,sy]],seenCell=new Set([sx+','+sy]);
+    while(q.length){
+      const [x,y]=q.shift();if(y>=13&&Math.abs(x-6)<=2)return true;
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx=x+dx,ny=y+dy;if(nx<0||nx>=13||ny<0||ny>=16)continue;
+        const t=state.map[ny*13+nx].t;if(t===4||t===5)continue;
+        const key=nx+','+ny;if(!seenCell.has(key)){seenCell.add(key);q.push([nx,ny])}
+      }
+    }return false;
+  }
   for(let n=1;n<=30;n++){
-    run.game.level(n);
-    const state=run.game.get();
-    assert.equal(state.n,n);
-    assert.equal(state.theme.title.length>3,true);
-    assert.ok(state.mission);
-    biomes.add(state.theme.short);
-    const cells=state.map.map(c=>c.t);
-    const signature=cells.join('');
-    assert.ok(!seen.has(signature),'duplicate map for level '+n);
-    seen.add(signature);fingerprints.push(signature);
+    run.game.level(n);const state=run.game.get(),cells=state.map.map(c=>c.t),signature=cells.join('');
+    assert.ok(!seen.has(signature),'duplicate obstacle map on level '+n);seen.add(signature);
+    biomes.add(state.theme.short);missions.add(state.mission);
     if(previous){
-      const changed=cells.reduce((count,t,i)=>count+(t!==previous[i]?1:0),0);
-      assert.ok(changed>=12,'stages '+(n-1)+' and '+n+' differ by only '+changed+' tiles');
+      const changed=cells.reduce((sum,t,i)=>sum+(t!==previous[i]?1:0),0);
+      assert.ok(changed>=28,'levels '+(n-1)+' and '+n+' still look too similar: only '+changed+' cells changed');
     }
     previous=cells;
-    for(let y=3;y<=11;y++)for(let x=5;x<=7;x++){
-      assert.equal(state.map[y*13+x].t,0,'central corridor blocked on stage '+n);
-    }
-    assert.equal(state.map[12*13+6].t,0,'cat blocked on stage '+n);
-    assert.equal(state.map[14*13+6].t,0,'home blocked on stage '+n);
+    assert.equal(state.map[12*13+6].t,0,'cat start blocked on level '+n);
+    assert.equal(state.map[14*13+6].t,0,'home gate blocked on level '+n);
+    assert.equal(pathExists(state,1,1),true,'left route blocked on level '+n);
+    assert.equal(pathExists(state,6,1),true,'center route blocked on level '+n);
+    assert.equal(pathExists(state,11,1),true,'right route blocked on level '+n);
   }
   assert.equal(seen.size,30);
   assert.equal(biomes.size,6);
+  assert.equal(missions.size,10);
+});
+test('Galchonok companion exists from level one and attacks a nearby dog automatically', () => {
+  const run=boot();run.game.level(1);const state=run.game.get();
+  assert.ok(state.helper&&Number.isFinite(state.helper.x)&&Number.isFinite(state.helper.y));
+  state.toSpawn=0;
+  state.dogs=[{x:state.helper.x+55,y:state.helper.y,type:1,hp:2,dir:2,bite:99,think:99,target:null}];
+  const before=state.dogs[0].hp;
+  for(let i=0;i<18&&state.dogs.length;i++)run.game.update(.1);
+  assert.ok(state.helper.shots>0,'helper never fired');
+  assert.ok(state.dogs.length===0||state.dogs[0].hp<before,'helper shot did not damage dog');
 });
 test('next button actually starts a different map, mission and stage number', () => {
   const run=boot();run.el('start').onclick();
