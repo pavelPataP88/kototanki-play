@@ -700,7 +700,7 @@ function spawnDog(){
   const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
 function burst(pos,color=0xffaa55,count=12){const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(new THREE.Vector3(pos.x,pos.y+1.1,pos.z),.07+Math.random()*.10,mat);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
-function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
+function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.playing&&state.kills>=state.targetKills)winLevel()}}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();retire(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
 function fireSausage(){
   if(!state.playing||state.fireCooldown>0)return;
@@ -913,8 +913,10 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,rawDt=stat
     if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}
     player.visible=state.invuln<=0||Math.floor(now*12)%2===0;
     updatePlayer(dt,now);updateAim(dt);if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.24)fireSausage();
-    updateHelper(dt,now);updateMouse(dt,now);updateAllies(dt,now);updateRaccoons(dt,now);updateProjectiles(dt);updateEnemies(dt,now);updateChaosItems(dt,now);state.uiTimer-=dt;if(state.uiTimer<=0){updateUI();state.uiTimer=.10}
-    state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}
+    updateHelper(dt,now);updateMouse(dt,now);updateAllies(dt,now);updateRaccoons(dt,now);updateProjectiles(dt);
+    if(state.playing)updateEnemies(dt,now);if(state.playing)updateChaosItems(dt,now);
+    state.uiTimer-=dt;if(state.uiTimer<=0){updateUI();state.uiTimer=.10}
+    if(state.playing){state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}
   }
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
   const portrait=camera.aspect<.75, radius=portrait?24.2:21, camH=portrait?14.8:13.2;camFocus.set(player.position.x,1.6,player.position.z);camDesired.set(camFocus.x+Math.sin(cameraYaw)*radius,camH,camFocus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(camDesired,1-Math.exp(-dt*7));camera.lookAt(camFocus);updateHomeOcclusion(dt);
