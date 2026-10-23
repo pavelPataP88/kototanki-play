@@ -219,7 +219,7 @@ function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6f
 function makeBase(){const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);return g}
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
-function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));boneShots.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));world=new THREE.Group();scene.add(world)}
+function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));boneShots.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));pickups.splice(0).forEach(p=>scene.remove(p.mesh));hazards.splice(0).forEach(h=>scene.remove(h.mesh));world=new THREE.Group();scene.add(world)}
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
@@ -228,31 +228,84 @@ function addVillageSet(loc,rng){
   for(let i=0;i<5;i++){const f=makeFence(5+rng()*3);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f)}
   const wt=makeWatchTower();wt.position.set(-12,0,-8);wt.scale.setScalar(.72);world.add(wt);collider(-12,-8,1.5)
 }
+const layoutNames=['КРИВЫЕ ОГОРОДЫ','РЫНОЧНАЯ ПЛОЩАДЬ','ЗАБОРНЫЙ ЛАБИРИНТ','КАМЕННЫЙ КРУГ','МЕЛЬНИЧНЫЙ ПЕРЕКРЁСТОК'];
+function addLevelLayout(n,loc,rng){
+  const layout=(n-1)%layoutNames.length;
+  if(layout===0){
+    for(const x of [-9,9])for(const z of [-18,-6,6]){const f=makeFence(6.5);f.position.set(x,0,z);f.rotation.y=(z/6)*.12;world.add(f);collider(x,z,1.8)}
+  }else if(layout===1){
+    const plaza=mesh(new THREE.CylinderGeometry(8,8,.10,28),std(0xd9c08d,.95),0,.05,-4);world.add(plaza);
+    for(let i=0;i<8;i++){const a=i*Math.PI/4,r=10;const rock=makeRock(.72);rock.position.set(Math.cos(a)*r,0,-4+Math.sin(a)*r);world.add(rock);collider(rock.position.x,rock.position.z,.75)}
+  }else if(layout===2){
+    for(let i=0;i<7;i++){const f=makeFence(8);f.position.set((i%2?7:-7),0,-25+i*8);f.rotation.y=(i%2?.58:-.58);world.add(f);collider(f.position.x,f.position.z,1.7)}
+  }else if(layout===3){
+    for(let i=0;i<12;i++){const a=i*Math.PI/6,r=12+(i%2)*3;const rock=makeRock(.75+(i%3)*.12);rock.position.set(Math.cos(a)*r,0,-3+Math.sin(a)*r);world.add(rock);collider(rock.position.x,rock.position.z,1.0)}
+  }else{
+    const cross=mesh(new THREE.PlaneGeometry(52,7),std(loc.road,.96),0,.028,-5);cross.rotation.x=-Math.PI/2;world.add(cross);
+    const tower=makeWatchTower();tower.position.set(0,0,-8);tower.scale.setScalar(.72);world.add(tower);collider(0,-8,1.7);
+    for(const p of [[-11,-18],[11,-18],[-11,8],[11,8]]){const h=makeHouse(loc.roof,.52);h.position.set(p[0],0,p[1]);world.add(h);collider(p[0],p[1],2.0)}
+  }
+  return layoutNames[layout]
+}
+function makeValerian(){
+  const g=new THREE.Group(),green=std(0x50d65b,.35,.08),glass=std(0xa8f2b0,.18,.05);
+  cyl(g,.22,.26,.78,glass,0,.42,0);cyl(g,.15,.18,.24,M.steel,0,.92,0);sph(g,.18,green,0,.36,0,[1,.75,1],10);
+  const leaf=mesh(new THREE.ConeGeometry(.16,.42,5),green,.22,.88,0);leaf.rotation.z=-.7;g.add(leaf);return g
+}
+function spawnValerian(pos){
+  const m=makeValerian();m.position.copy(pos);m.position.y=.05;scene.add(m);pickups.push({mesh:m,type:'valerian',life:12,bob:rand(0,6.28)})
+}
+function makePoop(){
+  const g=new THREE.Group(),brown=std(0x6a3c1f,.92);sph(g,.42,brown,0,.22,0,[1.3,.55,1.2],10);sph(g,.30,brown,.05,.48,0,[1,.65,1],10);sph(g,.18,brown,-.04,.68,0,[1,.7,1],10);return g
+}
+function spawnPoopField(n,rng){
+  const count=4+(n%4);
+  for(let i=0;i<count;i++){let x=(rng()<.5?-1:1)*(4+rng()*16),z=-23+rng()*44;if(Math.hypot(x,z-18)<6)z-=8;const m=makePoop();m.position.set(x,0,z);scene.add(m);hazards.push({mesh:m,type:'poop',armed:true})}
+}
+function updateChaosItems(dt,now){
+  for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;p.mesh.rotation.y+=dt*1.8;p.mesh.position.y=.14+Math.sin(now*4+p.bob)*.12;if(player.position.distanceTo(p.mesh.position)<1.45){if(p.type==='valerian'){state.valerian=6*tune.valerian;state.lives=Math.min(5,state.lives+1);sfx.valerian();showToast('🌿 ВАЛЕРЬЯНКА! КОТОБЕРСЕРК')}scene.remove(p.mesh);pickups.splice(i,1);updateUI();continue}if(p.life<=0){scene.remove(p.mesh);pickups.splice(i,1)}}
+  for(let i=hazards.length-1;i>=0;i--){const h=hazards[i];if(!h.armed)continue;h.mesh.rotation.y+=dt*.35;
+    const pd=player.position.distanceTo(h.mesh.position);
+    if(pd<1.35){h.armed=false;state.lives--;state.invuln=1.0;state.poopSlow=2.8;sfx.poop();burst(h.mesh.position,0x79502b,24);shake=.8;showToast('💩 БА-БАХ! ВЛИП!');scene.remove(h.mesh);hazards.splice(i,1);updateUI();if(state.lives<=0)lose('Кот героически подорвался на какашке');continue}
+    for(const e of [...enemies])if(e.position.distanceTo(h.mesh.position)<1.05){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);scene.remove(h.mesh);hazards.splice(i,1);break}
+  }
+}
+function normalizeAngle(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
+function updateAim(dt){
+  if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.18){
+    const x=aimInput.x,z=aimInput.y,cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw);
+    aimFacing.set(x*cs+z*sn,0,-x*sn+z*cs).normalize()
+  }
+  const worldYaw=Math.atan2(aimFacing.x,aimFacing.z)+Math.PI,local=normalizeAngle(worldYaw-player.rotation.y);
+  if(player.userData.turret)player.userData.turret.rotation.y+=normalizeAngle(local-player.userData.turret.rotation.y)*Math.min(1,dt*14);
+  if(player.userData.head){const headTarget=clamp(local,-1.2,1.2);player.userData.head.rotation.y+=(headTarget-player.userData.head.rotation.y)*Math.min(1,dt*9)}
+}
+
 function buildLevel(n){
-  clearWorld();const loc=locations[Math.floor((n-1)/5)],rng=seedRng(1207+n*9137);scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);ui.place.textContent=loc.name;
+  clearWorld();const loc=locations[Math.floor((n-1)/5)],rng=seedRng(1207+n*9137);scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
   hemi.color.setHex(0xe9f9ff);hemi.groundColor.setHex(loc.ground);sun.color.setHex(0xfff0c2);
   ground=mesh(new THREE.PlaneGeometry(70,82),std(loc.ground,.98),0,0,0);ground.rotation.x=-Math.PI/2;world.add(ground);
   const road=mesh(new THREE.PlaneGeometry(10,78),std(loc.road,.96),0,.025,-1);road.rotation.x=-Math.PI/2;world.add(road);
   const castle=makeCastle();castle.position.set(0,0,-43);castle.scale.setScalar(.8);world.add(castle);
   for(const x of [-25,25]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,-46);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
-  addVillageSet(loc,rng);
+  addVillageSet(loc,rng);const layoutName=addLevelLayout(n,loc,rng);ui.place.textContent=loc.name+' · '+layoutName;
   for(let i=0;i<18;i++){let x=(rng()<.5?-1:1)*(8+rng()*20),z=-30+rng()*57;if(Math.hypot(x,z-23)<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<18)collider(x,z,.75)}
   for(let i=0;i<8;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
-  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
+  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);spawnPoopField(n,rng);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
-  state.level=n;cameraYaw=0;cameraYawVelocity=0;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;updateUI();showToast(loc.name+' · ВОЛНА '+n)
+  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper)}makeCharacters();
-function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs}
+function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
 function blocked(x,z){if(Math.abs(x)>24||z<-31||z>30)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+1.15)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
 function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-30);else d.position.set(side<.84?-23:23,0,rand(-26,-3));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++}
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
-function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);scene.remove(e);enemies.splice(enemies.indexOf(e),1);updateUI();if(state.kills>=state.targetKills)winLevel()}}
+function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(Math.random()<.24)spawnValerian(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function fireSausage(){
   if(!state.playing||state.fireCooldown>0)return;state.fireCooldown=.12;let dir=new THREE.Vector3(playerFacing.x,0,playerFacing.z),target=nearestEnemy(player.position,23);if(target)dir.copy(target.position).sub(player.position).setY(0).normalize();
   const g=new THREE.Group();const body=cyl(g,.13,.13,.72,std(0xd54f2d,.45),0,0,0,0,Math.PI/2);body.rotation.z=Math.PI/2;sph(g,.14,M.glow,0,0,-.42,[1,1,1],10);g.position.copy(player.position).add(new THREE.Vector3(0,1.45,0)).add(dir.clone().multiplyScalar(1.7));g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(18),life:1.8});
