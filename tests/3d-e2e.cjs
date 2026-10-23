@@ -39,7 +39,7 @@ const {resolve}=require('node:path');
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
-    await page.waitForTimeout(720);
+    await page.waitForFunction(({t,h})=>{const p=window.__kototanki3d.player;return Math.abs(p.turret-t)>.02&&Math.abs(p.head-h)>.02&&window.__kototanki3d.action.shots>0},{t:aim0.turret,h:aim0.head},{timeout:5000});
     const aim1=await page.evaluate(()=>window.__kototanki3d.player);
     assert.ok(Math.abs(aim1.turret-aim0.turret)>.02);
     assert.ok(Math.abs(aim1.head-aim0.head)>.02);
