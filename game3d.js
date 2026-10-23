@@ -496,7 +496,7 @@ function spawnCatSquad(){
   for(const a of allies)retire(a);allies.length=0;
   const count=Math.min(6,4+Math.floor((state.level-1)/8));
   const slots=[[-6,10],[6,10],[-8,5],[8,5],[-10,0],[10,0]];
-  for(let i=0;i<count;i++){const a=makeAllyCat(i),s=slots[i];a.scale.setScalar(.72);a.position.set(s[0],0,s[1]);scene.add(a);allies.push(a)}
+  for(let i=0;i<count;i++){const a=makeAllyCat(i),s=slots[i],p=findClearSpawn(s[0],s[1],.7,10);a.scale.setScalar(.72);a.position.set(p[0],0,p[1]);scene.add(a);allies.push(a)}
 }
 function fireAlly(a,target){
   const dir=target.position.clone().sub(a.position).setY(.2).normalize();
@@ -687,7 +687,14 @@ function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(
 function blocked(x,z,radius=1.05){if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
 function nearestHostile(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}for(const r of raccoons){const q=from.distanceTo(r.position);if(q<d){d=q;best=r}}return best}
-function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
+function findClearSpawn(x,z,radius=1.2,tries=14){
+  let sx=x,sz=z;for(let i=0;i<tries;i++){if(!blocked(sx,sz,radius)&&Math.hypot(sx-player.position.x,sz-player.position.z)>8)return [sx,sz];sx=clamp(x+rand(-5,5),-22,22);sz=clamp(z+rand(-4,5),-28,25)}return [clamp(x,-21,21),clamp(z,-28,25)]
+}
+function spawnDog(){
+  const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();
+  let x,z;if(side<.68){x=rand(-18,18);z=-23}else{x=side<.84?-22:22;z=rand(-20,4)}
+  const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
+}
 function burst(pos,color=0xffaa55,count=12){const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(new THREE.Vector3(pos.x,pos.y+1.1,pos.z),.07+Math.random()*.10,mat);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();retire(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
