@@ -15,7 +15,7 @@ const locations = [
 ];
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,last:0};
-const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], particles=[], allies=[];
+const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], boneShots=[], particles=[], allies=[];
 let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
 const cameraDrag={active:false,id:null,lastX:0};
 
@@ -44,7 +44,7 @@ const M={
   steel:std(0x555e69,.35,.72),darkSteel:std(0x303741,.42,.68),bronze:std(0xb26c32,.36,.62),tank:std(0xb9702d,.48,.48),tankDark:std(0x604122,.55,.45),red:std(0xd84435,.55),
   wood:std(0x8d5c31,.8),woodLight:std(0xb77b43,.78),stone:std(0xa69e8d,.88),plaster:std(0xffe3ad,.84),grass:std(0x70ad4f,.95),road:std(0xc9a474,.96),
   dog1:std(0x9b673f,.86),dog2:std(0x6d5140,.86),dog3:std(0x8c8b86,.86),dog4:std(0x4c403d,.88),helmet:std(0x5a6066,.52,.38),
-  bird:std(0x202a34,.8),birdWing:std(0x151d25,.82),beak:std(0xf4ad22,.58),
+  bird:std(0x202a34,.8),birdWing:std(0x151d25,.82),beak:std(0xf4ad22,.58),bone:std(0xf7e6bd,.72),collar:std(0x2f77bd,.48,.12),
   glow:new THREE.MeshStandardMaterial({color:0xffbd57,emissive:0xff7b1f,emissiveIntensity:4,roughness:.45})
 };
 function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;return o}
@@ -87,16 +87,51 @@ function makeBird(){
 }
 
 function makeDog(type=0){
-  const g=new THREE.Group(),fur=[M.dog1,M.dog2,M.dog3,M.dog4][type%4];
-  sph(g,.78,fur,0,1.2,0,[1.05,1.25,.72]);
-  sph(g,.62,fur,0,2.15,-.32,[1,.92,1]);sph(g,.34,fur,0,1.98,-.84,[.9,.7,1.1]);
-  cone(g,.29,.72,fur,-.38,2.65,-.22,0,-.14);cone(g,.29,.72,fur,.38,2.65,-.22,0,.14);
-  sph(g,.11,M.white,-.23,2.28,-.78);sph(g,.11,M.white,.23,2.28,-.78);sph(g,.055,M.pupil,-.23,2.28,-.88);sph(g,.055,M.pupil,.23,2.28,-.88);sph(g,.09,M.black,0,1.92,-1.15,[1,.8,.8]);
-  sph(g,.67,M.helmet,0,2.46,-.05,[1.08,.46,1.02]);box(g,1.12,.55,.82,M.red,0,1.35,-.1);box(g,.86,.72,.48,M.wood,0,1.25,.64);
-  const legs=[];for(const x of [-.43,.43])for(const z of [-.22,.30]){const leg=cyl(g,.12,.15,.82,fur,x,.55,z);legs.push(leg)}
-  const gun=new THREE.Group();box(gun,.20,.22,1.45,M.darkSteel,0,0,-.65);cyl(gun,.07,.08,1.35,M.steel,0,.02,-1.7,Math.PI/2,0);gun.position.set(.72,1.48,-.25);gun.rotation.z=-.22;g.add(gun);
-  const tail=cyl(g,.08,.12,1.15,fur,.72,1.23,.35,0,-.95);tail.rotation.x=.35;
-  g.userData={hp:1+Math.floor(type/2),speed:2.45+type*.26,type,legs};return g;
+  const g=new THREE.Group(),fur=[M.dog1,M.dog2,M.dog3,M.dog4][type%4],dark=[M.dog2,M.dog4,M.black,M.dog1][type%4];
+  // Low-poly quadruped silhouette: long torso, raised chest, neck and forward muzzle.
+  sph(g,.78,fur,0,1.18,.18,[1.02,.82,1.75]);
+  sph(g,.62,fur,0,1.38,-1.02,[.9,1.12,.95]);
+  sph(g,.58,fur,0,1.88,-1.45,[1,.94,1.03]);
+  sph(g,.34,dark,0,1.72,-1.98,[.95,.62,1.12]);
+  sph(g,.13,M.black,0,1.72,-2.31,[1.05,.72,.82]);
+  // Eyes and brows.
+  for(const x of [-.22,.22]){sph(g,.105,M.white,x,2.02,-1.86,[1,1,.65]);sph(g,.052,M.pupil,x,2.02,-1.94,[1,1,.55]);box(g,.27,.06,.08,dark,x,2.19,-1.78,x<0?-.16:.16)}
+  // Ears: type 0/2 upright, type 1/3 partly floppy.
+  const floppy=type%2===1;
+  const le=cone(g,.28,.72,fur,-.38,2.42,-1.36,floppy?.28:0,-.18),re=cone(g,.28,.72,fur,.38,2.42,-1.36,floppy?.28:0,.18);
+  if(floppy){le.rotation.z=-.55;re.rotation.z=.55}
+  // Collar and tag.
+  box(g,1.02,.18,.72,M.collar,0,1.52,-1.12);sph(g,.105,M.glow,0,1.36,-1.52,[1,.8,.45],8);
+  // Four articulated legs with paws.
+  const legs=[];
+  for(const x of [-.47,.47])for(const z of [-.64,.72]){
+    const upper=cyl(g,.13,.17,.72,fur,x,.68,z);upper.rotation.z=x<0?.05:-.05;legs.push(upper);
+    sph(g,.18,dark,x,.24,z-.08,[1.25,.6,1.55],10);
+  }
+  // Curved-looking tail made from two segments.
+  const tail1=cyl(g,.10,.15,.88,fur,.0,1.34,1.58,.55,-.92);tail1.rotation.z=.08;
+  const tail2=cyl(g,.075,.10,.72,fur,.0,1.72,2.03,.72,-.52);tail2.rotation.z=.08;
+  // Small shoulder harness, still clearly an animal rather than a humanoid.
+  box(g,1.28,.15,.72,M.red,0,1.55,-.05);
+  g.userData={hp:1+Math.floor(type/2),speed:2.45+type*.28,type,legs,fireCooldown:rand(.7,1.7),preferredRange:10+type*.7};
+  g.scale.setScalar(type===3?1.08:1);
+  return g;
+}
+
+function makeBone(){
+  const g=new THREE.Group();
+  const shaft=cyl(g,.10,.13,.72,M.bone,0,0,0,0,Math.PI/2);shaft.rotation.z=Math.PI/2;
+  for(const x of [-.42,.42])for(const y of [-.11,.11])sph(g,.13,M.bone,x,y,0,[1,.9,.9],9);
+  g.rotation.z=.4;
+  return g
+}
+function fireBone(dog,target=player){
+  if(!dog?.parent||!target)return;
+  const aim=target.position.clone().add(new THREE.Vector3(0,target===player?1.2:1.0,0));
+  const origin=dog.position.clone().add(new THREE.Vector3(0,1.65,0));
+  const dir=aim.sub(origin).normalize();
+  const b=makeBone();b.position.copy(origin).add(dir.clone().multiplyScalar(.9));b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
+  boneShots.push({mesh:b,v:dir.multiplyScalar(10.5+dog.userData.type*.8),life:3.0,spin:rand(-9,9),owner:dog});
 }
 
 
@@ -154,7 +189,7 @@ function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6f
 function makeBase(){const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);return g}
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
-function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));world=new THREE.Group();scene.add(world)}
+function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));boneShots.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));world=new THREE.Group();scene.add(world)}
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
@@ -198,10 +233,32 @@ function updateProjectiles(dt){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.v.y-=10*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}}
   for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=mesh(new THREE.SphereGeometry(.045,5,4),new THREE.MeshBasicMaterial({color:0xffc77a}),s.mesh.position.x,s.mesh.position.y,s.mesh.position.z);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.2,0)))<1.25){damageEnemy(e,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);shots.splice(i,1)}}
   for(let i=feathers.length-1;i>=0;i--){const s=feathers[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.1,0)))<1){damageEnemy(e,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);feathers.splice(i,1)}}
+  for(let i=boneShots.length-1;i>=0;i--){const s=boneShots[i];s.mesh.position.addScaledVector(s.v,dt);s.mesh.rotation.x+=s.spin*dt;s.mesh.rotation.z+=s.spin*.7*dt;s.life-=dt;let hit=false;
+    if(s.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0,1.15,0)))<1.25&&state.invuln<=0){state.lives--;state.invuln=1.15;updateUI();pulseFlash();shake=.48;burst(player.position,0xf7e6bd,12);hit=true;if(state.lives<=0)lose('Кота закидали костями')}
+    if(!hit&&s.mesh.position.distanceTo(home.position.clone().add(new THREE.Vector3(0,1.5,0)))<2.8){state.home--;updateUI();pulseFlash();burst(home.position,0xf7e6bd,10);hit=true;if(state.home<=0)lose('База разбита костями')}
+    if(hit||s.life<0){scene.remove(s.mesh);boneShots.splice(i,1)}
+  }
 }
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(new THREE.ConeGeometry(.11,.72,5),std(0x273846,.55,.12));m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
 function updateHelper(dt,now){const anchor=player.position.clone();anchor.x+=Math.cos(now*1.55)*3.6;anchor.z+=Math.sin(now*1.55)*2.4;anchor.y=4.3+Math.sin(now*4.2)*.4;helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
-function updateEnemies(dt,now){for(const e of [...enemies]){const goal=home.position.clone();goal.z-=2.4;let dir=goal.sub(e.position);dir.y=0;const d=dir.length();if(d<3.8){state.home--;updateUI();pulseFlash();burst(e.position,0xffb54d,12);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.home<=0)lose('База разрушена');continue}dir.normalize();const step=dir.multiplyScalar(e.userData.speed*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;if(blocked(nx,nz)){const turn=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar((Math.random()<.5?-1:1)*e.userData.speed*dt*1.35);nx=e.position.x+turn.x;nz=e.position.z+turn.z}e.position.x=nx;e.position.z=nz;e.rotation.y=Math.atan2(dir.x,dir.z);if(e.userData.legs)for(let i=0;i<e.userData.legs.length;i++)e.userData.legs[i].rotation.x=Math.sin(now*9+i*Math.PI)*.42;if(e.position.distanceTo(player.position)<2.25&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}}}
+function updateEnemies(dt,now){for(const e of [...enemies]){
+  const u=e.userData,distPlayer=e.position.distanceTo(player.position),shootTarget=distPlayer<17?player:home;
+  const goal=(distPlayer<17?player.position:home.position).clone();let dir=goal.sub(e.position);dir.y=0;const d=dir.length();
+  u.fireCooldown-=dt;
+  // Dogs stop at a readable shooting distance, strafe a little and throw bones.
+  const wantsShoot=d<u.preferredRange+3;
+  if(wantsShoot&&u.fireCooldown<=0){fireBone(e,shootTarget);u.fireCooldown=Math.max(.75,1.85-state.level*.018)+Math.random()*.65}
+  if(!wantsShoot||d>u.preferredRange){
+    dir.normalize();const step=dir.multiplyScalar(u.speed*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;
+    if(blocked(nx,nz)){const turn=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar((Math.sin(now+u.type)>0?1:-1)*u.speed*dt*1.25);nx=e.position.x+turn.x;nz=e.position.z+turn.z}
+    e.position.x=nx;e.position.z=nz;
+  }else if(d>4){
+    dir.normalize();const strafe=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(Math.sin(now*1.9+u.type)*u.speed*dt*.42);const nx=e.position.x+strafe.x,nz=e.position.z+strafe.z;if(!blocked(nx,nz)){e.position.x=nx;e.position.z=nz}
+  }
+  if(dir.lengthSq()>.001){dir.normalize();e.rotation.y=Math.atan2(dir.x,dir.z)}
+  if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*10+i*Math.PI)*.5;
+  if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}
+}}
 function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);player.rotation.y=Math.atan2(wx,wz);const speed=8.7,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
 function winLevel(){state.playing=false;state.score+=state.level*120;updateUI();if(state.level>=30){showOverlay('ПОБЕДА!','Кототанк и Галчонок отбили все 30 волн. Крепость спасена.','ИГРАТЬ СНАЧАЛА',()=>{state.score=0;buildLevel(1);overlay.style.display='none'});return}showOverlay('ВОЛНА '+state.level+' ОТБИТА','Впереди новая яркая локация, больше врагов и более жёсткий бой.','ДАЛЬШЕ ▶',()=>{buildLevel(state.level+1);overlay.style.display='none'})}
 function lose(t){state.playing=false;showOverlay('ПОРАЖЕНИЕ',t+'. Перегруппируйся и дави их снова.','ПОВТОРИТЬ',()=>{buildLevel(state.level);overlay.style.display='none'})}
@@ -248,4 +305,4 @@ startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,fireCooldown:e.userData.fireCooldown}))},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
