@@ -184,48 +184,128 @@ function litterRim(parent,w,d,h,mat,y){
 }
 
 
+function heroTexture(base,accent,stripe,kind='fur'){
+  const key='hero:'+base+':'+accent+':'+stripe+':'+kind;if(textureCache.has(key))return textureCache.get(key);
+  const cv=document.createElement('canvas');cv.width=cv.height=256;const x=cv.getContext('2d');
+  x.fillStyle='#'+new THREE.Color(base).getHexString();x.fillRect(0,0,256,256);
+  const rng=seedRng((base^accent^stripe)>>>0);
+  for(let i=0;i<1400;i++){const px=rng()*256,py=rng()*256,len=3+rng()*10,alpha=.035+rng()*.11;x.strokeStyle='rgba(255,244,218,'+alpha+')';x.lineWidth=.6+rng()*1.3;x.beginPath();x.moveTo(px,py);x.lineTo(px+(rng()-.5)*3,py+len);x.stroke()}
+  if(kind==='fur'){x.strokeStyle='#'+new THREE.Color(stripe).getHexString();for(let band=0;band<9;band++){const cy=16+band*28+(rng()-.5)*8;x.globalAlpha=.22+rng()*.18;x.lineWidth=5+rng()*7;x.beginPath();x.moveTo(-12,cy);x.bezierCurveTo(60,cy-18,130,cy+20,270,cy-8);x.stroke()}x.globalAlpha=1}
+  if(kind==='metal'){x.strokeStyle='rgba(255,255,255,.18)';x.lineWidth=1;for(let i=0;i<40;i++){x.beginPath();x.moveTo(rng()*256,rng()*256);x.lineTo(rng()*256,rng()*256);x.stroke()}for(let i=0;i<70;i++){x.fillStyle='rgba(91,45,21,.14)';x.fillRect(rng()*256,rng()*256,1+rng()*5,1+rng()*2)}}
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(kind==='fur'?2.2:2.8,kind==='fur'?2.2:2.8);t.colorSpace=THREE.SRGBColorSpace;textureCache.set(key,t);return t
+}
+function heroFur(base=0xe97925,accent=0xffb15b,stripe=0x8f3f18){
+  const tex=heroTexture(base,accent,stripe,'fur');return new THREE.MeshPhysicalMaterial({map:tex,roughness:.78,metalness:0,sheen:.32,sheenColor:new THREE.Color(accent),clearcoat:.04})
+}
+function heroMetal(base,accent=0x5f321d,metal=.45){
+  const tex=heroTexture(base,accent,accent,'metal');return new THREE.MeshPhysicalMaterial({map:tex,roughness:.42,metalness:metal,clearcoat:.18,clearcoatRoughness:.45})
+}
+function heroEye(parent,x,y,z,side=1){
+  const white=new THREE.MeshPhysicalMaterial({color:0xfffbef,roughness:.18,clearcoat:.55});
+  const green=new THREE.MeshPhysicalMaterial({color:0x62c84d,emissive:0x153d14,emissiveIntensity:.22,roughness:.12,clearcoat:.8});
+  organic(parent,.245,white,x,y,z,[1.05,.92,.42],'soft');
+  organic(parent,.135,green,x+side*.012,y-.005,z-.122,[1,.96,.36],'soft');
+  organic(parent,.055,M.black,x+side*.012,y-.005,z-.168,[.72,1.24,.28],'soft');
+  const brow=tubePart(parent,[[x-side*.19,y+.19,z-.12],[x,y+.25,z-.17],[x+side*.16,y+.18,z-.13]],.035,M.black,8);brow.rotation.z=side*.10
+}
+function heroFurTuft(parent,x,y,z,mat,scale=1,rz=0){
+  const sh=new THREE.Shape();sh.moveTo(-.18*scale,0);sh.quadraticCurveTo(0,.52*scale,.18*scale,0);sh.lineTo(.06*scale,-.18*scale);sh.lineTo(0,-.05*scale);sh.lineTo(-.06*scale,-.18*scale);sh.closePath();
+  const geo=new THREE.ExtrudeGeometry(sh,{depth:.055*scale,bevelEnabled:true,bevelSegments:2,bevelSize:.025*scale,bevelThickness:.02*scale});geo.translate(0,0,-.027*scale);
+  const o=mesh(geo,mat,x,y,z);o.rotation.z=rz;parent.add(o);return o
+}
+function heroDecalTexture(kind){
+  const key='decal:'+kind;if(textureCache.has(key))return textureCache.get(key);
+  const cv=document.createElement('canvas');cv.width=256;cv.height=128;const x=cv.getContext('2d');x.clearRect(0,0,256,128);x.lineCap='round';x.lineJoin='round';x.strokeStyle='#f3e5cb';x.fillStyle='#f3e5cb';x.lineWidth=11;
+  if(kind==='fish'){x.beginPath();x.moveTo(42,64);x.lineTo(188,64);x.stroke();for(let i=0;i<4;i++){const xx=82+i*26;x.beginPath();x.moveTo(xx,64);x.lineTo(xx-13,44);x.moveTo(xx,64);x.lineTo(xx-13,84);x.stroke()}x.beginPath();x.moveTo(42,64);x.lineTo(18,42);x.moveTo(42,64);x.lineTo(18,86);x.stroke();x.beginPath();x.arc(205,64,18,0,Math.PI*2);x.stroke()}
+  else if(kind==='cat'){x.beginPath();x.arc(128,68,36,.15*Math.PI,.85*Math.PI,true);x.stroke();x.beginPath();x.moveTo(98,46);x.lineTo(104,18);x.lineTo(120,39);x.moveTo(136,39);x.lineTo(153,18);x.lineTo(159,47);x.stroke();x.fillStyle='#f3e5cb';x.beginPath();x.arc(115,66,4,0,7);x.arc(141,66,4,0,7);x.fill();x.beginPath();x.moveTo(128,73);x.lineTo(122,80);x.lineTo(134,80);x.closePath();x.fill();x.beginPath();x.moveTo(92,72);x.lineTo(66,65);x.moveTo(94,82);x.lineTo(67,86);x.moveTo(164,72);x.lineTo(190,65);x.moveTo(162,82);x.lineTo(189,86);x.stroke()}
+  else if(kind==='paw'){for(const [px,py,r] of [[128,78,29],[87,45,15],[116,31,15],[145,31,15],[173,47,15]]){x.beginPath();x.arc(px,py,r,0,Math.PI*2);x.fill()}}
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;textureCache.set(key,t);return t
+}
+function heroDecal(parent,kind,w,h,x,y,z,ry=0){
+  const m=new THREE.MeshBasicMaterial({map:heroDecalTexture(kind),transparent:true,depthWrite:false,side:THREE.DoubleSide});
+  const p=mesh(new THREE.PlaneGeometry(w,h),m,x,y,z);p.rotation.y=ry;parent.add(p);return p
+}
+
 function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
-  // Real litter-tray silhouette: sloped outward walls, open top and chunky rim.
-  taperedTray(vehicle,3.95,4.55,5.15,5.75,.92,M.tray,0,.38,.12);
-  litterRim(vehicle,5.25,5.86,.18,M.trayLight,1.28);
-  roundedSlab(vehicle,4.18,4.72,.30,M.litter,0,1.03,.12,.50,.05);
-  for(let i=0;i<44;i++)organic(vehicle,.07+Math.random()*.07,i%3===0?std(0xc5a873,.98):i%3===1?std(0xeadbb4,.98):std(0xd5bd8b,.98),rand(-1.72,1.72),1.27+rand(-.01,.05),rand(-1.85,1.85),[1.45,.42,1.1],'soft');
+  const blue=heroMetal(0x2c6f9f,0x163b5d,.38),cream=heroMetal(0xeee2c9,0xa48a6c,.15),brass=heroMetal(0xc9842e,0x6e3518,.72),green=heroMetal(0x4d6f31,0x25391a,.34),rubber=heroMetal(0x25272a,0x0f1012,.05);
+  const orange=heroFur(0xe97828,0xffb15a,0x8c3d18),creamFur=heroFur(0xf4d9b6,0xfff2d7,0xc58f62),pink=std(0xf08b7e,.42),scarf=heroMetal(0xd94336,0x7e1f1c,.08);
 
-  const wheels=[];for(const x of [-1.88,1.88])for(const z of [-1.66,1.66])wheels.push(wheel(vehicle,x,z));
-  roundedSlab(vehicle,2.35,.30,.70,M.steel,0,.59,-2.78,.14,.035);
-  for(const x of [-.76,-.38,0,.38,.76])roundedSlab(vehicle,.09,.22,.47,M.darkSteel,x,.61,-2.96,.03,.015);
-  for(const x of [-1.46,1.46])organic(vehicle,.27,M.glow,x,.67,-2.78,[1,1,.55],'soft');
+  // Reference-matched litter-box buggy: deep blue tub, cream lip, exposed wheels and front plate.
+  taperedTray(vehicle,4.15,4.65,5.25,5.85,1.08,blue,0,.30,.10);
+  litterRim(vehicle,5.34,5.96,.24,cream,1.40);
+  roundedSlab(vehicle,4.34,4.78,.34,M.litter,0,1.06,.10,.50,.06);
+  for(let i=0;i<52;i++)organic(vehicle,.055+Math.random()*.075,i%3===0?std(0xc8ad7b,.98):i%3===1?std(0xead8ad,.98):std(0xb79a66,.98),rand(-1.88,1.88),1.27+rand(-.02,.06),rand(-1.95,1.95),[1.55,.36,1.12],'soft');
 
-  // Rounded improvised turret.
-  const turret=new THREE.Group();turret.position.set(.18,1.54,-.45);vehicle.add(turret);
-  const cup=organic(turret,.72,M.bronze,0,.12,0,[1.18,.46,1.04],'soft');
-  const barrel=tubePart(turret,[[0,.24,-.35],[0,.24,-1.25],[0,.20,-2.25],[0,.18,-3.05]],.21,M.bronze,20);
-  organic(turret,.20,M.glow,0,.18,-3.15,[1,1,.85],'soft');
+  const wheels=[];
+  for(const x of [-2.05,2.05])for(const z of [-1.72,1.72]){
+    const tire=mesh(new THREE.TorusGeometry(.47,.18,12,28),rubber,x,.47,z);tire.rotation.y=Math.PI/2;vehicle.add(tire);
+    const hub=cyl(vehicle,.22,.22,.28,brass,x,.47,z,0,Math.PI/2);hub.rotation.z=Math.PI/2;
+    for(let a=0;a<8;a++){const stud=organic(vehicle,.035,cream,x,.47+Math.cos(a*Math.PI/4)*.18,z+Math.sin(a*Math.PI/4)*.18,[1,1,.7],'soft');stud.rotation.y=Math.PI/2}
+    wheels.push(tire)
+  }
+  // bumper / headlights / front paw badge
+  roundedSlab(vehicle,2.55,.34,.78,cream,0,.62,-2.93,.17,.035);
+  for(const x of [-1.58,1.58]){const lamp=organic(vehicle,.31,M.glow,x,.72,-2.92,[1,1,.58],'soft');const ring=mesh(new THREE.TorusGeometry(.34,.055,8,24),brass,x,.72,-2.94);vehicle.add(ring)}
+  roundedSlab(vehicle,1.08,.12,.92,cream,0,.88,-3.03,.12,.025);heroDecal(vehicle,'paw',.80,.55,0,.89,-3.105,0);
+  for(const x of [-2.00,-1.35,-.72,.72,1.35,2.00])bolt(vehicle,x,1.39,-2.85,brass);
+  // side decals, patches and scratches
+  heroDecal(vehicle,'fish',1.85,.90,-2.69,.88,.35,Math.PI/2);heroDecal(vehicle,'cat',1.55,.95,-2.69,.88,1.52,Math.PI/2);
+  for(const [x,z,w,h] of [[-2.70,-.78,.32,.62],[-2.70,.90,.28,.45],[2.70,-.55,.30,.52]])roundedSlab(vehicle,w,.07,h,cream,x,.95,z,.05,.012);
 
-  // Sculpted seated cat.
-  const cat=new THREE.Group();cat.position.set(-.64,1.72,.42);cat.scale.setScalar(1.24);g.add(cat);
-  organic(cat,.78,M.orange,0,.70,.05,[1.02,1.04,.92],'catBody');
-  organic(cat,.54,M.cream,0,.52,-.47,[.92,.82,.78],'soft');
-  organic(cat,.23,M.orange,-.50,.72,-.66,[1.05,.82,1.15],'paw');organic(cat,.23,M.orange,.50,.72,-.66,[1.05,.82,1.15],'paw');
-  tubePart(cat,[[.82,.66,.42],[1.10,.72,.72],[1.24,1.05,.88],[1.08,1.34,.78]],.12,M.orange,18);
-  roundedSlab(cat,1.18,.40,.18,M.red,0,1.14,-.08,.12,.035);
+  // rear cargo / flag / bell
+  roundedSlab(vehicle,1.65,1.14,.96,heroMetal(0x486170,0x232e35,.45),-1.15,1.84,1.75,.18,.04);
+  for(const x of [-1.76,-1.38,-1.00,-.62])bolt(vehicle,x,2.18,1.18,brass);
+  tubePart(vehicle,[[-1.80,1.45,1.88],[-1.92,2.45,1.92],[-2.00,3.75,1.88]],.055,brass,12);
+  const flagMat=new THREE.MeshPhysicalMaterial({color:0xefe1c4,roughness:.88,side:THREE.DoubleSide});const flag=roundedSlab(vehicle,1.62,.05,.82,flagMat,-1.19,3.18,1.89,.10,.02);flag.rotation.z=-.06;heroDecal(vehicle,'cat',.82,.50,-1.19,3.18,1.855,0);
+  cyl(vehicle,.22,.30,.34,brass,-2.28,.93,1.34);tubePart(vehicle,[[-2.28,1.08,1.34],[-2.44,.73,1.47]],.055,brass,7);
 
-  const head=new THREE.Group();head.position.set(0,1.78,-.10);cat.add(head);
-  organic(head,.73,M.orange,0,0,0,[1.03,.98,.98],'catHead');
-  organic(head,.34,M.cream,-.19,-.13,-.58,[1.05,.72,.82],'muzzle');organic(head,.34,M.cream,.19,-.13,-.58,[1.05,.72,.82],'muzzle');
-  softEar(head,-1,.40,.00,M.orange,false,.96);softEar(head,1,.40,.00,M.orange,false,.96);
-  organic(head,.145,M.eye,-.27,.12,-.68,[1,.92,.46],'soft');organic(head,.145,M.eye,.27,.12,-.68,[1,.92,.46],'soft');
-  organic(head,.060,M.pupil,-.27,.12,-.77,[1,.98,.35],'soft');organic(head,.060,M.pupil,.27,.12,-.77,[1,.98,.35],'soft');
-  organic(head,.085,M.red,0,-.17,-.86,[1,.70,.58],'soft');
-  const gog=std(0x65d4ff,.18,.18);const gl=mesh(new THREE.TorusGeometry(.23,.045,8,20),gog,-.29,.34,-.56),gr=mesh(new THREE.TorusGeometry(.23,.045,8,20),gog,.29,.34,-.56);head.add(gl,gr);roundedSlab(head,.20,.08,.06,M.darkSteel,0,.34,-.56,.03,.01);
-  for(const side of [-1,1])for(const yy of [-.10,.02,.14])whisker(head,side*.34,yy,-.82,.60,side*(.10+yy*.18));
+  // Long brass/green cannon from the reference, independent of the cat.
+  const turret=new THREE.Group();turret.position.set(.54,1.80,-.65);vehicle.add(turret);
+  organic(turret,.68,brass,0,.08,0,[1.18,.44,1.02],'soft');
+  const barrel=new THREE.Group();turret.add(barrel);
+  const gun1=cyl(barrel,.24,.29,1.30,green,0,.10,-.95,Math.PI/2,0);gun1.rotation.x=Math.PI/2;
+  const gun2=cyl(barrel,.31,.31,1.72,brass,0,.10,-2.25,Math.PI/2,0);gun2.rotation.x=Math.PI/2;
+  const muzzle=cyl(barrel,.45,.38,.58,brass,0,.10,-3.30,Math.PI/2,0);muzzle.rotation.x=Math.PI/2;
+  for(const z of [-1.42,-2.05,-2.68,-3.48]){const ring=mesh(new THREE.TorusGeometry(z<-3?.43:.31,.055,8,24),cream,0,.10,z);ring.rotation.x=Math.PI/2;barrel.add(ring)}
+  heroDecal(barrel,'paw',.46,.34,.33,.10,-1.65,-Math.PI/2);
 
-  // Harness, scratches, bolts, bumper and flag.
-  roundedSlab(vehicle,.72,.10,.42,M.red,-2.38,.98,-.86,.08,.02);roundedSlab(vehicle,.60,.10,.34,M.woodLight,-2.38,.86,1.18,.08,.02);
-  for(const x of [-2.05,-1.38,-.70,0,.70,1.38,2.05]){bolt(vehicle,x,1.28,-2.66);bolt(vehicle,x,1.28,2.86)}
-  box(vehicle,.10,2.30,.10,M.wood,-1.92,2.45,1.90);const flag=roundedSlab(vehicle,1.30,.08,.68,M.cream,-1.27,3.25,1.90,.10,.025);flag.rotation.z=-.06;
-  g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,kind:'litterbox',modelStyle:'organic-r3'};return g
+  // Hero cat: large triangular head, green eyes, cream muzzle, red scarf, huge fluffy tail.
+  const cat=new THREE.Group();cat.position.set(-.78,1.58,.42);cat.scale.setScalar(1.30);g.add(cat);
+  organic(cat,.78,orange,0,.72,.05,[1.00,1.12,.94],'catBody');
+  organic(cat,.49,creamFur,0,.54,-.48,[.92,.82,.78],'soft');
+  organic(cat,.27,orange,-.50,.72,-.72,[1.18,.80,1.25],'paw');organic(cat,.27,orange,.50,.72,-.72,[1.18,.80,1.25],'paw');
+
+  // Huge fluffy tail as overlapping sculpted segments, matching the reference silhouette.
+  const tail=new THREE.Group();tail.position.set(.72,.68,.54);cat.add(tail);
+  const tailPts=[[0,0,0],[.33,.10,.26],[.58,.30,.50],[.74,.58,.68],[.68,.91,.72],[.48,1.20,.62],[.16,1.40,.49],[-.10,1.48,.38]];
+  for(let i=0;i<tailPts.length;i++){const p=tailPts[i],r=.30+.13*Math.sin((i/(tailPts.length-1))*Math.PI);organic(tail,r,orange,p[0],p[1],p[2],[1.18,1.02,1.18],'soft');if(i>2&&i<7)for(let k=0;k<3;k++)heroFurTuft(tail,p[0]+(k-1)*.12,p[1]+.10,p[2]+.10,orange,.42,(k-1)*.24)}
+  organic(tail,.34,creamFur,-.13,1.53,.37,[1.20,1.05,1.20],'soft');
+
+  // scarf tied at the neck with two flying tails
+  roundedSlab(cat,1.28,.42,.20,scarf,0,1.18,-.04,.14,.035);
+  const s1=roundedSlab(cat,.34,1.10,.18,scarf,-.48,1.16,.56,.08,.025);s1.rotation.y=.15;s1.rotation.z=.10;
+  const s2=roundedSlab(cat,.30,1.02,.16,scarf,-.63,1.05,.60,.08,.025);s2.rotation.y=-.28;s2.rotation.z=-.18;
+
+  const head=new THREE.Group();head.position.set(0,1.84,-.12);cat.add(head);
+  organic(head,.79,orange,0,0,0,[1.08,.98,1.00],'catHead');
+  // pronounced forehead/cheeks for the reference expression
+  organic(head,.28,orange,-.38,.05,-.35,[1.08,.92,.82],'soft');organic(head,.28,orange,.38,.05,-.35,[1.08,.92,.82],'soft');
+  organic(head,.38,creamFur,-.20,-.17,-.59,[1.08,.72,.88],'muzzle');organic(head,.38,creamFur,.20,-.17,-.59,[1.08,.72,.88],'muzzle');
+  softEar(head,-1,.44,.02,orange,false,1.08);softEar(head,1,.44,.02,orange,false,1.08);
+  softEar(head,-1,.47,-.005,pink,false,.68);softEar(head,1,.47,-.005,pink,false,.68);
+  heroEye(head,-.29,.14,-.70,-1);heroEye(head,.29,.14,-.70,1);
+  organic(head,.095,pink,0,-.18,-.91,[1.02,.72,.60],'soft');
+  tubePart(head,[[-.02,-.25,-.83],[0,-.31,-.88],[.05,-.34,-.83]],.025,M.black,6);
+  // whiskers
+  for(const side of [-1,1])for(let k=0;k<4;k++){const yy=-.18+k*.10;const w=tubePart(head,[[side*.24,yy,-.74],[side*.52,yy+(k-1.5)*.025,-.86],[side*.84,yy+(k-1.5)*.05,-.78]],.012,M.white,7);w.renderOrder=2}
+  // fur crown / cheek tufts
+  for(const [x,y,s,r] of [[-.42,.48,.45,-.30],[-.18,.58,.38,-.12],[.12,.60,.34,.06],[.38,.49,.44,.28],[-.56,-.06,.34,-.75],[.56,-.06,.34,.75]])heroFurTuft(head,x,y,.02,orange,s,r);
+
+  // paws gripping cannon as in reference
+  organic(cat,.25,creamFur,-.14,1.22,-.88,[1.16,.82,1.34],'paw');organic(cat,.25,creamFur,.38,1.20,-.82,[1.16,.82,1.34],'paw');
+
+  g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,tail,kind:'litterbox',modelStyle:'reference-r4'};return g
 }
 function makeMouse(){
   const g=new THREE.Group();
