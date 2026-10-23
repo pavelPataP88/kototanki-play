@@ -264,9 +264,6 @@ function heroDecal(parent,kind,w,h,x,y,z,ry=0){
   const p=mesh(new THREE.PlaneGeometry(w,h),m,x,y,z);p.rotation.y=ry;p.castShadow=false;p.receiveShadow=false;parent.add(p);return p
 }
 
-function makeHeroImpostor(){return null}
-function updateHeroImpostor(){}
-function updateHeroWheels(){}
 function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
   const blue=heroMetal(0x2c6f9f,0x163b5d,.38),cream=heroMetal(0xeee2c9,0xa48a6c,.15),brass=heroMetal(0xc9842e,0x6e3518,.72),green=heroMetal(0x4d6f31,0x25391a,.34),rubber=heroMetal(0x25272a,0x0f1012,.05);
