@@ -232,21 +232,38 @@ function heroTextureView(name){
   if(heroViewTextures[name])return heroViewTextures[name];
   const t=new THREE.TextureLoader().load(HERO_VIEWS[name]);t.colorSpace=THREE.SRGBColorSpace;t.minFilter=THREE.LinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;heroViewTextures[name]=t;return t
 }
-function makeHeroImpostor(){
-  const mat=new THREE.SpriteMaterial({map:heroTextureView('front3q'),transparent:true,depthWrite:false,depthTest:true,alphaTest:.04,toneMapped:false});
-  const s=new THREE.Sprite(mat);s.position.set(0,2.35,.02);s.scale.set(7.4,6.25,1);s.renderOrder=7;s.userData.view='front3q';return s
+function heroSpriteLayer(view='front3q',opacity=1){
+  const mat=new THREE.SpriteMaterial({map:heroTextureView(view),transparent:true,depthWrite:false,depthTest:true,alphaTest:.025,toneMapped:false,opacity});
+  const s=new THREE.Sprite(mat);s.position.set(0,2.35,.02);s.scale.set(7.4,6.25,1);s.renderOrder=7;s.userData.view=view;return s
 }
-function updateHeroImpostor(){
-  const s=player?.userData?.impostor;if(!s)return;
+function makeHeroImpostor(){
+  const root=new THREE.Group(),a=heroSpriteLayer('front3q',1),b=heroSpriteLayer('side',0);root.add(a,b);
+  root.userData={a,b,blend:0,lastAngle:0};return root
+}
+const heroViewSpec=[
+  {name:'front',angle:0,dims:[5.0,5.95],y:2.45},
+  {name:'front3q',angle:.76,dims:[7.4,6.25],y:2.35},
+  {name:'side',angle:1.57,dims:[7.25,4.95],y:2.20},
+  {name:'rear3q',angle:2.36,dims:[6.7,4.88],y:2.20},
+  {name:'rear',angle:Math.PI,dims:[5.1,4.55],y:2.18}
+];
+function setHeroLayer(layer,spec,mirror,opacity){
+  if(layer.userData.view!==spec.name){layer.material.map=heroTextureView(spec.name);layer.material.needsUpdate=true;layer.userData.view=spec.name}
+  layer.material.opacity=opacity;
+  layer.scale.set((mirror?-1:1)*spec.dims[0],spec.dims[1],1);layer.position.y=spec.y
+}
+function updateHeroImpostor(dt=.016,now=0){
+  const root=player?.userData?.impostor;if(!root)return;
   const dx=camera.position.x-player.position.x,dz=camera.position.z-player.position.z;
-  const worldAng=Math.atan2(dx,dz),rel=normalizeAngle(worldAng-player.rotation.y);
-  const a=Math.abs(rel);
-  let name=a<.24?'front':a<1.05?'front3q':a<2.10?'side':a<2.82?'rear3q':'rear';
-  const mirror=rel>0;
-  if(s.userData.view!==name){s.material.map=heroTextureView(name);s.material.needsUpdate=true;s.userData.view=name}
-  const dims={front3q:[7.4,6.25],front:[5.0,5.95],side:[7.25,4.95],rear:[5.1,4.55],rear3q:[6.7,4.88]}[name];
-  s.scale.set((mirror?-1:1)*dims[0],dims[1],1);
-  s.position.y=name==='front3q'?2.35:name==='front'?2.45:2.20;
+  const worldAng=Math.atan2(dx,dz),rel=normalizeAngle(worldAng-player.rotation.y),a=Math.abs(rel),mirror=rel>0;
+  let lo=heroViewSpec[0],hi=heroViewSpec[1];
+  for(let i=0;i<heroViewSpec.length-1;i++)if(a>=heroViewSpec[i].angle&&a<=heroViewSpec[i+1].angle){lo=heroViewSpec[i];hi=heroViewSpec[i+1];break}
+  let t=(a-lo.angle)/Math.max(.001,hi.angle-lo.angle);t=clamp(t,0,1);t=t*t*(3-2*t);
+  const u=root.userData,blend=u.blend+(t-u.blend)*Math.min(1,dt*12);u.blend=blend;u.lastAngle=a;
+  setHeroLayer(u.a,lo,mirror,1-blend);setHeroLayer(u.b,hi,mirror,blend);
+  const speedBob=state.playing?(Math.sin(now*8)*.025):0;
+  root.position.y+=((speedBob)-root.position.y)*Math.min(1,dt*10);
+  root.rotation.z+=(0-root.rotation.z)*Math.min(1,dt*8);
 }
 
 function makeCatTank(){
@@ -333,20 +350,37 @@ function makeCatTank(){
   const shcv=document.createElement('canvas');shcv.width=shcv.height=128;const shx=shcv.getContext('2d'),grad=shx.createRadialGradient(64,64,8,64,64,60);grad.addColorStop(0,'rgba(28,20,15,.40)');grad.addColorStop(.55,'rgba(28,20,15,.20)');grad.addColorStop(1,'rgba(28,20,15,0)');shx.fillStyle=grad;shx.fillRect(0,0,128,128);const sht=new THREE.CanvasTexture(shcv),shm=new THREE.MeshBasicMaterial({map:sht,transparent:true,depthWrite:false,opacity:.85});const contact=mesh(new THREE.PlaneGeometry(6.2,6.8),shm,0,.035,.18);contact.rotation.x=-Math.PI/2;contact.castShadow=false;contact.receiveShadow=false;g.add(contact);
   const impostor=makeHeroImpostor();g.add(impostor);
   vehicle.visible=false;cat.visible=false;
-  g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,tail,impostor,catYaw:cat.rotation.y,kind:'litterbox',modelStyle:'reference-impostor-r5'};return g
+  const wheelOverlay=new THREE.Group();g.add(wheelOverlay);const visualWheels=[];
+  for(const [x,z] of [[-2.18,-1.56],[2.18,-1.56],[-2.08,1.52],[2.08,1.52]]){
+    const wg=new THREE.Group();wg.position.set(x,.48,z);wheelOverlay.add(wg);
+    const tire=mesh(new THREE.TorusGeometry(.48,.17,12,28),rubber);tire.rotation.y=Math.PI/2;wg.add(tire);
+    const hub=mesh(new THREE.CylinderGeometry(.21,.21,.18,16),brass);hub.rotation.z=Math.PI/2;wg.add(hub);
+    for(let a=0;a<6;a++){const spoke=box(wg,.05,.34,.05,cream,0,Math.cos(a*Math.PI/3)*.19,Math.sin(a*Math.PI/3)*.19);spoke.rotation.x=a*Math.PI/3}
+    wg.userData={spin:0};visualWheels.push(wg)
+  }
+  g.userData={tracks:visualWheels,wheels:visualWheels,cat,head,turret,barrel,vehicle,tail,impostor,wheelOverlay,catYaw:cat.rotation.y,kind:'litterbox',modelStyle:'reference-impostor-r6'};return g
 }
 function makeMouse(){
-  const g=new THREE.Group();
-  organic(g,.31,M.mouse,0,.43,.05,[1.30,.76,1.30],'soft');
-  organic(g,.28,M.mouse,0,.70,-.30,[1.02,.95,1.06],'soft');
-  softEar(g,-1,.68,-.28,M.mouseEar,false,.42);softEar(g,1,.68,-.28,M.mouseEar,false,.42);
-  organic(g,.075,M.black,0,.62,-.61,[1,.78,.88],'soft');
-  organic(g,.052,M.pupil,-.11,.75,-.55,[1,1,.55],'soft');organic(g,.052,M.pupil,.11,.75,-.55,[1,1,.55],'soft');
-  tubePart(g,[[.28,.43,.18],[.55,.47,.38],[.75,.42,.58],[.93,.36,.50]],.032,M.mouse,14);
-  roundedSlab(g,.56,.44,.20,std(0x556e47,.72),0,.48,.06,.12,.025);roundedSlab(g,.24,.18,.30,M.wood,.27,.53,.24,.06,.015);
-  for(const side of [-1,1])for(const yy of [.60,.69])whisker(g,side*.22,yy,-.59,.30,side*.12);
-  organic(g,.075,M.red,0,.68,-.63,[1,.7,.6],'soft');
-  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),modelStyle:'organic-r3'};return g
+  const g=new THREE.Group(),fur=heroFur(0x8f9196,0xc2c5c8,0x66686c),belly=heroFur(0xd9d4cc,0xf2eee8,0xb9b2a8),pink=new THREE.MeshPhysicalMaterial({color:0xf0a5b0,roughness:.62,clearcoat:.08}),eye=new THREE.MeshPhysicalMaterial({color:0x17191d,roughness:.18,clearcoat:.75});
+  // Pear-shaped body and chest.
+  organic(g,.34,fur,0,.43,.02,[1.28,.96,1.42],'soft');
+  organic(g,.22,belly,0,.45,-.28,[.86,1.16,.72],'soft');
+  const head=new THREE.Group();head.position.set(0,.77,-.32);g.add(head);
+  organic(head,.30,fur,0,0,0,[1.02,.96,1.08],'soft');
+  // Big round pink ears.
+  for(const side of [-1,1]){organic(head,.19,pink,side*.23,.16,.03,[.34,1.08,1.02],'soft');organic(head,.145,fur,side*.23,.16,.04,[.30,1.05,1.0],'soft')}
+  // Eyes, muzzle and nose.
+  organic(head,.067,eye,-.105,.045,-.278,[1,.95,.48],'soft');organic(head,.067,eye,.105,.045,-.278,[1,.95,.48],'soft');
+  organic(head,.11,belly,0,-.07,-.25,[1.18,.72,.86],'soft');organic(head,.055,pink,0,-.055,-.365,[1,.78,.72],'soft');
+  for(const side of [-1,1])for(const yy of [-.11,-.03,.05])tubePart(head,[[side*.08,yy,-.31],[side*.26,yy+(yy*.15),-.39],[side*.47,yy+(yy*.22),-.34]],.008,M.white,5);
+  // Tiny paws gripping the litter-box rim.
+  organic(g,.10,pink,-.23,.35,-.31,[1.18,.52,1.30],'paw');organic(g,.10,pink,.23,.35,-.31,[1.18,.52,1.30],'paw');
+  // One continuous pink tail.
+  tubePart(g,[[.25,.35,.22],[.50,.32,.43],[.72,.26,.57],[.91,.18,.48],[1.02,.16,.30]],.035,pink,18);
+  // Small poop pouch kept rounded, not a square backpack.
+  organic(g,.16,std(0x6c4b32,.88),.28,.50,.18,[.90,1.10,.72],'soft');
+  g.traverse(o=>{if(o.isMesh){o.renderOrder=10;o.material.depthTest=false;o.material.depthWrite=false}});
+  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),head,modelStyle:'mouse-reference-r6'};return g
 }
 function makeBird(){
   const g=new THREE.Group();sph(g,.48,M.bird,0,.35,0,[.9,1.15,.9]);sph(g,.50,M.bird,0,.92,-.08,[1,.92,1]);
@@ -739,20 +773,22 @@ function updateMouse(dt,now){
   const u=mouseCompanion.userData;
   let best=null,bestD=11;
   for(const p of pickups){const d=player.position.distanceTo(p.mesh.position);if(d<bestD){best=p;bestD=d}}
-  if(best){u.fetch=best;u.mode='fetch'}else if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
+  if(best&&!u.fetch){u.fetch=best;u.mode='fetch'}else if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
+  let moving=false;
   if(u.mode==='fetch'&&u.fetch){
     const d=u.fetch.mesh.position.clone().sub(mouseCompanion.position);d.y=0;
-    if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
-    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*10.2);mouseCompanion.position.y+=(.16-mouseCompanion.position.y)*Math.min(1,dt*12);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
+    if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return';sfx.pickup()}
+    else{d.normalize();const speed=10.2;mouseCompanion.position.addScaledVector(d,dt*speed);mouseCompanion.position.y+=(.18-mouseCompanion.position.y)*Math.min(1,dt*10);mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(d.x,d.z)-mouseCompanion.rotation.y)*Math.min(1,dt*13);moving=true}
   }else{
-    const ride=player.position.clone().add(new THREE.Vector3(1.05,1.62,.18)).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position.clone().multiplyScalar(0));
-    // Above expression keeps the offset in the litter-box frame without parenting the mouse.
-    ride.copy(new THREE.Vector3(1.05,1.62,.18).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position));
-    const d=ride.sub(mouseCompanion.position);
-    mouseCompanion.position.lerp(mouseCompanion.position.clone().add(d),Math.min(1,dt*8));
-    if(d.length()<.45)u.mode='ride';
+    const rideLocal=new THREE.Vector3(.82,1.74,.10).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y),ride=player.position.clone().add(rideLocal);
+    const d=ride.clone().sub(mouseCompanion.position);
+    mouseCompanion.position.lerp(ride,1-Math.exp(-dt*11));
+    mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+2.56)-mouseCompanion.rotation.y)*Math.min(1,dt*8);
+    if(d.length()<.24)u.mode='ride';moving=d.length()>.12
   }
-  mouseCompanion.position.y=Math.max(.12,mouseCompanion.position.y+Math.sin(now*10+u.phase)*.002);
+  const hop=moving?Math.abs(Math.sin(now*15+u.phase))*.10:Math.sin(now*5+u.phase)*.025;
+  mouseCompanion.position.y+=hop;
+  if(u.head){u.head.rotation.y=Math.sin(now*2.6+u.phase)*.24;u.head.rotation.z=Math.sin(now*4.3+u.phase)*.035}
   u.fireCooldown-=dt;const target=nearestEnemy(mouseCompanion.position,18);
   if(target&&u.fireCooldown<=0&&u.mode!=='fetch'){fireMousePoop(target);u.fireCooldown=.48+Math.random()*.35}
 }
@@ -773,6 +809,7 @@ function litterDust(now){
   for(let i=0;i<3;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.08,6,4),new THREE.MeshBasicMaterial({color:i%2?0xd5bd8e:0xb99866,transparent:true,opacity:.8}),back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7));m.castShadow=false;scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
 }
 function updatePlayer(dt,now){
+  const prevX=player.position.x,prevZ=player.position.z;
   let x=moveInput.active?moveInput.x:0,z=moveInput.active?moveInput.y:0;
   if(keys.has('left'))x-=1;if(keys.has('right'))x+=1;if(keys.has('up'))z-=1;if(keys.has('down'))z+=1;
   const mag=Math.min(1,Math.hypot(x,z));
@@ -780,9 +817,13 @@ function updatePlayer(dt,now){
     const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);
     const desiredYaw=Math.atan2(wx,wz);player.rotation.y+=normalizeAngle(desiredYaw-player.rotation.y)*Math.min(1,dt*10);
     const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;
-    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*10*mag;litterDust(now)
+    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;litterDust(now)
   }else{player.rotation.z=Math.sin(now*2.5)*.012}
-  player.position.y=.06+Math.sin(now*4)*.025
+  const travelled=Math.hypot(player.position.x-prevX,player.position.z-prevZ),spin=travelled/.47;
+  for(const w of player.userData.tracks||[]){w.userData.spin=(w.userData.spin||0)+spin;w.rotation.x=w.userData.spin}
+  const lean=mag>.06?clamp(normalizeAngle(Math.atan2(playerFacing.x,playerFacing.z)-player.rotation.y),-.25,.25):0;
+  if(player.userData.wheelOverlay)player.userData.wheelOverlay.rotation.z+=(lean*.22-player.userData.wheelOverlay.rotation.z)*Math.min(1,dt*8);
+  player.position.y=.06+Math.sin(now*(mag>.06?8:4))*(mag>.06?.035:.018)
 }
 const upgrades=[
   {name:'⚡ ТУРБО-ГУСЕНИЦЫ',desc:'+12% скорость',apply(){tune.speed*=1.12}},
@@ -855,9 +896,9 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
   const radius=16.8,focus=new THREE.Vector3(player.position.x,1.65,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,9.25,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
   if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
-  updateHeroImpostor();
+  updateHeroImpostor(dt,now);
   renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.4))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'reference-impostor-r5',catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'motion-mouse-r6',wheelCount:player.userData.tracks?.length||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
