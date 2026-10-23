@@ -187,3 +187,44 @@ test('UI has mobile controls, proper HTML, and no external dependencies', () => 
   assert.ok(html.endsWith('</script></body></html>'));
   assert.ok(!/<script\s+src=/i.test(html));
 });
+
+
+test('all 30 stages have unique map fingerprints and six visibly distinct biomes', () => {
+  const run=boot(),fingerprints=[],seen=new Set(),biomes=new Set();
+  let previous=null;
+  for(let n=1;n<=30;n++){
+    run.game.level(n);
+    const state=run.game.get();
+    assert.equal(state.n,n);
+    assert.equal(state.theme.title.length>3,true);
+    assert.ok(state.mission);
+    biomes.add(state.theme.short);
+    const cells=state.map.map(c=>c.t);
+    const signature=cells.join('');
+    assert.ok(!seen.has(signature),'duplicate map for level '+n);
+    seen.add(signature);fingerprints.push(signature);
+    if(previous){
+      const changed=cells.reduce((count,t,i)=>count+(t!==previous[i]?1:0),0);
+      assert.ok(changed>=12,'stages '+(n-1)+' and '+n+' differ by only '+changed+' tiles');
+    }
+    previous=cells;
+    for(let y=3;y<=11;y++)for(let x=5;x<=7;x++){
+      assert.equal(state.map[y*13+x].t,0,'central corridor blocked on stage '+n);
+    }
+    assert.equal(state.map[12*13+6].t,0,'cat blocked on stage '+n);
+    assert.equal(state.map[14*13+6].t,0,'home blocked on stage '+n);
+  }
+  assert.equal(seen.size,30);
+  assert.equal(biomes.size,6);
+});
+test('next button actually starts a different map, mission and stage number', () => {
+  const run=boot();run.el('start').onclick();
+  const first=run.game.get().map.map(c=>c.t).join('');
+  clearLevel(run);
+  assert.equal(run.game.get().state,'next');
+  run.el('start').onclick();
+  const next=run.game.get();
+  assert.equal(next.n,2);
+  assert.notEqual(next.map.map(c=>c.t).join(''),first);
+  assert.equal(run.el('lvl').textContent.startsWith('2 / 30'),true);
+});
