@@ -161,16 +161,35 @@ function wheel(parent,x,z){
   const tire=mesh(new THREE.TorusGeometry(.42,.14,10,22),M.darkSteel,x,.48,z);tire.rotation.y=Math.PI/2;parent.add(tire);
   const hub=cyl(parent,.19,.19,.22,M.steel,x,.48,z,0,Math.PI/2);hub.rotation.z=Math.PI/2;return tire
 }
+function taperedTray(parent,bottomW,bottomD,topW,topD,h,mat,x=0,y=0,z=0){
+  const bw=bottomW/2,bd=bottomD/2,tw=topW/2,td=topD/2;
+  const v=[
+    -bw,0,-bd, bw,0,-bd, bw,0,bd, -bw,0,bd,
+    -tw,h,-td, tw,h,-td, tw,h,td, -tw,h,td
+  ];
+  const faces=[
+    0,1,5, 0,5,4,
+    1,2,6, 1,6,5,
+    2,3,7, 2,7,6,
+    3,0,4, 3,4,7,
+    0,3,2, 0,2,1
+  ];
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));geo.setIndex(faces);geo.computeVertexNormals();
+  const m=mesh(geo,mat,x,y,z);parent.add(m);
+  return m
+}
+function litterRim(parent,w,d,h,mat,y){
+  roundedSlab(parent,w,.24,h,mat,0,y,-d/2,.10,.03);roundedSlab(parent,w,.24,h,mat,0,y,d/2,.10,.03);
+  roundedSlab(parent,.24,d,h,mat,-w/2,y,0,.10,.03);roundedSlab(parent,.24,d,h,mat,w/2,y,0,.10,.03);
+}
+
 
 function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
-  // Rounded litter tray — no boxy tank chassis.
-  roundedSlab(vehicle,4.65,5.35,.54,M.tray,0,.56,.10,.62,.08);
-  roundedSlab(vehicle,4.92,.38,.92,M.trayLight,0,1.05,-2.52,.18,.055);
-  roundedSlab(vehicle,4.92,.38,.92,M.trayLight,0,1.05,2.72,.18,.055);
-  roundedSlab(vehicle,.38,4.95,.92,M.trayLight,-2.27,1.05,.10,.18,.055);
-  roundedSlab(vehicle,.38,4.95,.92,M.trayLight,2.27,1.05,.10,.18,.055);
-  roundedSlab(vehicle,4.00,4.48,.32,M.litter,0,1.08,.12,.44,.045);
+  // Real litter-tray silhouette: sloped outward walls, open top and chunky rim.
+  taperedTray(vehicle,3.95,4.55,5.15,5.75,.92,M.tray,0,.38,.12);
+  litterRim(vehicle,5.25,5.86,.18,M.trayLight,1.28);
+  roundedSlab(vehicle,4.18,4.72,.30,M.litter,0,1.03,.12,.50,.05);
   for(let i=0;i<44;i++)organic(vehicle,.07+Math.random()*.07,i%3===0?std(0xc5a873,.98):i%3===1?std(0xeadbb4,.98):std(0xd5bd8b,.98),rand(-1.72,1.72),1.27+rand(-.01,.05),rand(-1.85,1.85),[1.45,.42,1.1],'soft');
 
   const wheels=[];for(const x of [-1.88,1.88])for(const z of [-1.66,1.66])wheels.push(wheel(vehicle,x,z));
@@ -185,17 +204,17 @@ function makeCatTank(){
   organic(turret,.20,M.glow,0,.18,-3.15,[1,1,.85],'soft');
 
   // Sculpted seated cat.
-  const cat=new THREE.Group();cat.position.set(-.55,1.78,.52);cat.scale.setScalar(1.07);g.add(cat);
+  const cat=new THREE.Group();cat.position.set(-.64,1.72,.42);cat.scale.setScalar(1.24);g.add(cat);
   organic(cat,.78,M.orange,0,.70,.05,[1.02,1.04,.92],'catBody');
   organic(cat,.54,M.cream,0,.52,-.47,[.92,.82,.78],'soft');
   organic(cat,.23,M.orange,-.50,.72,-.66,[1.05,.82,1.15],'paw');organic(cat,.23,M.orange,.50,.72,-.66,[1.05,.82,1.15],'paw');
   tubePart(cat,[[.82,.66,.42],[1.10,.72,.72],[1.24,1.05,.88],[1.08,1.34,.78]],.12,M.orange,18);
   roundedSlab(cat,1.18,.40,.18,M.red,0,1.14,-.08,.12,.035);
 
-  const head=new THREE.Group();head.position.set(0,1.72,-.08);cat.add(head);
+  const head=new THREE.Group();head.position.set(0,1.78,-.10);cat.add(head);
   organic(head,.73,M.orange,0,0,0,[1.03,.98,.98],'catHead');
   organic(head,.34,M.cream,-.19,-.13,-.58,[1.05,.72,.82],'muzzle');organic(head,.34,M.cream,.19,-.13,-.58,[1.05,.72,.82],'muzzle');
-  softEar(head,-1,.36,.00,M.orange,false,.78);softEar(head,1,.36,.00,M.orange,false,.78);
+  softEar(head,-1,.40,.00,M.orange,false,.96);softEar(head,1,.40,.00,M.orange,false,.96);
   organic(head,.145,M.eye,-.27,.12,-.68,[1,.92,.46],'soft');organic(head,.145,M.eye,.27,.12,-.68,[1,.92,.46],'soft');
   organic(head,.060,M.pupil,-.27,.12,-.77,[1,.98,.35],'soft');organic(head,.060,M.pupil,.27,.12,-.77,[1,.98,.35],'soft');
   organic(head,.085,M.red,0,-.17,-.86,[1,.70,.58],'soft');
@@ -206,7 +225,7 @@ function makeCatTank(){
   roundedSlab(vehicle,.72,.10,.42,M.red,-2.38,.98,-.86,.08,.02);roundedSlab(vehicle,.60,.10,.34,M.woodLight,-2.38,.86,1.18,.08,.02);
   for(const x of [-2.05,-1.38,-.70,0,.70,1.38,2.05]){bolt(vehicle,x,1.28,-2.66);bolt(vehicle,x,1.28,2.86)}
   box(vehicle,.10,2.30,.10,M.wood,-1.92,2.45,1.90);const flag=roundedSlab(vehicle,1.30,.08,.68,M.cream,-1.27,3.25,1.90,.10,.025);flag.rotation.z=-.06;
-  g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,kind:'litterbox',modelStyle:'organic'};return g
+  g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,kind:'litterbox',modelStyle:'organic-r3'};return g
 }
 function makeMouse(){
   const g=new THREE.Group();
@@ -219,7 +238,7 @@ function makeMouse(){
   roundedSlab(g,.56,.44,.20,std(0x556e47,.72),0,.48,.06,.12,.025);roundedSlab(g,.24,.18,.30,M.wood,.27,.53,.24,.06,.015);
   for(const side of [-1,1])for(const yy of [.60,.69])whisker(g,side*.22,yy,-.59,.30,side*.12);
   organic(g,.075,M.red,0,.68,-.63,[1,.7,.6],'soft');
-  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),modelStyle:'organic'};return g
+  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),modelStyle:'organic-r3'};return g
 }
 function makeBird(){
   const g=new THREE.Group();sph(g,.48,M.bird,0,.35,0,[.9,1.15,.9]);sph(g,.50,M.bird,0,.92,-.08,[1,.92,1]);
@@ -236,12 +255,12 @@ function makeDog(type=0){
   organic(g,.61,fur,0,1.40,-.86,[breed===1?1.08:.92,1.08,.86],'dogBody');
   tubePart(g,[[0,1.42,-.72],[0,1.60,-1.05],[0,1.82,-1.26]],.37,fur,14);
   const head=new THREE.Group();head.position.set(0,1.88,-1.42);g.add(head);
-  organic(head,.58,fur,0,0,0,[breed===1?1.12:1,.94,1.02],'dogHead');
-  organic(head,.35,dark,0,-.13,-.50,[breed===1?1.18:.96,.64,1.18],'muzzle');
+  organic(head,.66,fur,0,0,0,[breed===1?1.14:1.05,.98,1.05],'dogHead');
+  organic(head,.39,dark,0,-.16,-.56,[breed===1?1.22:1.02,.68,1.26],'muzzle');
   organic(head,.115,M.black,0,-.10,-.85,[1.08,.72,.82],'soft');
   organic(head,.100,M.white,-.22,.13,-.56,[1,.94,.55],'soft');organic(head,.100,M.white,.22,.13,-.56,[1,.94,.55],'soft');
   organic(head,.047,M.pupil,-.22,.13,-.64,[1,1,.45],'soft');organic(head,.047,M.pupil,.22,.13,-.64,[1,1,.45],'soft');
-  softEar(head,-1,.32,-.05,fur,floppy,floppy?.72:.66);softEar(head,1,.32,-.05,fur,floppy,floppy?.72:.66);
+  softEar(head,-1,.38,-.03,fur,floppy,floppy?.88:.82);softEar(head,1,.38,-.03,fur,floppy,floppy?.88:.82);
   // Open jaw and tongue.
   organic(head,.27,M.black,0,-.36,-.55,[.92,.42,.72],'soft');organic(head,.18,M.red,0,-.45,-.62,[.72,.24,.82],'soft');
   for(const x of [-.18,-.06,.06,.18]){const tooth=cone(head,.045,.18,M.white,x,-.24,-.72,Math.PI,0);tooth.rotation.x=Math.PI}
@@ -264,8 +283,8 @@ function makeDog(type=0){
   organic(head,.18,dark,0,.05,-.61,[1.05,.70,1.05],'muzzle');
   const innerEar=std(type%2?0x8e665e:0xb98269,.78);softEar(head,-1,.33,-.055,innerEar,floppy,.48);softEar(head,1,.33,-.055,innerEar,floppy,.48);
   for(const z of [-.10,.12,.34,.56]){const tuft=softEar(g,z<.25?-1:1,1.74,z+.28,fur,false,.18);tuft.rotation.x=-.25}
-  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic'};
-  g.scale.set(breed===1?1.08:breed===2?.94:1,breed===1?.92:1,1);return g
+  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic-r3'};
+  g.scale.set(breed===1?1.30:breed===2?1.16:1.22,breed===1?1.10:1.18,1.24);return g
 }
 function makeBone(){
   const g=new THREE.Group();
@@ -306,7 +325,7 @@ function makeRaccoon(){
   const shield=mesh(new THREE.CylinderGeometry(.62,.62,.12,22),M.steel,.78,1.16,-.20);shield.rotation.z=Math.PI/2;g.add(shield);
   tubePart(g,[[-.64,1.05,-.03],[-.80,1.55,-.08],[-1.02,2.05,-.18]],.055,M.wood,10);
   const hoop=mesh(new THREE.TorusGeometry(.48,.055,8,22),M.steel,-1.08,2.20,-.25);hoop.rotation.y=Math.PI/2;hoop.rotation.z=-.45;g.add(hoop);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,modelStyle:'organic'};return g
+  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,modelStyle:'organic-r3'};return g
 }
 function makePoopBall(mat=M.trash){
   const g=new THREE.Group();sph(g,.19,mat,0,0,0,[1.15,.8,1],9);sph(g,.13,mat,.02,.15,0,[1,.7,1],8);return g
@@ -503,7 +522,7 @@ function buildLevel(n){
   state.level=n;cameraYaw=-.58;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.04);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.18);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.16);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.30);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
@@ -725,4 +744,4 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.4))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'r3-visible'}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
