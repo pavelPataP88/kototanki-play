@@ -113,7 +113,7 @@ function makeDog(type=0){
   const tail2=cyl(g,.075,.10,.72,fur,.0,1.72,2.03,.72,-.52);tail2.rotation.z=.08;
   // Small shoulder harness, still clearly an animal rather than a humanoid.
   box(g,1.28,.15,.72,M.red,0,1.55,-.05);
-  g.userData={hp:1+Math.floor(type/2),speed:2.45+type*.28,type,legs,fireCooldown:rand(.7,1.7),preferredRange:10+type*.7};
+  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45};
   g.scale.setScalar(type===3?1.08:1);
   return g;
 }
@@ -131,7 +131,7 @@ function fireBone(dog,target=player){
   const origin=dog.position.clone().add(new THREE.Vector3(0,1.65,0));
   const dir=aim.sub(origin).normalize();
   const b=makeBone();b.position.copy(origin).add(dir.clone().multiplyScalar(.9));b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
-  boneShots.push({mesh:b,v:dir.multiplyScalar(10.5+dog.userData.type*.8),life:3.0,spin:rand(-9,9),owner:dog});
+  boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});
 }
 
 
@@ -169,7 +169,7 @@ function updateAllies(dt,now){
     for(let k=0;k<u.legs.length;k++)u.legs[k].rotation.x=Math.sin(now*11+u.phase+k*Math.PI)*.55;
     a.position.y=.03+Math.abs(Math.sin(now*11+u.phase))*.07;
     u.fireCooldown-=dt;
-    if(target&&u.fireCooldown<=0){fireAlly(a,target);u.fireCooldown=.7+Math.random()*.55}
+    if(target&&u.fireCooldown<=0){fireAlly(a,target);u.fireCooldown=.38+Math.random()*.36}
   }
 }
 
@@ -211,7 +211,7 @@ function buildLevel(n){
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
-  state.level=n;cameraYaw=0;cameraYawVelocity=0;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
+  state.level=n;cameraYaw=0;cameraYawVelocity=0;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;updateUI();showToast(loc.name+' · ВОЛНА '+n)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper)}makeCharacters();
@@ -224,7 +224,7 @@ function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.ra
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);scene.remove(e);enemies.splice(enemies.indexOf(e),1);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function fireSausage(){
-  if(!state.playing||state.fireCooldown>0)return;state.fireCooldown=.17;let dir=new THREE.Vector3(playerFacing.x,0,playerFacing.z),target=nearestEnemy(player.position,23);if(target)dir.copy(target.position).sub(player.position).setY(0).normalize();
+  if(!state.playing||state.fireCooldown>0)return;state.fireCooldown=.12;let dir=new THREE.Vector3(playerFacing.x,0,playerFacing.z),target=nearestEnemy(player.position,23);if(target)dir.copy(target.position).sub(player.position).setY(0).normalize();
   const g=new THREE.Group();const body=cyl(g,.13,.13,.72,std(0xd54f2d,.45),0,0,0,0,Math.PI/2);body.rotation.z=Math.PI/2;sph(g,.14,M.glow,0,0,-.42,[1,1,1],10);g.position.copy(player.position).add(new THREE.Vector3(0,1.45,0)).add(dir.clone().multiplyScalar(1.7));g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(18),life:1.8});
   burst(g.position,0xffc15a,5);shake=Math.max(shake,.16)
 }
@@ -247,16 +247,16 @@ function updateEnemies(dt,now){for(const e of [...enemies]){
   u.fireCooldown-=dt;
   // Dogs stop at a readable shooting distance, strafe a little and throw bones.
   const wantsShoot=d<u.preferredRange+3;
-  if(wantsShoot&&u.fireCooldown<=0){fireBone(e,shootTarget);u.fireCooldown=Math.max(.75,1.85-state.level*.018)+Math.random()*.65}
+  if(wantsShoot&&u.fireCooldown<=0){fireBone(e,shootTarget);u.fireCooldown=Math.max(.42,.82-state.level*.008)+Math.random()*.34}
   if(!wantsShoot||d>u.preferredRange){
-    dir.normalize();const step=dir.multiplyScalar(u.speed*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;
+    dir.normalize();const rush=d>15?1.28:1;const step=dir.multiplyScalar(u.speed*rush*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;
     if(blocked(nx,nz)){const turn=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar((Math.sin(now+u.type)>0?1:-1)*u.speed*dt*1.25);nx=e.position.x+turn.x;nz=e.position.z+turn.z}
     e.position.x=nx;e.position.z=nz;
   }else if(d>4){
-    dir.normalize();const strafe=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(Math.sin(now*1.9+u.type)*u.speed*dt*.42);const nx=e.position.x+strafe.x,nz=e.position.z+strafe.z;if(!blocked(nx,nz)){e.position.x=nx;e.position.z=nz}
+    dir.normalize();const strafe=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(Math.sin(now*3.0+u.type)*u.speed*dt*.62);const nx=e.position.x+strafe.x,nz=e.position.z+strafe.z;if(!blocked(nx,nz)){e.position.x=nx;e.position.z=nz}
   }
   if(dir.lengthSq()>.001){dir.normalize();e.rotation.y=Math.atan2(dir.x,dir.z)}
-  if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*10+i*Math.PI)*.5;
+  if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*16+i*Math.PI)*.68;
   if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}
 }}
 function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);player.rotation.y=Math.atan2(wx,wz);const speed=8.7,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
@@ -302,7 +302,7 @@ document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireSausage()});$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();bomb()});
 startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
+function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,fireCooldown:e.userData.fireCooldown}))},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
