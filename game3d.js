@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 
 const $ = id => document.getElementById(id);
 const root = $('game'), overlay = $('overlay'), startBtn = $('start'), toast = $('toast'), flash = $('flash');
-const ui = {level:$('level'),home:$('home'),lives:$('lives'),enemies:$('enemies'),score:$('score'),combo:$('combo'),bombs:$('bombs'),place:$('place')};
+const ui = {level:$('level'),home:$('home'),lives:$('lives'),enemies:$('enemies'),score:$('score'),combo:$('combo'),bombs:$('bombs'),boost:$('boost'),place:$('place')};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), rand=(a=0,b=1)=>a+Math.random()*(b-a);
 
 const locations = [
@@ -14,10 +14,12 @@ const locations = [
   {name:'СОЛНЕЧНАЯ ЦИТАДЕЛЬ',sky:0x7fc6ff,fog:0xffe3ba,ground:0x8da04c,road:0xd2a265,roof:0xc44835,leaf:0x63933b,kind:'citadel'}
 ];
 
-const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,last:0};
-const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], boneShots=[], particles=[], allies=[];
-let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
+const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,valerian:0,poopSlow:0,last:0};
+const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], boneShots=[], particles=[], allies=[], pickups=[], hazards=[];
+let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), aimFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
 const cameraDrag={active:false,id:null,lastX:0};
+const moveInput={x:0,y:0,active:false},aimInput={x:0,y:-1,active:false};
+const tune={speed:1,fire:1,damage:1,valerian:1,bombRadius:1};
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87cfff);
@@ -33,6 +35,31 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.32;
 root.appendChild(renderer.domElement);
+
+const audio={ctx:null,master:null};
+function initAudio(){
+  if(audio.ctx)return;
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  audio.ctx=new AC();audio.master=audio.ctx.createGain();audio.master.gain.value=.16;audio.master.connect(audio.ctx.destination)
+}
+function tone(freq=440,dur=.08,type='square',gain=.22,slide=1){
+  initAudio();const ac=audio.ctx;if(!ac)return;
+  const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*slide),ac.currentTime+dur);g.gain.setValueAtTime(gain,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(audio.master);o.start();o.stop(ac.currentTime+dur)
+}
+function noise(dur=.14,gain=.12){
+  initAudio();const ac=audio.ctx;if(!ac)return;const len=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);const s=ac.createBufferSource(),g=ac.createGain();s.buffer=buf;g.gain.value=gain;s.connect(g);g.connect(audio.master);s.start()
+}
+const sfx={
+  shoot(){tone(210,.07,'square',.18,1.8)},
+  bone(){tone(520,.08,'triangle',.12,.62)},
+  hit(){noise(.09,.16);tone(95,.12,'sawtooth',.12,.55)},
+  bomb(){noise(.28,.28);tone(80,.3,'sawtooth',.20,.38)},
+  pickup(){tone(560,.08,'sine',.16,1.35);setTimeout(()=>tone(820,.11,'sine',.13,1.12),55)},
+  valerian(){tone(320,.12,'triangle',.15,1.8);setTimeout(()=>tone(720,.16,'sine',.14,.8),80)},
+  poop(){tone(105,.18,'sawtooth',.20,.45);noise(.20,.12)},
+  wave(){tone(330,.1,'square',.13,1.4);setTimeout(()=>tone(520,.14,'square',.12,1.3),80)}
+};
+
 
 const hemi=new THREE.HemisphereLight(0xdff5ff,0x6e8c43,2.15); scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff1c4,4.4); sun.position.set(-18,35,16); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-38;sun.shadow.camera.right=38;sun.shadow.camera.top=46;sun.shadow.camera.bottom=-46;sun.shadow.bias=-.00035;scene.add(sun);
@@ -66,17 +93,20 @@ function makeCatTank(){
   const turret=new THREE.Group();turret.position.set(0,1.4,-.2);chassis.add(turret);
   cyl(turret,1.05,1.15,.55,M.tank,0,.15,0);const barrel=cyl(turret,.18,.26,3.5,M.steel,0,.2,-2.05,Math.PI/2,0);barrel.rotation.x=Math.PI/2;
   sph(turret,.28,M.glow,0,.2,-3.78,[1,1,1],12);
+
   const cat=new THREE.Group();cat.position.set(0,1.75,.2);g.add(cat);
   sph(cat,.82,M.orange,0,.65,0,[1.05,1.04,.95]);sph(cat,.65,M.cream,0,.45,-.48,[.92,.74,.7]);
-  sph(cat,.74,M.orange,0,1.68,-.05,[1.03,.98,.96]);sph(cat,.42,M.cream,0,1.55,-.58,[1,.68,.72]);
-  cone(cat,.34,.78,M.orange,-.43,2.26,-.02,0,-.1);cone(cat,.34,.78,M.orange,.43,2.26,-.02,0,.1);
-  sph(cat,.16,M.eye,-.27,1.78,-.66,[1,1,.55]);sph(cat,.16,M.eye,.27,1.78,-.66,[1,1,.55]);sph(cat,.075,M.pupil,-.27,1.78,-.75,[1,1,.45]);sph(cat,.075,M.pupil,.27,1.78,-.75,[1,1,.45]);
-  sph(cat,.09,M.red,0,1.48,-.87,[1,.7,.6]);
-  const gog=std(0x65d4ff,.18,.18);sph(cat,.23,gog,-.31,2.02,-.48,[1.1,.65,.35]);sph(cat,.23,gog,.31,2.02,-.48,[1.1,.65,.35]);box(cat,.22,.08,.08,M.darkSteel,0,2.02,-.48);
   box(cat,1.18,.20,.42,M.red,0,1.12,-.1);const scarf=box(cat,.28,.18,1.25,M.red,.55,1.03,.48,.35);scarf.rotation.x=.18;
   for(const x of [-.58,.58])sph(cat,.23,M.orange,x,.72,-.75,[1.05,.8,1]);
   const tail=cyl(cat,.13,.17,2.05,M.orange,1.0,.62,.52,0,-1.02);tail.rotation.x=.4;
-  g.userData={tracks,cat,barrel};return g;
+
+  const head=new THREE.Group();head.position.set(0,1.68,-.05);cat.add(head);
+  sph(head,.74,M.orange,0,0,0,[1.03,.98,.96]);sph(head,.42,M.cream,0,-.13,-.53,[1,.68,.72]);
+  cone(head,.34,.78,M.orange,-.43,.58,.03,0,-.1);cone(head,.34,.78,M.orange,.43,.58,.03,0,.1);
+  sph(head,.16,M.eye,-.27,.10,-.66,[1,1,.55]);sph(head,.16,M.eye,.27,.10,-.66,[1,1,.55]);sph(head,.075,M.pupil,-.27,.10,-.75,[1,1,.45]);sph(head,.075,M.pupil,.27,.10,-.75,[1,1,.45]);
+  sph(head,.09,M.red,0,-.20,-.87,[1,.7,.6]);
+  const gog=std(0x65d4ff,.18,.18);sph(head,.23,gog,-.31,.34,-.48,[1.1,.65,.35]);sph(head,.23,gog,.31,.34,-.48,[1.1,.65,.35]);box(head,.22,.08,.08,M.darkSteel,0,.34,-.48);
+  g.userData={tracks,cat,head,turret,barrel};return g;
 }
 
 function makeBird(){
