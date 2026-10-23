@@ -84,13 +84,14 @@ function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
   // Cat litter-box battle cart: deep blue tray, sand, wheels and improvised bumper.
   box(vehicle,4.4,.55,5.1,M.tray,0,.62,.1);
-  box(vehicle,4.6,.7,.28,M.trayLight,0,1.08,-2.42);
-  box(vehicle,4.6,.78,.28,M.trayLight,0,1.08,2.58);
-  box(vehicle,.28,.78,5.05,M.trayLight,-2.18,1.08,.08);
-  box(vehicle,.28,.78,5.05,M.trayLight,2.18,1.08,.08);
-  box(vehicle,3.85,.28,4.35,M.litter,0,1.03,.10);
+  box(vehicle,4.72,.82,.32,M.trayLight,0,1.12,-2.44);
+  box(vehicle,4.72,.86,.32,M.trayLight,0,1.12,2.60);
+  box(vehicle,.32,.86,5.16,M.trayLight,-2.20,1.12,.08);
+  box(vehicle,.32,.86,5.16,M.trayLight,2.20,1.12,.08);
+  box(vehicle,4.85,.14,.40,M.cream,0,1.55,-2.47);box(vehicle,4.85,.14,.40,M.cream,0,1.55,2.63);box(vehicle,.40,.14,5.05,M.cream,-2.23,1.55,.08);box(vehicle,.40,.14,5.05,M.cream,2.23,1.55,.08);
+  box(vehicle,3.92,.30,4.42,M.litter,0,1.04,.10);
   // Uneven litter surface.
-  for(let i=0;i<18;i++)sph(vehicle,.16+Math.random()*.12,M.litter,rand(-1.75,1.75),1.18,rand(-1.85,1.85),[1.25,.45,1],8);
+  for(let i=0;i<34;i++){const grain=std(i%3===0?0xc6ae7b:i%3===1?0xe7d7ae:0xd7c090,.96);sph(vehicle,.10+Math.random()*.13,grain,rand(-1.72,1.72),1.20+rand(-.02,.05),rand(-1.82,1.82),[1.3,.38,1],8)}
   const wheels=[];
   for(const x of [-1.86,1.86])for(const z of [-1.62,1.62]){
     const w=cyl(vehicle,.48,.48,.34,M.darkSteel,x,.48,z,0,Math.PI/2);w.rotation.z=Math.PI/2;wheels.push(w);
@@ -110,7 +111,7 @@ function makeCatTank(){
   box(turret,.82,.52,.92,M.darkSteel,0,.18,-.22);
   sph(turret,.20,M.glow,0,.20,-3.28,[1,1,1],10);
 
-  const cat=new THREE.Group();cat.position.set(-.50,1.55,.42);g.add(cat);
+  const cat=new THREE.Group();cat.position.set(-.48,1.82,.48);cat.scale.setScalar(1.08);g.add(cat);
   sph(cat,.82,M.orange,0,.65,0,[1.05,1.04,.95]);sph(cat,.65,M.cream,0,.45,-.48,[.92,.74,.7]);
   box(cat,1.18,.20,.42,M.red,0,1.12,-.1);const scarf=box(cat,.28,.18,1.25,M.red,.55,1.03,.48,.35);scarf.rotation.x=.18;
   for(const x of [-.58,.58])sph(cat,.23,M.orange,x,.72,-.75,[1.05,.8,1]);
@@ -122,6 +123,10 @@ function makeCatTank(){
   sph(head,.09,M.red,0,-.20,-.87,[1,.7,.6]);
   const gog=std(0x65d4ff,.18,.18);sph(head,.23,gog,-.31,.34,-.48,[1.1,.65,.35]);sph(head,.23,gog,.31,.34,-.48,[1.1,.65,.35]);box(head,.22,.08,.08,M.darkSteel,0,.34,-.48);
 
+  // Scratches, taped patches and a dangling bell sell the improvised litter-box vehicle.
+  for(const z of [-1.2,-.3,.7,1.45])box(vehicle,.05,.42,.62,M.bronze,2.36,1.0,z,rand(-.5,.5));
+  box(vehicle,.72,.42,.08,M.red,-2.38,1.06,-.85,.22);box(vehicle,.58,.34,.08,M.woodLight,-2.38,.88,1.18,-.16);
+  sph(vehicle,.18,M.glow,-1.62,.62,2.92,[1,.9,1],10);
   // Fish-bone battle flag.
   box(vehicle,.10,2.6,.10,M.wood,-1.72,2.65,1.65);
   const flag=box(vehicle,1.55,.82,.08,M.cream,-.94,3.58,1.65);flag.rotation.z=-.06;
@@ -203,9 +208,14 @@ function makeRaccoon(){
   cone(g,.20,.48,M.raccoon,-.28,2.22,-.36,0,-.15);cone(g,.20,.48,M.raccoon,.28,2.22,-.36,0,.15);
   for(const x of [-.28,.28])for(const z of [-.18,.24])cyl(g,.08,.10,.58,M.raccoonDark,x,.48,z);
   const tail=new THREE.Group();for(let i=0;i<5;i++)cyl(tail,.13,.15,.34,i%2?M.raccoon:M.raccoonDark,0,i*.28,0);tail.position.set(.58,1.02,.36);tail.rotation.z=-.85;g.add(tail);
-  // Trash-can shield and launcher.
+  // Trash-cart rig, matching the filthy enemy-support look from the reference.
+  const cart=new THREE.Group();cart.position.set(0,.25,.92);g.add(cart);
+  box(cart,1.42,.18,1.12,M.steel,0,.48,0);for(const x of [-.64,.64])for(const z of [-.46,.46])box(cart,.06,.78,.06,M.steel,x,.88,z);
+  for(let x=-.54;x<=.54;x+=.27)box(cart,.035,.64,1.02,M.steel,x,.86,0);
+  for(const x of [-.56,.56]){const w=cyl(cart,.22,.22,.14,M.darkSteel,x,.18,.48,0,Math.PI/2);w.rotation.z=Math.PI/2}
+  sph(cart,.46,std(0xb73731,.55,.25),0,1.16,.05);box(cart,.52,.18,.10,M.white,0,1.18,-.42);
   cyl(g,.30,.36,.74,M.steel,-.58,1.18,-.05,0,0);box(g,.16,.16,.76,M.darkSteel,.55,1.22,-.20);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28)};return g
+  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart};return g
 }
 function makePoopBall(mat=M.trash){
   const g=new THREE.Group();sph(g,.19,mat,0,0,0,[1.15,.8,1],9);sph(g,.13,mat,.02,.15,0,[1,.7,1],8);return g
@@ -235,7 +245,7 @@ function makeAllyCat(i=0){
 function spawnCatSquad(){
   for(const a of allies)scene.remove(a);allies.length=0;
   const count=Math.min(8,5+Math.floor((state.level-1)/6));
-  for(let i=0;i<count;i++){const a=makeAllyCat(i);const row=Math.floor(i/3),col=i%3;a.position.set((col-1)*2.3+(row%2?1.1:0),0,20+row*2.4);scene.add(a);allies.push(a)}
+  for(let i=0;i<count;i++){const a=makeAllyCat(i);const row=Math.floor(i/3),col=i%3;a.position.set((col-1)*3.1+(row%2?1.45:0),0,13.5-row*3.0);scene.add(a);allies.push(a)}
 }
 function fireAlly(a,target){
   const dir=target.position.clone().sub(a.position).setY(.2).normalize();
@@ -358,16 +368,17 @@ function updateAim(dt){
 
 function addGardenProps(rng,n){
   // Bird bath.
-  const bath=new THREE.Group();cyl(bath,.55,.72,1.2,M.stone,0,.62,0);cyl(bath,1.45,1.25,.28,std(0x6aaed0,.35),0,1.30,0);sph(bath,1.05,std(0x63bddd,.18),0,1.43,0,[1,.12,1],16);bath.position.set(-18,0,10);world.add(bath);collider(-18,10,1.2);
+  const bath=new THREE.Group();cyl(bath,.55,.72,1.2,M.stone,0,.62,0);cyl(bath,1.45,1.25,.28,std(0x6aaed0,.35),0,1.30,0);sph(bath,1.05,std(0x63bddd,.18),0,1.43,0,[1,.12,1],16);bath.position.set(-11.5,0,5.5);world.add(bath);collider(-11.5,5.5,1.2);
   // Pink flamingo.
-  const fl=new THREE.Group();cyl(fl,.06,.06,2.1,std(0xe95f91,.65),0,1.05,0);sph(fl,.52,std(0xee6b9d,.68),0,2.16,0,[.72,1,1.25]);cyl(fl,.11,.14,1.45,std(0xee6b9d,.68),.22,2.72,-.15,.3,.15);sph(fl,.25,std(0xee6b9d,.68),.36,3.32,-.28);cone(fl,.12,.45,M.black,.52,3.27,-.44,Math.PI/2,0);fl.position.set(18,0,12);world.add(fl);
+  const fl=new THREE.Group();cyl(fl,.06,.06,2.1,std(0xe95f91,.65),0,1.05,0);sph(fl,.52,std(0xee6b9d,.68),0,2.16,0,[.72,1,1.25]);cyl(fl,.11,.14,1.45,std(0xee6b9d,.68),.22,2.72,-.15,.3,.15);sph(fl,.25,std(0xee6b9d,.68),.36,3.32,-.28);cone(fl,.12,.45,M.black,.52,3.27,-.44,Math.PI/2,0);fl.position.set(11.8,0,8.0);world.add(fl);
   // Garden gnome.
-  const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(20,0,22);world.add(gn);
+  const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(13.8,0,17.0);world.add(gn);
   // Mud puddles and cat-logo manholes.
   for(let i=0;i<3;i++){const x=(i-1)*9+(n%2?2:-2),z=-14+i*13;const mud=mesh(new THREE.CylinderGeometry(2.1,2.4,.06,20),std(0x7d5b3b,.95),x,.03,z);world.add(mud)}
   for(let i=0;i<2;i++){const x=i?12:-12,z=i?-4:2;const lid=mesh(new THREE.CylinderGeometry(1.25,1.25,.10,24),M.darkSteel,x,.07,z);world.add(lid);sph(world,.30,M.cream,x,.14,z,[1,.18,1],10)}
-  // Extra sunflowers/flowers to push the sunny garden look.
-  for(let i=0;i<18;i++)flowerPatch(world,(rng()<.5?-1:1)*(8+rng()*17),-26+rng()*50,50+i)
+  // White garden fencing and dense flowers bring the reference backyard into the play space.
+  const fenceMat=std(0xf4eee0,.78);for(const side of [-1,1])for(let z=-22;z<=20;z+=6){for(let k=0;k<4;k++){const x=side*(22.2+k*.02);box(world,.24,1.65,.24,fenceMat,x,.82,z+k*1.35);cone(world,.22,.42,fenceMat,x,1.85,z+k*1.35)}box(world,.18,.18,5.2,fenceMat,side*22.2,1.22,z+2.0);box(world,.18,.18,5.2,fenceMat,side*22.2,.52,z+2.0)}
+  for(let i=0;i<24;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*14),-24+rng()*47,50+i)
 }
 
 function buildLevel(n){
@@ -386,7 +397,7 @@ function buildLevel(n){
   state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(.9);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(.96);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(.9);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
@@ -492,7 +503,7 @@ function updateMouse(dt,now){
   if(u.mode==='fetch'&&u.fetch){
     const d=u.fetch.mesh.position.clone().sub(mouseCompanion.position);d.y=0;
     if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
-    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*7.4);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
+    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*7.4);mouseCompanion.position.y+=(.16-mouseCompanion.position.y)*Math.min(1,dt*12);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
   }else{
     const ride=player.position.clone().add(new THREE.Vector3(.78,1.62,.70)).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position.clone().multiplyScalar(0));
     // Above expression keeps the offset in the litter-box frame without parenting the mouse.
@@ -516,6 +527,11 @@ function updateRaccoons(dt,now){
   }
 }
 
+function litterDust(now){
+  player.userData.dustTimer=(player.userData.dustTimer||0)-.016;if(player.userData.dustTimer>0)return;player.userData.dustTimer=.075;
+  const back=new THREE.Vector3(-playerFacing.x,0,-playerFacing.z).multiplyScalar(1.8).add(player.position);
+  for(let i=0;i<3;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.08,6,4),new THREE.MeshBasicMaterial({color:i%2?0xd5bd8e:0xb99866,transparent:true,opacity:.8}),back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7));m.castShadow=false;scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
+}
 function updatePlayer(dt,now){
   let x=moveInput.active?moveInput.x:0,z=moveInput.active?moveInput.y:0;
   if(keys.has('left'))x-=1;if(keys.has('right'))x+=1;if(keys.has('up'))z-=1;if(keys.has('down'))z+=1;
@@ -524,7 +540,7 @@ function updatePlayer(dt,now){
     const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);
     const desiredYaw=Math.atan2(wx,wz);player.rotation.y+=normalizeAngle(desiredYaw-player.rotation.y)*Math.min(1,dt*10);
     const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;
-    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*10*mag
+    if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*10*mag;litterDust(now)
   }else{player.rotation.z=Math.sin(now*2.5)*.012}
   player.position.y=.06+Math.sin(now*4)*.025
 }
@@ -597,7 +613,7 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
     state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}
   }
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
-  const radius=18.5,focus=new THREE.Vector3(player.position.x,1.55,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,10.8,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
+  const radius=16.8,focus=new THREE.Vector3(player.position.x,1.65,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,9.25,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
   if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
   renderer.render(scene,camera)
 }
