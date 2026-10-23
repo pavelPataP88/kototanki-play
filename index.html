@@ -45,6 +45,7 @@
     }
     resizeGame();
   }
+  document.getElementById('start').addEventListener('click',()=>{if(innerHeight>innerWidth)rotate()});
   btn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation()});
   btn.addEventListener('click',e=>{e.preventDefault();rotate()});
   addEventListener('orientationchange',resizeGame);
