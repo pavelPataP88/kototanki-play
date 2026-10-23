@@ -241,10 +241,10 @@ function makeCatTank(){
   for(let i=0;i<34;i++)organic(vehicle,.055+Math.random()*.075,i%3===0?std(0xc8ad7b,.98):i%3===1?std(0xead8ad,.98):std(0xb79a66,.98),rand(-1.88,1.88),1.27+rand(-.02,.06),rand(-1.95,1.95),[1.55,.36,1.12],'soft');
 
   const wheels=[];
-  for(const x of [-2.05,2.05])for(const z of [-1.72,1.72]){
-    const wg=new THREE.Group();wg.position.set(x,.47,z);vehicle.add(wg);
-    const tire=mesh(new THREE.TorusGeometry(.47,.18,14,30),rubber);tire.rotation.y=Math.PI/2;wg.add(tire);
-    const hub=mesh(new THREE.CylinderGeometry(.22,.22,.28,18),brass);hub.rotation.z=Math.PI/2;wg.add(hub);
+  for(const x of [-2.42,2.42])for(const z of [-1.66,1.66]){
+    const wg=new THREE.Group();wg.position.set(x,.38,z);vehicle.add(wg);const arm=box(vehicle,.18,.18,.74,brass,x*.88,.70,z);arm.rotation.z=x<0?-.42:.42;
+    const tire=mesh(new THREE.TorusGeometry(.54,.20,14,30),rubber);tire.rotation.y=Math.PI/2;wg.add(tire);
+    const hub=mesh(new THREE.CylinderGeometry(.24,.24,.30,18),brass);hub.rotation.z=Math.PI/2;wg.add(hub);
     for(let a=0;a<8;a++){const ang=a*Math.PI/4,stud=organic(wg,.035,cream,0,Math.cos(ang)*.18,Math.sin(ang)*.18,[1,1,.7],'soft');stud.rotation.y=Math.PI/2}
     wg.userData={spin:0};wheels.push(wg)
   }
@@ -317,6 +317,7 @@ function makeCatTank(){
   const shcv=document.createElement('canvas');shcv.width=shcv.height=128;const shx=shcv.getContext('2d'),grad=shx.createRadialGradient(64,64,8,64,64,60);grad.addColorStop(0,'rgba(28,20,15,.40)');grad.addColorStop(.55,'rgba(28,20,15,.20)');grad.addColorStop(1,'rgba(28,20,15,0)');shx.fillStyle=grad;shx.fillRect(0,0,128,128);const sht=new THREE.CanvasTexture(shcv),shm=new THREE.MeshBasicMaterial({map:sht,transparent:true,depthWrite:false,opacity:.85});const contact=mesh(new THREE.PlaneGeometry(6.2,6.8),shm,0,.035,.18);contact.rotation.x=-Math.PI/2;contact.castShadow=false;contact.receiveShadow=false;g.add(contact);
   // True 3D hero: no sprites, no view switching.
   vehicle.visible=true;cat.visible=true;
+  const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=128;const sx=shadowCanvas.getContext('2d'),sg=sx.createRadialGradient(64,64,5,64,64,60);sg.addColorStop(0,'rgba(30,20,12,.55)');sg.addColorStop(.55,'rgba(30,20,12,.28)');sg.addColorStop(1,'rgba(30,20,12,0)');sx.fillStyle=sg;sx.fillRect(0,0,128,128);const st=new THREE.CanvasTexture(shadowCanvas),sm=new THREE.MeshBasicMaterial({map:st,transparent:true,depthWrite:false,opacity:.75});const contact=mesh(new THREE.PlaneGeometry(6.4,7.1),sm,0,.025,.18);contact.rotation.x=-Math.PI/2;contact.castShadow=false;contact.receiveShadow=false;g.add(contact);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
   g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,tail,tailSegments,catYaw:cat.rotation.y,kind:'litterbox',modelStyle:'true-3d-r7'};return g
 }
@@ -631,7 +632,7 @@ function buildLevel(n){
   state.level=n;cameraYaw=-.58;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.36);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.52);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
@@ -735,7 +736,7 @@ function updateMouse(dt,now){
   for(const p of pickups){const d=player.position.distanceTo(p.mesh.position);if(d<bestD){best=p;bestD=d}}
   if(best&&!u.fetch&&u.mode==='ride'){u.fetch=best;u.mode='fetch'}
   if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
-  const seat=new THREE.Vector3(1.05,1.72,.35).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position);
+  const seat=new THREE.Vector3(1.18,1.88,-.18).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position);
   let moving=false;
   if(u.mode==='fetch'&&u.fetch){
     const d=u.fetch.mesh.position.clone().sub(mouseCompanion.position);d.y=0;
@@ -783,10 +784,12 @@ function updatePlayer(dt,now){
     const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z))player.position.x=nx;else vel.x*=.2;if(!blocked(player.position.x,nz))player.position.z=nz;else vel.z*=.2;litterDust(now)
   }else{const vel=player.userData.velocity||(player.userData.velocity=new THREE.Vector3());vel.multiplyScalar(Math.exp(-dt*10));if(vel.lengthSq()>.002){const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz}player.rotation.z=Math.sin(now*2.5)*.012}
   const travelled=Math.hypot(player.position.x-prevX,player.position.z-prevZ),spin=travelled/.47;
-  for(const w of player.userData.tracks||[]){w.userData.spin=(w.userData.spin||0)+spin;w.rotation.x=w.userData.spin}
+  for(let wi=0;wi<(player.userData.tracks||[]).length;wi++){const w=player.userData.tracks[wi];w.userData.spin=(w.userData.spin||0)+spin;w.rotation.x=w.userData.spin;w.position.y=.38+Math.abs(Math.sin(now*10+wi*.7))*mag*.035}
   const lean=mag>.06?clamp(normalizeAngle(Math.atan2(playerFacing.x,playerFacing.z)-player.rotation.y),-.25,.25):0;
   if(player.userData.cat){player.userData.cat.rotation.z+=(lean*.16-player.userData.cat.rotation.z)*Math.min(1,dt*8);player.userData.cat.position.y=1.72+Math.abs(Math.sin(now*8))*mag*.055}
   const segs=player.userData.tailSegments||[];for(let i=0;i<segs.length;i++){const s=segs[i],phase=now*3.5-i*.32;s.rotation.z=Math.sin(phase)*(0.12+i*.018)+lean*.18;s.rotation.x=Math.sin(phase*.83+i*.41)*(.035+i*.006)}
+  if(player.userData.cat){const breathe=Math.sin(now*2.2)*.012;player.userData.cat.scale.setScalar(1+breathe);player.userData.cat.rotation.x=Math.sin(now*1.7)*.012}
+  if(player.userData.head&&!aimInput.active){player.userData.head.rotation.y+=normalizeAngle(Math.sin(now*.85)*.18-player.userData.head.rotation.y)*Math.min(1,dt*3.2);player.userData.head.rotation.z=Math.sin(now*1.3)*.025}
 
   player.position.y=.06+Math.sin(now*(mag>.06?8:4))*(mag>.06?.035:.018)
 }
