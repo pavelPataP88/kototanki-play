@@ -379,18 +379,20 @@ function makeDog(type=0){
   organic(head,.115,M.black,0,-.10,-.85,[1.08,.72,.82],'soft');
   organic(head,.100,M.white,-.22,.13,-.56,[1,.94,.55],'soft');organic(head,.100,M.white,.22,.13,-.56,[1,.94,.55],'soft');
   organic(head,.047,M.pupil,-.22,.13,-.64,[1,1,.45],'soft');organic(head,.047,M.pupil,.22,.13,-.64,[1,1,.45],'soft');
-  softEar(head,-1,.38,-.03,fur,floppy,floppy?.88:.82);softEar(head,1,.38,-.03,fur,floppy,floppy?.88:.82);
+  const dogEarL=softEar(head,-1,.38,-.03,fur,floppy,floppy?.88:.82),dogEarR=softEar(head,1,.38,-.03,fur,floppy,floppy?.88:.82);
   // Open jaw and tongue.
   organic(head,.27,M.black,0,-.36,-.55,[.92,.42,.72],'soft');organic(head,.18,M.red,0,-.45,-.62,[.72,.24,.82],'soft');
   for(const x of [-.18,-.06,.06,.18]){const tooth=cone(head,.045,.18,M.white,x,-.24,-.72,Math.PI,0);tooth.rotation.x=Math.PI}
-  // Articulated curved legs and broad paws.
+  // Rigged legs: each leg pivots from its own hip instead of around the dog's origin.
   const legs=[];
   for(const x of [-.48,.48])for(const z of [-.52,.70]){
-    const front=z<0,phase=(x<0?-.08:.08);
-    const leg=tubePart(g,[[x,1.02,z],[x+phase,.65,z+(front?-.08:.08)],[x,.27,z+(front?-.16:.14)]],breed===1?.14:.12,fur,14);legs.push(leg);
-    organic(g,.18,dark,x,.18,z+(front?-.20:.18),[1.25,.58,1.52],'paw')
+    const front=z<0,hip=new THREE.Group();hip.position.set(x,1.04,z);g.add(hip);
+    const phase=x<0?-.08:.08;
+    tubePart(hip,[[0,0,0],[phase,-.38,front?-.08:.08],[0,-.77,front?-.16:.14]],breed===1?.14:.12,fur,12);
+    organic(hip,.18,dark,0,-.86,front?-.20:.18,[1.25,.58,1.52],'paw');legs.push(hip)
   }
-  tubePart(g,[[0,1.30,1.34],[.18,1.55,1.72],[.42,1.82,1.98],[.30,2.03,2.16]],breed===3?.12:.10,fur,18);
+  const dogTail=new THREE.Group();dogTail.position.set(0,1.28,1.28);g.add(dogTail);
+  tubePart(dogTail,[[0,0,0],[.18,.25,.38],[.42,.52,.64],[.30,.75,.82]],breed===3?.12:.10,fur,16);
   roundedSlab(g,1.18,.60,.16,M.collar,0,1.50,-.96,.14,.025);organic(g,.105,M.glow,0,1.35,-1.38,[1,.8,.45],'soft');
   // Fur tufts and bandana.
   for(const x of [-.28,0,.28])softEar(g,x<0?-1:1,1.72+x*.2,-.52,fur,false,.22);
@@ -402,7 +404,7 @@ function makeDog(type=0){
   organic(head,.18,dark,0,.05,-.61,[1.05,.70,1.05],'muzzle');
   const innerEar=std(type%2?0x8e665e:0xb98269,.78);softEar(head,-1,.33,-.055,innerEar,floppy,.48);softEar(head,1,.33,-.055,innerEar,floppy,.48);
   for(const z of [-.10,.12,.34,.56]){const tuft=softEar(g,z<.25?-1:1,1.74,z+.28,fur,false,.18);tuft.rotation.x=-.25}
-  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic-r3'};
+  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,dogEarL,dogEarR,dogTail,head,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic-r3'};
   g.scale.set(breed===1?1.30:breed===2?1.16:1.22,breed===1?1.10:1.18,1.24);g.userData.baseScale=g.scale.clone();return g
 }
 function makeBone(){
@@ -483,7 +485,7 @@ function fireAlly(a,target){
 }
 function updateAllies(dt,now){
   for(let i=0;i<allies.length;i++){
-    const a=allies[i],u=a.userData,target=nearestEnemy(a.position,18);
+    const a=allies[i],u=a.userData,target=nearestHostile(a.position,18);
     let goal;
     if(target)goal=target.position.clone().add(new THREE.Vector3((i%3-1)*1.6,0,4.2+(i%2)*1.2));
     else goal=player.position.clone().add(new THREE.Vector3((i%3-1)*2.2,0,-2-Math.floor(i/3)*2.2));
@@ -588,12 +590,12 @@ function updateChaosItems(dt,now){
   for(let i=hazards.length-1;i>=0;i--){const h=hazards[i];if(!h.armed)continue;h.mesh.rotation.y+=dt*.35;
     const pd=player.position.distanceTo(h.mesh.position);
     if(pd<1.35&&state.invuln<=0){h.armed=false;state.lives--;state.invuln=1.0;state.poopSlow=2.8;sfx.poop();burst(h.mesh.position,0x79502b,24);shake=.8;showToast('💩 БА-БАХ! ВЛИП!');retire(h.mesh);hazards.splice(i,1);updateUI();if(state.lives<=0)lose('Кот героически подорвался на какашке');continue}
-    for(const e of [...enemies])if(e.position.distanceTo(h.mesh.position)<1.05){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);retire(h.mesh);hazards.splice(i,1);break}
+    for(const e of [...enemies])if(e.position.distanceTo(h.mesh.position)<1.05){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);retire(h.mesh);hazards.splice(i,1);break}if(h.armed)for(const r of [...raccoons])if(r.position.distanceTo(h.mesh.position)<.95){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageRaccoon(r,2);retire(h.mesh);hazards.splice(i,1);break}
   }
   for(let i=yarnBalls.length-1;i>=0;i--){const y=yarnBalls[i];y.life-=dt;y.mesh.position.addScaledVector(y.v,dt);y.mesh.rotation.x+=dt*5;y.mesh.rotation.y+=dt*7;
     if(Math.abs(y.mesh.position.x)>23){y.v.x*=-1;y.mesh.position.x=clamp(y.mesh.position.x,-23,23);sfx.hit()}
     if(y.mesh.position.z<-29||y.mesh.position.z>29){y.v.z*=-1;y.mesh.position.z=clamp(y.mesh.position.z,-29,29);sfx.hit()}
-    for(const e of [...enemies])if(!y.hits.has(e)&&e.position.distanceTo(y.mesh.position)<1.5){y.hits.add(e);damageEnemy(e,2);burst(e.position,0xe45f9d,9)}
+    for(const e of [...enemies])if(!y.hits.has(e)&&e.position.distanceTo(y.mesh.position)<1.5){y.hits.add(e);damageEnemy(e,2);burst(e.position,0xe45f9d,9)}for(const r of [...raccoons])if(!y.hits.has(r)&&r.position.distanceTo(y.mesh.position)<1.25){y.hits.add(r);damageRaccoon(r,2);burst(r.position,0xe45f9d,9)}
     if(y.life<=0){retire(y.mesh);yarnBalls.splice(i,1)}
   }
 }
@@ -667,6 +669,7 @@ function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(s
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
 function blocked(x,z,radius=1.05){if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
+function nearestHostile(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}for(const r of raccoons){const q=from.distanceTo(r.position);if(q<d){d=q;best=r}}return best}
 function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
 function burst(pos,color=0xffaa55,count=12){const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(new THREE.Vector3(pos.x,pos.y+1.1,pos.z),.07+Math.random()*.10,mat);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
@@ -675,7 +678,7 @@ function fireSausage(){
   if(!state.playing||state.fireCooldown>0)return;
   const berserk=state.valerian>0 ? .52 : 1;state.fireCooldown=.12*tune.fire*berserk;
   let dir=aimFacing.clone();
-  if(!aimInput.active){const target=nearestEnemy(player.position,22);if(target){dir.copy(target.position).sub(player.position).setY(0).normalize();aimFacing.copy(dir)}}
+  if(!aimInput.active){const target=nearestHostile(player.position,22);if(target){dir.copy(target.position).sub(player.position).setY(0).normalize();aimFacing.copy(dir)}}
   if(dir.lengthSq()<.01)dir.copy(playerFacing);dir.normalize();
   const g=new THREE.Group(),body=mesh(sausageBodyGeo,sausageMat),tip=mesh(sausageTipGeo,M.glow,0,0,-.42);body.rotation.x=Math.PI/2;g.add(body,tip);const origin=player.userData.shotOrigin||(player.userData.shotOrigin=new THREE.Vector3());if(player.userData.muzzle)player.userData.muzzle.getWorldPosition(origin);else origin.copy(player.position).add(new THREE.Vector3(0,1.55,0));g.position.copy(origin).addScaledVector(dir,.38);g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
   player.userData.recoil=Math.min(1,(player.userData.recoil||0)+.72);burst(g.position,0xffc15a,5);shake=Math.max(shake,.16);sfx.shoot()
@@ -703,7 +706,7 @@ function updateProjectiles(dt){
   }
 }
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(featherGeo,featherMat);m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
-function updateHelper(dt,now){const anchor=helper.userData.anchor||(helper.userData.anchor=new THREE.Vector3());anchor.set(player.position.x+Math.cos(now*1.55)*3.6,4.3+Math.sin(now*4.2)*.4,player.position.z+Math.sin(now*1.55)*2.4);helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
+function updateHelper(dt,now){const anchor=helper.userData.anchor||(helper.userData.anchor=new THREE.Vector3());anchor.set(player.position.x+Math.cos(now*1.55)*3.6,4.3+Math.sin(now*4.2)*.4,player.position.z+Math.sin(now*1.55)*2.4);helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestHostile(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
 function chooseDogTarget(e){
   let best=player,bestScore=e.position.distanceTo(player.position);
   for(const a of allies){const d=e.position.distanceTo(a.position)*.92;if(d<bestScore){best=a;bestScore=d}}
@@ -743,7 +746,7 @@ function updateEnemies(dt,now){for(const e of [...enemies]){
   if(!blocked(nx,e.position.z))e.position.x=nx;
   if(!blocked(e.position.x,nz))e.position.z=nz;
   const fdx=target.position.x-e.position.x,fdz=target.position.z-e.position.z;if(fdx*fdx+fdz*fdz>.001)e.rotation.y=Math.atan2(fdx,fdz)+Math.PI
-  if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*12+i*Math.PI)*.48;const bs=u.baseScale||new THREE.Vector3(1,1,1);if(!u.hitFlash){const bob=1+Math.abs(Math.sin(now*6+u.dodgeSeed))*.012;e.scale.set(bs.x,bs.y*bob,bs.z)}
+  if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=(i%2?Math.PI:0)+(i>1?Math.PI:0);u.legs[i].rotation.x=Math.sin(now*10+phase)*.44}if(u.dogTail)u.dogTail.rotation.z=Math.sin(now*5.5+u.dodgeSeed)*.32;if(u.dogEarL&&u.dogEarR){const et=Math.sin(now*4+u.dodgeSeed)*.07;u.dogEarL.rotation.z-=et*dt*3;u.dogEarR.rotation.z+=et*dt*3}if(u.head)u.head.rotation.z=Math.sin(now*2.2+u.dodgeSeed)*.025;const bs=u.baseScale||new THREE.Vector3(1,1,1);if(!u.hitFlash){const bob=1+Math.abs(Math.sin(now*6+u.dodgeSeed))*.012;e.scale.set(bs.x,bs.y*bob,bs.z)}
   const distPlayer=e.position.distanceTo(player.position);
   if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;state.kills++;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);if(player.userData.velocity)player.userData.velocity.set(0,0,0);retire(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили');else if(state.kills>=state.targetKills)winLevel()}
 }}
@@ -763,7 +766,7 @@ function updateMouse(dt,now){
   let moving=false;
   if(u.mode==='fetch'&&u.fetch){
     let dx=u.fetch.mesh.position.x-mouseCompanion.position.x,dz=u.fetch.mesh.position.z-mouseCompanion.position.z,d=Math.hypot(dx,dz);
-    if(d<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return';sfx.pickup()}
+    if(d<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
     else{dx/=d;dz/=d;mouseCompanion.position.x+=dx*dt*10.4;mouseCompanion.position.z+=dz*dt*10.4;mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(dx,dz)-mouseCompanion.rotation.y)*Math.min(1,dt*14);moving=true}
   }else{
     const dx=seatX-mouseCompanion.position.x,dz=seatZ-mouseCompanion.position.z,d=Math.hypot(dx,dz);
@@ -775,7 +778,7 @@ function updateMouse(dt,now){
   mouseCompanion.position.y+=(targetY-mouseCompanion.position.y)*Math.min(1,dt*12);
   if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.28;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.04}
   mouseCompanion.rotation.z=moving?Math.sin(now*15+u.phase)*.08:Math.sin(now*4+u.phase)*.02;
-  u.fireCooldown-=dt;const target=nearestEnemy(mouseCompanion.position,18);
+  u.fireCooldown-=dt;const target=nearestHostile(mouseCompanion.position,18);
   if(target&&u.fireCooldown<=0&&u.mode!=='fetch'){fireMousePoop(target);u.fireCooldown=.48+Math.random()*.35}
 }
 function updateRaccoons(dt,now){
@@ -859,7 +862,7 @@ function bindCameraOrbit(){
 }
 bindCameraOrbit();
 
-function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right');moveInput.x=moveInput.y=0;moveInput.active=false}
+function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right');moveInput.x=moveInput.y=0;moveInput.active=false;aimInput.x=0;aimInput.y=-1;aimInput.active=false}
 function bindStick(id,target){
   const el=$(id),knob=el.querySelector('.knob');let pointer=null;
   const update=e=>{const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.34,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy)||1,scale=Math.min(1,max/len),px=dx*scale,py=dy*scale;target.x=px/max;target.y=py/max;target.active=true;knob.style.transform='translate(calc(-50% + '+px+'px),calc(-50% + '+py+'px))'};
