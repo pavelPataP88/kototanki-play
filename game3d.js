@@ -278,7 +278,7 @@ function updateAim(dt){
   }
   const worldYaw=Math.atan2(aimFacing.x,aimFacing.z)+Math.PI,local=normalizeAngle(worldYaw-player.rotation.y);
   if(player.userData.turret)player.userData.turret.rotation.y+=normalizeAngle(local-player.userData.turret.rotation.y)*Math.min(1,dt*14);
-  if(player.userData.head){const headTarget=clamp(local,-1.2,1.2);player.userData.head.rotation.y+=(headTarget-player.userData.head.rotation.y)*Math.min(1,dt*9)}
+  if(player.userData.head){const headTarget=clamp(local,-1.2,1.2);player.userData.head.rotation.y+=(headTarget-player.userData.head.rotation.y)*Math.min(1,dt*9);player.userData.head.rotation.x=Math.sin(performance.now()*.006)*.035+(aimInput.active?-.035:0)}
 }
 
 function buildLevel(n){
@@ -294,7 +294,7 @@ function buildLevel(n){
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);spawnPoopField(n,rng);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
-  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
+  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper)}makeCharacters();
@@ -432,22 +432,37 @@ function bindCameraOrbit(){
 }
 bindCameraOrbit();
 
-function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right')}
-for(const b of document.querySelectorAll('[data-move]')){
-  const moves=b.dataset.move.split('-');
-  b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch{}for(const k of moves)keys.add(k)});
-  const end=e=>{e.preventDefault();for(const k of moves)keys.delete(k);try{if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId)}catch{}};
-  b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',()=>{for(const k of moves)keys.delete(k)});
+function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right');moveInput.x=moveInput.y=0;moveInput.active=false}
+function bindStick(id,target){
+  const el=$(id),knob=el.querySelector('.knob');let pointer=null;
+  const update=e=>{const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.34,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy)||1,scale=Math.min(1,max/len),px=dx*scale,py=dy*scale;target.x=px/max;target.y=py/max;target.active=true;knob.style.transform='translate(calc(-50% + '+px+'px),calc(-50% + '+py+'px))'};
+  el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();pointer=e.pointerId;try{el.setPointerCapture(pointer)}catch{}update(e)});
+  el.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();update(e)});
+  const stop=e=>{if(e.pointerId!==pointer)return;pointer=null;target.active=false;if(id==='moveStick'){target.x=target.y=0}knob.style.transform='translate(-50%,-50%)';try{if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId)}catch{}};
+  el.addEventListener('pointerup',stop);el.addEventListener('pointercancel',stop);el.addEventListener('lostpointercapture',()=>{pointer=null;target.active=false;if(id==='moveStick'){target.x=target.y=0}knob.style.transform='translate(-50%,-50%)'})
 }
-document.addEventListener('pointerup',clearMovement,{passive:true});document.addEventListener('pointercancel',clearMovement,{passive:true});
+bindStick('moveStick',moveInput);bindStick('aimStick',aimInput);
+document.addEventListener('pointerup',e=>{if(!e.target.closest?.('.joy')){moveInput.active=false;moveInput.x=moveInput.y=0}},{passive:true});
 window.addEventListener('blur',clearMovement);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMovement()});
 for(const evt of ['contextmenu','selectstart','dragstart'])document.addEventListener(evt,e=>{if(e.target.closest('#controls'))e.preventDefault()});
 document.addEventListener('keydown',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.add(m[e.code]);if(e.code==='Space')fireSausage();if(e.code==='KeyB')bomb()});
 document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.delete(m[e.code])});
-$('fire').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireSausage()});$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();bomb()});
-startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
-
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
+$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();bomb()});
+startBtn.onclick=()=>{initAudio();resetTune();state.score=0;buildLevel(1);overlay.style.display='none'};
+function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;
+  if(state.playing){
+    state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);state.valerian=Math.max(0,state.valerian-dt);state.poopSlow=Math.max(0,state.poopSlow-dt);
+    if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}
+    player.visible=state.invuln<=0||Math.floor(now*12)%2===0;
+    updatePlayer(dt,now);updateAim(dt);if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.24)fireSausage();
+    updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);updateChaosItems(dt,now);updateUI();
+    state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}
+  }
+  if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
+  const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);
+  if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
+  renderer.render(scene,camera)
+}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,pickups:pickups.length,hazards:hazards.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
