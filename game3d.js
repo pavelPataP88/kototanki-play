@@ -564,7 +564,7 @@ function updateMouse(dt,now){
   if(u.mode==='fetch'&&u.fetch){
     const d=u.fetch.mesh.position.clone().sub(mouseCompanion.position);d.y=0;
     if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
-    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*7.4);mouseCompanion.position.y+=(.16-mouseCompanion.position.y)*Math.min(1,dt*12);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
+    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*10.2);mouseCompanion.position.y+=(.16-mouseCompanion.position.y)*Math.min(1,dt*12);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
   }else{
     const ride=player.position.clone().add(new THREE.Vector3(1.05,1.62,.18)).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position.clone().multiplyScalar(0));
     // Above expression keeps the offset in the litter-box frame without parenting the mouse.
@@ -664,7 +664,7 @@ document.addEventListener('keydown',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDow
 document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.delete(m[e.code])});
 $('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();bomb()});
 startBtn.onclick=()=>{initAudio();resetTune();state.score=0;buildLevel(1);overlay.style.display='none'};
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;
+function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.055,state.last?now-state.last:.016);state.last=now;
   if(state.playing){
     state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);state.valerian=Math.max(0,state.valerian-dt);state.poopSlow=Math.max(0,state.poopSlow-dt);
     if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}
