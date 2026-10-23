@@ -20,7 +20,7 @@ const {resolve}=require('node:path');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));
-    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
+    await page.waitForTimeout(650);const homeFade=await page.evaluate(()=>window.__kototanki3d.camera.homeFade);assert.ok(homeFade<.55);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForFunction(()=>window.__kototanki3d.state.valerian>0,{timeout:5000});
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
@@ -45,6 +45,7 @@ const {resolve}=require('node:path');
     assert.ok(Math.abs(aim1.head-aim0.head)>.02);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
     await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
+    await page.evaluate(()=>{window.__kototanki3d.setAim(1,0,true);window.dispatchEvent(new Event('blur'))});await page.waitForTimeout(50);assert.equal(await page.evaluate(()=>window.__kototanki3d.sticks.aim.active),false);
 
     await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.launchYarn());
     await page.waitForTimeout(350);
