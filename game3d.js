@@ -113,7 +113,7 @@ function makeDog(type=0){
   const tail2=cyl(g,.075,.10,.72,fur,.0,1.72,2.03,.72,-.52);tail2.rotation.z=.08;
   // Small shoulder harness, still clearly an animal rather than a humanoid.
   box(g,1.28,.15,.72,M.red,0,1.55,-.05);
-  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45};
+  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28)};
   g.scale.setScalar(type===3?1.08:1);
   return g;
 }
@@ -241,22 +241,53 @@ function updateProjectiles(dt){
 }
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(new THREE.ConeGeometry(.11,.72,5),std(0x273846,.55,.12));m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
 function updateHelper(dt,now){const anchor=player.position.clone();anchor.x+=Math.cos(now*1.55)*3.6;anchor.z+=Math.sin(now*1.55)*2.4;anchor.y=4.3+Math.sin(now*4.2)*.4;helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
+function chooseDogTarget(e){
+  let best=player,bestScore=e.position.distanceTo(player.position);
+  for(const a of allies){const d=e.position.distanceTo(a.position)*.92;if(d<bestScore){best=a;bestScore=d}}
+  const homeScore=e.position.distanceTo(home.position)*1.12;
+  if(homeScore<bestScore)best=home;
+  return best
+}
+function dogSteer(e,target,now){
+  const u=e.userData,pos=e.position,to=target.position.clone().sub(pos).setY(0),dist=Math.max(.001,to.length()),forward=to.clone().divideScalar(dist);
+  const side=new THREE.Vector3(-forward.z,0,forward.x).multiplyScalar(u.flankSign);
+  const desired=new THREE.Vector3();
+  if(dist>u.preferredRange+1.6)desired.add(forward);
+  else if(dist<u.preferredRange-1.5)desired.addScaledVector(forward,-.42);
+  desired.addScaledVector(side,.52+Math.sin(now*2.4+u.dodgeSeed)*.18);
+  const separation=new THREE.Vector3();
+  for(const other of enemies){if(other===e)continue;const off=pos.clone().sub(other.position);const d=off.length();if(d>0&&d<3.4)separation.add(off.multiplyScalar((3.4-d)/(d*3.4)))}
+  desired.addScaledVector(separation,1.35);
+  const avoid=new THREE.Vector3();
+  for(const o of obstacles){const off=pos.clone().sub(new THREE.Vector3(o.x,0,o.z));const d=off.length(),limit=o.r+2.2;if(d>0&&d<limit)avoid.add(off.multiplyScalar((limit-d)/(d*limit)))}
+  desired.addScaledVector(avoid,1.8);
+  for(const s of shots){const off=pos.clone().sub(s.mesh.position).setY(0),d=off.length();if(d<5.0&&d>.01){const sv=s.v.clone().setY(0).normalize(),cross=sv.x*off.z-sv.z*off.x;desired.addScaledVector(new THREE.Vector3(-sv.z,0,sv.x),cross>0?1.2:-1.2)}}
+  if(desired.lengthSq()<.01)desired.copy(forward);
+  return desired.normalize()
+}
 function updateEnemies(dt,now){for(const e of [...enemies]){
-  const u=e.userData,distPlayer=e.position.distanceTo(player.position),shootTarget=distPlayer<17?player:home;
-  const goal=(distPlayer<17?player.position:home.position).clone();let dir=goal.sub(e.position);dir.y=0;const d=dir.length();
+  const u=e.userData;
+  u.thinkTimer-=dt;
+  if(u.thinkTimer<=0||!u.target||!u.target.parent){u.target=chooseDogTarget(e);u.thinkTimer=.22+Math.random()*.28}
+  const target=u.target||player,dist=e.position.distanceTo(target.position);
   u.fireCooldown-=dt;
-  // Dogs stop at a readable shooting distance, strafe a little and throw bones.
-  const wantsShoot=d<u.preferredRange+3;
-  if(wantsShoot&&u.fireCooldown<=0){fireBone(e,shootTarget);u.fireCooldown=Math.max(.42,.82-state.level*.008)+Math.random()*.34}
-  if(!wantsShoot||d>u.preferredRange){
-    dir.normalize();const rush=d>15?1.28:1;const step=dir.multiplyScalar(u.speed*rush*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;
-    if(blocked(nx,nz)){const turn=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar((Math.sin(now+u.type)>0?1:-1)*u.speed*dt*1.25);nx=e.position.x+turn.x;nz=e.position.z+turn.z}
-    e.position.x=nx;e.position.z=nz;
-  }else if(d>4){
-    dir.normalize();const strafe=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar(Math.sin(now*3.0+u.type)*u.speed*dt*.62);const nx=e.position.x+strafe.x,nz=e.position.z+strafe.z;if(!blocked(nx,nz)){e.position.x=nx;e.position.z=nz}
+  const steer=dogSteer(e,target,now);
+  const wantsShoot=dist<u.preferredRange+4.0;
+  if(wantsShoot&&u.fireCooldown<=0){fireBone(e,target===home?home:target);u.fireCooldown=Math.max(.42,.82-state.level*.008)+Math.random()*.34}
+  const rush=dist>15?1.28:1;
+  const moveScale=(wantsShoot?.72:1)*u.speed*rush*dt;
+  let step=steer.clone().multiplyScalar(moveScale),nx=e.position.x+step.x,nz=e.position.z+step.z;
+  if(blocked(nx,nz)){
+    u.flankSign*=-1;
+    const alt=new THREE.Vector3(-steer.z,0,steer.x).multiplyScalar(u.flankSign*u.speed*dt*1.15);
+    nx=e.position.x+alt.x;nz=e.position.z+alt.z;
   }
-  if(dir.lengthSq()>.001){dir.normalize();e.rotation.y=Math.atan2(dir.x,dir.z)}
+  if(!blocked(nx,e.position.z))e.position.x=nx;
+  if(!blocked(e.position.x,nz))e.position.z=nz;
+  const face=target.position.clone().sub(e.position).setY(0);
+  if(face.lengthSq()>.001){face.normalize();e.rotation.y=Math.atan2(face.x,face.z)+Math.PI}
   if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*16+i*Math.PI)*.68;
+  const distPlayer=e.position.distanceTo(player.position);
   if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}
 }}
 function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);player.rotation.y=Math.atan2(wx,wz);const speed=8.7,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
@@ -289,10 +320,10 @@ bindCameraOrbit();
 
 function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right')}
 for(const b of document.querySelectorAll('[data-move]')){
-  const k=b.dataset.move;
-  b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch{}keys.add(k)});
-  const end=e=>{e.preventDefault();keys.delete(k);try{if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId)}catch{}};
-  b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',()=>keys.delete(k));
+  const moves=b.dataset.move.split('-');
+  b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch{}for(const k of moves)keys.add(k)});
+  const end=e=>{e.preventDefault();for(const k of moves)keys.delete(k);try{if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId)}catch{}};
+  b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',()=>{for(const k of moves)keys.delete(k)});
 }
 document.addEventListener('pointerup',clearMovement,{passive:true});document.addEventListener('pointercancel',clearMovement,{passive:true});
 window.addEventListener('blur',clearMovement);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMovement()});
@@ -305,4 +336,4 @@ startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null}))},get action(){return {activeDogs:enemies.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},spawnDog(){spawnDog()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
