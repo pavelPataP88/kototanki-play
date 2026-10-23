@@ -13,6 +13,7 @@ on:
       - feature/twin-stick-chaos-20261023
       - feature/litterbox-war-20261023
       - feature/litterbox-mouse-raccoons-20261023
+      - fix/classic-camera-organic-models-20261023
   workflow_dispatch:
 permissions:
   contents: read
