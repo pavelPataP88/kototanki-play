@@ -27,13 +27,13 @@ scene.fog=new THREE.Fog(0xcfeeff,40,115);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);
 camera.position.set(0,13.5,22);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth>=700?1.5:1.4));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.32;
+renderer.toneMappingExposure=1.38;
 root.appendChild(renderer.domElement);
 
 const audio={ctx:null,master:null};
@@ -79,6 +79,34 @@ function box(p,sx,sy,sz,m,x=0,y=0,z=0,ry=0){const o=mesh(new THREE.BoxGeometry(s
 function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=14){const o=mesh(new THREE.SphereGeometry(r,seg,Math.max(10,seg-4)),m,x,y,z);o.scale.set(...s);p.add(o);return o}
 function cyl(p,rt,rb,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.CylinderGeometry(rt,rb,h,14),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry(r,h,12),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
+
+function bolt(p,x,y,z,m=M.bronze){return sph(p,.055,m,x,y,z,[1,1,.55],8)}
+function whisker(p,x,y,z,len=.55,rz=0){const w=box(p,len,.025,.025,M.white,x,y,z);w.rotation.z=rz;return w}
+function makeBarrel(){
+  const g=new THREE.Group(),m=std(0x8b5a2e,.82),band=M.darkSteel;
+  cyl(g,.72,.76,1.48,m,0,.74,0);for(const y of [.16,.72,1.30])cyl(g,.77,.77,.10,band,0,y,0);
+  for(let a=0;a<6;a++){const x=Math.cos(a*Math.PI/3)*.62,z=Math.sin(a*Math.PI/3)*.62;box(g,.08,1.35,.08,M.woodLight,x,.74,z)}
+  return g
+}
+function makeGardenBed(){
+  const g=new THREE.Group();box(g,5.4,.48,2.75,M.woodLight,0,.25,0);box(g,4.95,.34,2.30,std(0x5b3a24,.96),0,.52,0);
+  for(const x of [-2.55,2.55])box(g,.24,.74,3.0,M.wood,x,.42,0);for(const z of [-1.30,1.30])box(g,5.25,.74,.24,M.wood,0,.42,z);
+  const stem=std(0x3f8f3d,.86),tomato=std(0xe64b35,.58);
+  for(let i=0;i<5;i++){const x=-1.9+i*.95;cyl(g,.045,.055,1.25,stem,x,1.10,0);for(let k=0;k<3;k++){const yy=.82+k*.34,zz=(k%2?-.28:.28);sph(g,.11,tomato,x+.10*(k-1),yy,zz,[1,1,1],10);const leaf=mesh(new THREE.ConeGeometry(.12,.36,5),stem,x-.16,yy+.05,-zz);leaf.rotation.z=.65;g.add(leaf)}}
+  return g
+}
+function makeSunflower(){
+  const g=new THREE.Group(),stem=std(0x4b9a42,.82),petal=std(0xf5c63f,.62),center=std(0x6b3c1d,.88);
+  cyl(g,.055,.07,2.0,stem,0,1.0,0);sph(g,.22,center,0,2.02,0,[1,1,.55],12);
+  for(let i=0;i<10;i++){const a=i*Math.PI/5,p=sph(g,.12,petal,Math.cos(a)*.28,2.02+Math.sin(a)*.28,.02,[1.4,.75,.45],8);p.rotation.z=a}
+  return g
+}
+function makeTerracottaPot(){
+  const g=new THREE.Group(),pot=std(0xb85f39,.82),soil=std(0x5a3a25,.96),leaf=std(0x4a9a43,.84);
+  cyl(g,.54,.38,.74,pot,0,.37,0);cyl(g,.60,.60,.12,pot,0,.72,0);sph(g,.46,soil,0,.77,0,[1,.12,1],12);
+  for(let i=0;i<6;i++){const a=i*Math.PI/3;cyl(g,.035,.045,.9,leaf,0,1.15,0,0,.5*Math.sin(a));const l=mesh(new THREE.ConeGeometry(.14,.46,5),leaf,Math.cos(a)*.28,1.42,Math.sin(a)*.28);l.rotation.z=a;g.add(l)}
+  return g
+}
 
 function makeCatTank(){
   const g=new THREE.Group(),vehicle=new THREE.Group();g.add(vehicle);
@@ -130,6 +158,11 @@ function makeCatTank(){
   // Fish-bone battle flag.
   box(vehicle,.10,2.35,.10,M.wood,-1.88,2.48,1.92);
   const flag=box(vehicle,1.28,.68,.08,M.cream,-1.24,3.28,1.92);flag.rotation.z=-.06;
+  // Fine hero details: whiskers, bolts, tread blocks and extra litter chunks.
+  for(const side of [-1,1])for(const yy of [-.12,.02,.16])whisker(head,side*.34,yy,-.82,.62,side*(.10+yy*.18));
+  for(const x of [-2.15,-1.45,-.72,0,.72,1.45,2.15]){bolt(vehicle,x,1.22,-2.62);bolt(vehicle,x,1.22,2.78)}
+  for(const z of [-1.72,-1.15,-.58,0,.58,1.15,1.72])for(const x of [-1.90,1.90])box(vehicle,.58,.08,.22,M.black,x,.26,z);
+  for(let i=0;i<14;i++)sph(vehicle,.07+Math.random()*.08,std(i%2?0xf0dfb6:0xbda678,.95),rand(-1.55,1.55),1.27,rand(-1.55,1.55),[1.3,.35,1],7);
   g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,kind:'litterbox'};return g
 }
 
@@ -139,6 +172,9 @@ function makeMouse(){
   sph(g,.17,M.mouseEar,-.22,.88,-.25,[1,.35,1],10);sph(g,.17,M.mouseEar,.22,.88,-.25,[1,.35,1],10);
   sph(g,.055,M.black,0,.61,-.60,[1,.8,.9],8);sph(g,.055,M.pupil,-.11,.73,-.54);sph(g,.055,M.pupil,.11,.73,-.54);
   const tail=cyl(g,.035,.045,1.05,M.mouse,.45,.42,.20,0,-1.0);tail.rotation.x=.5;
+  box(g,.54,.22,.46,std(0x556e47,.72),0,.48,.05);box(g,.25,.32,.18,M.wood,.26,.52,.22);
+  for(const side of [-1,1])for(const yy of [.60,.68])whisker(g,side*.22,yy,-.58,.30,side*.12);
+  sph(g,.08,M.red,0,.67,-.62,[1,.7,.6],8);
   g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28)};return g
 }
 
@@ -176,7 +212,13 @@ function makeDog(type=0){
   const tail2=cyl(g,.075,.10,.72,fur,.0,1.72,2.03,.72,-.52);tail2.rotation.z=.08;
   // Small shoulder harness, still clearly an animal rather than a humanoid.
   box(g,1.28,.15,.72,M.red,0,1.55,-.05);
-  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28)};
+  // Expressive open mouth, teeth, tongue and scrappy bandana/gear.
+  sph(g,.31,M.black,0,1.61,-2.02,[.78,.48,.62],12);sph(g,.22,M.red,0,1.48,-2.08,[.62,.28,.72],10);
+  for(const x of [-.20,-.07,.07,.20]){const tooth=cone(g,.055,.22,M.white,x,1.75,-2.22,Math.PI,0);tooth.rotation.x=Math.PI}
+  box(g,1.34,.18,.72,std(type%2?0xd13c35:0xb52f2b,.62),0,1.46,-.26);
+  for(const x of [-.46,.46])cone(g,.10,.30,M.helmet,x,1.54,-.62,0,x<0?-.2:.2);
+  for(const z of [-.18,.10,.38])cone(g,.10,.26,fur,0,2.28,z+.15,0,(z-.1)*.5);
+    g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28)};
   g.scale.setScalar(type===3?1.08:1);
   return g;
 }
@@ -215,7 +257,12 @@ function makeRaccoon(){
   for(const x of [-.56,.56]){const w=cyl(cart,.22,.22,.14,M.darkSteel,x,.18,.48,0,Math.PI/2);w.rotation.z=Math.PI/2}
   sph(cart,.46,std(0xb73731,.55,.25),0,1.16,.05);box(cart,.52,.18,.10,M.white,0,1.18,-.42);
   cyl(g,.30,.36,.74,M.steel,-.58,1.18,-.05,0,0);box(g,.16,.16,.76,M.darkSteel,.55,1.22,-.20);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart};return g
+  sph(g,.20,M.black,0,1.56,-.98,[.8,.42,.65],10);for(const x of [-.13,0,.13]){const t=cone(g,.045,.17,M.white,x,1.66,-1.08,Math.PI,0);t.rotation.x=Math.PI}
+  const shield=mesh(new THREE.CylinderGeometry(.62,.62,.12,18),M.steel,.78,1.20,-.20);shield.rotation.z=Math.PI/2;g.add(shield);
+  const handle=box(g,.10,.10,1.15,M.wood,-.74,1.78,-.02);handle.rotation.z=-.45;
+  const hoop=mesh(new THREE.TorusGeometry(.48,.055,7,18),M.steel,-1.08,2.20,-.25);hoop.rotation.y=Math.PI/2;hoop.rotation.z=-.45;g.add(hoop);
+  for(let i=-2;i<=2;i++){const line=box(g,.025,.88,.025,M.white,-1.08+i*.13,2.20,-.25);line.rotation.z=-.45}
+    g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart};return g
 }
 function makePoopBall(mat=M.trash){
   const g=new THREE.Group();sph(g,.19,mat,0,0,0,[1.15,.8,1],9);sph(g,.13,mat,.02,.15,0,[1,.7,1],8);return g
@@ -369,18 +416,32 @@ function updateAim(dt){
 function addGardenProps(rng,n){
   // Bird bath.
   const bath=new THREE.Group();cyl(bath,.55,.72,1.2,M.stone,0,.62,0);cyl(bath,1.45,1.25,.28,std(0x6aaed0,.35),0,1.30,0);sph(bath,1.05,std(0x63bddd,.18),0,1.43,0,[1,.12,1],16);bath.position.set(-11.5,0,5.5);world.add(bath);collider(-11.5,5.5,1.2);
-  // Pink flamingo.
+  // Pink flamingo and gnome.
   const fl=new THREE.Group();cyl(fl,.06,.06,2.1,std(0xe95f91,.65),0,1.05,0);sph(fl,.52,std(0xee6b9d,.68),0,2.16,0,[.72,1,1.25]);cyl(fl,.11,.14,1.45,std(0xee6b9d,.68),.22,2.72,-.15,.3,.15);sph(fl,.25,std(0xee6b9d,.68),.36,3.32,-.28);cone(fl,.12,.45,M.black,.52,3.27,-.44,Math.PI/2,0);fl.position.set(11.8,0,8.0);world.add(fl);
-  // Garden gnome.
   const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(13.8,0,17.0);world.add(gn);
-  // Mud puddles and cat-logo manholes.
-  for(let i=0;i<3;i++){const x=(i-1)*9+(n%2?2:-2),z=-14+i*13;const mud=mesh(new THREE.CylinderGeometry(2.1,2.4,.06,20),std(0x7d5b3b,.95),x,.03,z);world.add(mud)}
-  for(let i=0;i<2;i++){const x=i?12:-12,z=i?-4:2;const lid=mesh(new THREE.CylinderGeometry(1.25,1.25,.10,24),M.darkSteel,x,.07,z);world.add(lid);sph(world,.30,M.cream,x,.14,z,[1,.18,1],10)}
-  // White garden fencing and dense flowers bring the reference backyard into the play space.
-  const fenceMat=std(0xf4eee0,.78);for(const side of [-1,1])for(let z=-22;z<=20;z+=6){for(let k=0;k<4;k++){const x=side*(22.2+k*.02);box(world,.24,1.65,.24,fenceMat,x,.82,z+k*1.35);cone(world,.22,.42,fenceMat,x,1.85,z+k*1.35)}box(world,.18,.18,5.2,fenceMat,side*22.2,1.22,z+2.0);box(world,.18,.18,5.2,fenceMat,side*22.2,.52,z+2.0)}
-  for(let i=0;i<24;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*14),-24+rng()*47,50+i)
-}
 
+  // Raised tomato beds like the reference backyard.
+  for(const p of [[-15,-18,.15],[15,-16,-.12],[-15,12,-.08],[15,15,.18]]){const bed=makeGardenBed();bed.position.set(p[0],0,p[1]);bed.rotation.y=p[2];bed.scale.setScalar(.72);world.add(bed);collider(p[0],p[1],2.0)}
+
+  // Barrels, pots and sunflowers.
+  for(const p of [[-18,-6],[18,-4],[-19,20]]){const b=makeBarrel();b.position.set(p[0],0,p[1]);b.scale.setScalar(.82);world.add(b);collider(p[0],p[1],.8)}
+  for(let i=0;i<7;i++){const pot=makeTerracottaPot();pot.position.set((i%2?-1:1)*(17+rng()*3),0,-20+i*6.3);pot.scale.setScalar(.65+rng()*.18);world.add(pot)}
+  for(let i=0;i<12;i++){const s=makeSunflower();s.position.set((i%2?-1:1)*(18+rng()*2.5),0,-25+i*4.5);s.scale.setScalar(.60+rng()*.35);world.add(s)}
+
+  // Mud puddles and cat-logo manholes.
+  for(let i=0;i<4;i++){const x=(i-1.5)*7+(n%2?1.5:-1.5),z=-17+i*11;const mud=mesh(new THREE.CylinderGeometry(1.8,2.35,.055,22),std(0x775238,.92),x,.03,z);world.add(mud);const shine=mesh(new THREE.CylinderGeometry(1.25,1.8,.02,22),std(0x6c91a0,.25),x,.065,z);world.add(shine)}
+  for(let i=0;i<2;i++){const x=i?12:-12,z=i?-4:2;const lid=mesh(new THREE.CylinderGeometry(1.25,1.25,.10,24),M.darkSteel,x,.07,z);world.add(lid);sph(world,.30,M.cream,x,.14,z,[1,.18,1],10)}
+
+  // White picket fence.
+  const fenceMat=std(0xf4eee0,.78);
+  for(const side of [-1,1])for(let z=-24;z<=20;z+=5.5){for(let k=0;k<4;k++){const x=side*22.2;box(world,.24,1.65,.24,fenceMat,x,.82,z+k*1.18);cone(world,.22,.42,fenceMat,x,1.85,z+k*1.18)}box(world,.18,.18,4.7,fenceMat,side*22.2,1.22,z+1.75);box(world,.18,.18,4.7,fenceMat,side*22.2,.52,z+1.75)}
+
+  // Shed wall/tool rack at the far end.
+  const shed=new THREE.Group();box(shed,12,4.5,.38,std(0x9b5e3a,.82),0,2.25,0);for(let x=-5.5;x<=5.5;x+=1.0)box(shed,.08,4.2,.12,M.woodLight,x,2.25,-.22);
+  box(shed,1.4,.12,.15,M.steel,-2.4,2.4,-.35,.35);box(shed,.12,2.5,.12,M.steel,-2.4,1.45,-.35);box(shed,1.1,.10,.14,M.steel,1.5,2.7,-.35,-.4);box(shed,.12,2.3,.12,M.wood,1.5,1.45,-.35);shed.position.set(0,0,-36);world.add(shed);
+
+  for(let i=0;i<30;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*14),-25+rng()*49,50+i)
+}
 function buildLevel(n){
   clearWorld();const loc=locations[Math.floor((n-1)/5)],rng=seedRng(1207+n*9137);scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
   hemi.color.setHex(0xe9f9ff);hemi.groundColor.setHex(loc.ground);sun.color.setHex(0xfff0c2);
@@ -618,5 +679,5 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
   renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth>=700?1.5:1.4))});
 window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
