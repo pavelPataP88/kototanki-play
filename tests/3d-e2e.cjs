@@ -1,2 +1,86 @@
-const {chromium}=require('playwright');const assert=require('node:assert/strict');const {spawn}=require('node:child_process');const {resolve}=require('node:path');
-(async()=>{const server=spawn('python3',['-m','http.server','4173','--bind','127.0.0.1'],{cwd:resolve(__dirname,'..'),stdio:'ignore'});const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--use-angle=swiftshader']});try{await new Promise(r=>setTimeout(r,700));const ctx=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:true,hasTouch:true});const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGEERROR',e.message)});page.on('console',m=>{if(m.type()==='error')console.error('CONSOLE',m.text())});await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});await page.waitForFunction(()=>window.__kototanki3d&&window.__kototanki3d.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});assert.equal(await page.locator('canvas').count(),1);await page.click('#start');assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.targetKills))>=14);assert.ok((await page.evaluate(()=>Math.min(...window.__kototanki3d.dogs.map(d=>d.speed))))>=4.3);assert.equal(await page.evaluate(()=>window.__kototanki3d.state.level),1);assert.equal(await page.locator('#combo').textContent(),'×1');assert.equal(await page.locator('#bombs').textContent(),'3');assert.equal(await page.locator('#place').textContent(),'СОЛНЕЧНАЯ ДЕРЕВНЯ');const h=await page.evaluate(()=>window.__kototanki3d.helper);assert.ok(Number.isFinite(h.x)&&h.y>1);const squad=await page.evaluate(()=>window.__kototanki3d.allies);assert.ok(squad.length>=5);await page.waitForTimeout(320);const dogFacing=await page.evaluate(()=>{const d=window.__kototanki3d.dogs.find(x=>x.targetX!==null);if(!d)return null;const dx=d.targetX-d.x,dz=d.targetZ-d.z,l=Math.hypot(dx,dz)||1;return {dot:d.forwardX*dx/l+d.forwardZ*dz/l,target:d.target}});assert.ok(dogFacing&&dogFacing.dot>.55);assert.ok(['player','home','ally'].includes(dogFacing.target));await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));const diag0=await page.evaluate(()=>window.__kototanki3d.player);await page.evaluate(()=>document.querySelector('[data-move="up-right"]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:77,pointerType:'touch',isPrimary:true})));const diagControls=await page.evaluate(()=>window.__kototanki3d.controls);assert.ok(diagControls.includes('up')&&diagControls.includes('right'));await page.waitForTimeout(260);await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,pointerId:77,pointerType:'touch',isPrimary:true})));const diag1=await page.evaluate(()=>window.__kototanki3d.player);assert.ok(Math.abs(diag1.x-diag0.x)>.08&&Math.abs(diag1.z-diag0.z)>.08);await page.evaluate(()=>window.__kototanki3d.spawnDog());assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.length))>=1);await page.evaluate(()=>window.__kototanki3d.fireDogBone());await page.waitForTimeout(80);assert.ok((await page.evaluate(()=>window.__kototanki3d.bones.length))>=1);const yawBefore=await page.evaluate(()=>window.__kototanki3d.camera.yaw);const canvasBox=await page.locator('canvas').boundingBox();assert.ok(canvasBox);await page.mouse.move(canvasBox.x+canvasBox.width*.72,canvasBox.y+canvasBox.height*.45);await page.mouse.down();await page.mouse.move(canvasBox.x+canvasBox.width*.42,canvasBox.y+canvasBox.height*.45,{steps:8});await page.mouse.up();await page.waitForTimeout(180);const yawAfter=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(yawAfter-yawBefore)>.12);const noSelect=await page.evaluate(()=>getComputedStyle(document.querySelector('[data-move="right"]')).userSelect==='none');assert.equal(noSelect,true);const contextPrevented=await page.evaluate(()=>!document.querySelector('[data-move="right"]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true})));assert.equal(contextPrevented,true);await page.evaluate(()=>document.querySelector('[data-move="right"]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:41,pointerType:'touch',isPrimary:true})));assert.ok((await page.evaluate(()=>window.__kototanki3d.controls)).includes('right'));await page.evaluate(()=>document.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,pointerId:41,pointerType:'touch',isPrimary:true})));assert.equal((await page.evaluate(()=>window.__kototanki3d.controls)).includes('right'),false);const before=await page.evaluate(()=>window.__kototanki3d.player);await page.keyboard.down('ArrowRight');await page.waitForTimeout(700);await page.keyboard.up('ArrowRight');const after=await page.evaluate(()=>window.__kototanki3d.player);assert.ok(Math.hypot(after.x-before.x,after.z-before.z)>.25);await page.evaluate(()=>window.__kototanki3d.setCameraYaw(Math.PI/2));const p0=await page.evaluate(()=>window.__kototanki3d.player);await page.keyboard.down('ArrowUp');await page.waitForTimeout(500);await page.keyboard.up('ArrowUp');const p1=await page.evaluate(()=>window.__kototanki3d.player);assert.ok(Math.abs(p1.x-p0.x)>.2);await page.waitForTimeout(1200);const squadAfter=await page.evaluate(()=>window.__kototanki3d.allies);assert.equal(squadAfter.length,squad.length);await page.evaluate(()=>window.__kototanki3d.fire());await page.waitForTimeout(100);const bombsBefore=await page.evaluate(()=>window.__kototanki3d.state.bombs);await page.evaluate(()=>window.__kototanki3d.bomb());assert.equal(await page.evaluate(()=>window.__kototanki3d.state.bombs),bombsBefore-1);assert.equal(await page.locator('#bombs').textContent(),String(bombsBefore-1));await page.evaluate(()=>window.__kototanki3d.next());assert.equal(await page.evaluate(()=>window.__kototanki3d.state.level),2);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-3d-landscape.png')});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-3d-portrait.png')});assert.deepEqual(errors,[]);console.log('KOTOTANKI_3D_E2E_PASS');await ctx.close()}finally{await browser.close();server.kill('SIGTERM')}})().catch(e=>{console.error(e);process.exit(1)});
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const {spawn}=require('node:child_process');
+const {resolve}=require('node:path');
+
+(async()=>{
+  const server=spawn('python3',['-m','http.server','4173','--bind','127.0.0.1'],{cwd:resolve(__dirname,'..'),stdio:'ignore'});
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--use-angle=swiftshader']});
+  try{
+    await new Promise(r=>setTimeout(r,700));
+    const ctx=await browser.newContext({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    const page=await ctx.newPage(),errors=[];
+    page.on('pageerror',e=>{errors.push(e.message);console.error('PAGEERROR',e.message)});
+    page.on('console',m=>{if(m.type()==='error')console.error('CONSOLE',m.text())});
+    await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+    await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
+
+    assert.equal(await page.locator('canvas').count(),1);
+    assert.equal(await page.locator('#moveStick').count(),1);
+    assert.equal(await page.locator('#aimStick').count(),1);
+    await page.click('#start');
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);
+    assert.ok((await page.locator('#place').textContent()).includes('·'));
+
+    const p0=await page.evaluate(()=>window.__kototanki3d.player);
+    await page.evaluate(()=>window.__kototanki3d.setMove(.75,-.75));
+    await page.waitForTimeout(420);
+    await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
+    const p1=await page.evaluate(()=>window.__kototanki3d.player);
+    assert.ok(Math.abs(p1.x-p0.x)>.12&&Math.abs(p1.z-p0.z)>.12);
+
+    const aim0=await page.evaluate(()=>window.__kototanki3d.player);
+    await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
+    await page.waitForTimeout(320);
+    const aim1=await page.evaluate(()=>window.__kototanki3d.player);
+    assert.ok(Math.abs(aim1.turret-aim0.turret)>.12);
+    assert.ok(Math.abs(aim1.head-aim0.head)>.05);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
+    await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
+
+    await page.evaluate(()=>window.__kototanki3d.spawnValerian());
+    await page.waitForTimeout(220);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
+    assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
+
+    await page.evaluate(()=>window.__kototanki3d.spawnYarn());
+    await page.waitForTimeout(220);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.yarns))>=1);
+
+    await page.waitForTimeout(260);
+    const dogFacing=await page.evaluate(()=>{
+      const d=window.__kototanki3d.dogs.find(x=>x.targetX!==null);if(!d)return null;
+      const dx=d.targetX-d.x,dz=d.targetZ-d.z,l=Math.hypot(dx,dz)||1;
+      return {dot:d.forwardX*dx/l+d.forwardZ*dz/l,target:d.target};
+    });
+    assert.ok(dogFacing&&dogFacing.dot>.45);
+
+    const yawBefore=await page.evaluate(()=>window.__kototanki3d.camera.yaw);
+    const canvasBox=await page.locator('canvas').boundingBox();assert.ok(canvasBox);
+    await page.mouse.move(canvasBox.x+canvasBox.width*.72,canvasBox.y+canvasBox.height*.44);
+    await page.mouse.down();await page.mouse.move(canvasBox.x+canvasBox.width*.44,canvasBox.y+canvasBox.height*.44,{steps:8});await page.mouse.up();
+    await page.waitForTimeout(160);
+    const yawAfter=await page.evaluate(()=>window.__kototanki3d.camera.yaw);
+    assert.ok(Math.abs(yawAfter-yawBefore)>.10);
+
+    const bombsBefore=await page.evaluate(()=>window.__kototanki3d.state.bombs);
+    await page.evaluate(()=>window.__kototanki3d.bomb());
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.bombs),bombsBefore-1);
+
+    const place1=await page.locator('#place').textContent();
+    await page.evaluate(()=>window.__kototanki3d.next());
+    const place2=await page.locator('#place').textContent();
+    assert.notEqual(place2,place1);
+
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-chaos-landscape.png')});
+    await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);
+    assert.equal(await page.locator('#moveStick').isVisible(),true);
+    assert.equal(await page.locator('#aimStick').isVisible(),true);
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-chaos-portrait.png')});
+    assert.deepEqual(errors,[]);
+    console.log('KOTOTANKI_TWIN_STICK_CHAOS_E2E_PASS');
+    await ctx.close();
+  }finally{await browser.close();server.kill('SIGTERM')}
+})().catch(e=>{console.error(e);process.exit(1)});
