@@ -86,7 +86,7 @@ const {resolve}=require('node:path');
     const mem0=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     for(let i=0;i<5;i++){await page.evaluate(()=>window.__kototanki3d.next());await page.waitForTimeout(120)}
     const mem1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
-    console.log('MEMORY_SOAK',JSON.stringify({before:mem0,after:mem1}));
+    console.log('MEMORY_SOAK',JSON.stringify({before:mem0,after:mem1}));console.log('RENDER_PROFILE',JSON.stringify(mem1));
     assert.ok(mem1.geometries<mem0.geometries*1.8+120);assert.ok(mem1.textures<mem0.textures+30);
     assert.deepEqual(errors,[]);
     console.log('KOTOTANKI_TWIN_STICK_CHAOS_E2E_PASS');
