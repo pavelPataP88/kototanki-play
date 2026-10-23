@@ -35,7 +35,7 @@ const {resolve}=require('node:path');
     await page.waitForFunction(({x,z,w})=>{const p=window.__kototanki3d.player,v=window.__kototanki3d.vehicle;return Math.hypot(p.x-x,p.z-z)>.20&&Math.abs(v.wheelSpin-w)>.15},{x:p0.x,z:p0.z,w:wheel0},{timeout:5000});
     await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
     const p1=await page.evaluate(()=>window.__kototanki3d.player);const wheel1=await page.evaluate(()=>window.__kototanki3d.vehicle.wheelSpin);const mouseRide=await page.evaluate(()=>window.__kototanki3d.mouse);
-    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);assert.ok(mouseRide&&Math.hypot(mouseRide.x-p1.x,mouseRide.z-p1.z)<2.5);await page.waitForFunction(t=>Math.abs(window.__kototanki3d.vehicle.tailPose-t)>.01,tail0,{timeout:3000});const tail1=await page.evaluate(()=>window.__kototanki3d.vehicle.tailPose);assert.ok(Math.abs(tail1-tail0)>.01);
+    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);assert.ok(mouseRide&&Math.hypot(mouseRide.x-p1.x,mouseRide.z-p1.z)<2.5);await page.waitForFunction(t=>Math.abs(window.__kototanki3d.vehicle.tailPose-t)>.01,tail0,{timeout:3000});
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
