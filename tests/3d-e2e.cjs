@@ -22,6 +22,7 @@ const {resolve}=require('node:path');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(700);
+    console.log('MOUSE_DEBUG',await page.evaluate(()=>({mouse:window.__kototanki3d.mouse,action:window.__kototanki3d.action,state:window.__kototanki3d.state})));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
