@@ -24,7 +24,7 @@ const tune={speed:1,fire:1,damage:1,valerian:1,bombRadius:1,extraBombs:0};
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87cfff);
 scene.fog=new THREE.Fog(0xcfeeff,40,115);
-const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);
+const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);const camFocus=new THREE.Vector3(),camDesired=new THREE.Vector3();
 camera.position.set(0,13.5,22);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
@@ -693,7 +693,7 @@ function updateProjectiles(dt){
   }
 }
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(featherGeo,featherMat);m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
-function updateHelper(dt,now){const anchor=player.position.clone();anchor.x+=Math.cos(now*1.55)*3.6;anchor.z+=Math.sin(now*1.55)*2.4;anchor.y=4.3+Math.sin(now*4.2)*.4;helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
+function updateHelper(dt,now){const anchor=helper.userData.anchor||(helper.userData.anchor=new THREE.Vector3());anchor.set(player.position.x+Math.cos(now*1.55)*3.6,4.3+Math.sin(now*4.2)*.4,player.position.z+Math.sin(now*1.55)*2.4);helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
 function chooseDogTarget(e){
   let best=player,bestScore=e.position.distanceTo(player.position);
   for(const a of allies){const d=e.position.distanceTo(a.position)*.92;if(d<bestScore){best=a;bestScore=d}}
@@ -702,21 +702,17 @@ function chooseDogTarget(e){
   return best
 }
 function dogSteer(e,target,now){
-  const u=e.userData,pos=e.position,to=target.position.clone().sub(pos).setY(0),dist=Math.max(.001,to.length()),forward=to.clone().divideScalar(dist);
-  const side=new THREE.Vector3(-forward.z,0,forward.x).multiplyScalar(u.flankSign);
-  const desired=new THREE.Vector3();
-  if(dist>u.preferredRange+1.6)desired.add(forward);
-  else if(dist<u.preferredRange-1.5)desired.addScaledVector(forward,-.42);
-  desired.addScaledVector(side,.52+Math.sin(now*2.4+u.dodgeSeed)*.18);
-  const separation=new THREE.Vector3();
-  for(const other of enemies){if(other===e)continue;const off=pos.clone().sub(other.position);const d=off.length();if(d>0&&d<3.4)separation.add(off.multiplyScalar((3.4-d)/(d*3.4)))}
-  desired.addScaledVector(separation,1.35);
-  const avoid=new THREE.Vector3();
-  for(const o of obstacles){const off=pos.clone().sub(new THREE.Vector3(o.x,0,o.z));const d=off.length(),limit=o.r+2.2;if(d>0&&d<limit)avoid.add(off.multiplyScalar((limit-d)/(d*limit)))}
-  desired.addScaledVector(avoid,1.8);
-  for(const s of shots){const off=pos.clone().sub(s.mesh.position).setY(0),d=off.length();if(d<5.0&&d>.01){const sv=s.v.clone().setY(0).normalize(),cross=sv.x*off.z-sv.z*off.x;desired.addScaledVector(new THREE.Vector3(-sv.z,0,sv.x),cross>0?1.2:-1.2)}}
-  if(desired.lengthSq()<.01)desired.copy(forward);
-  return desired.normalize()
+  const u=e.userData,pos=e.position;
+  let fx=target.position.x-pos.x,fz=target.position.z-pos.z,dist=Math.max(.001,Math.hypot(fx,fz));fx/=dist;fz/=dist;
+  let vx=0,vz=0;
+  if(dist>u.preferredRange+1.6){vx+=fx;vz+=fz}
+  else if(dist<u.preferredRange-1.5){vx-=fx*.42;vz-=fz*.42}
+  const sideW=(.52+Math.sin(now*2.4+u.dodgeSeed)*.18)*u.flankSign;vx+=-fz*sideW;vz+=fx*sideW;
+  for(const other of enemies){if(other===e)continue;let ox=pos.x-other.position.x,oz=pos.z-other.position.z,d=Math.hypot(ox,oz);if(d>0&&d<3.4){const k=(3.4-d)/(d*3.4)*1.35;vx+=ox*k;vz+=oz*k}}
+  for(const o of obstacles){let ox=pos.x-o.x,oz=pos.z-o.z,d=Math.hypot(ox,oz),limit=o.r+2.2;if(d>0&&d<limit){const k=(limit-d)/(d*limit)*1.8;vx+=ox*k;vz+=oz*k}}
+  for(const s of shots){let ox=pos.x-s.mesh.position.x,oz=pos.z-s.mesh.position.z,d=Math.hypot(ox,oz);if(d<5&&d>.01){let svx=s.v.x,svz=s.v.z,sl=Math.hypot(svx,svz)||1;svx/=sl;svz/=sl;const cross=svx*oz-svz*ox,k=cross>0?1.2:-1.2;vx+=-svz*k;vz+=svx*k}}
+  let len=Math.hypot(vx,vz);if(len<.01){vx=fx;vz=fz;len=1}
+  const out=u.steerVec||(u.steerVec=new THREE.Vector3());return out.set(vx/len,0,vz/len)
 }
 function updateEnemies(dt,now){for(const e of [...enemies]){
   const u=e.userData;
@@ -729,16 +725,14 @@ function updateEnemies(dt,now){for(const e of [...enemies]){
   if(wantsShoot&&u.fireCooldown<=0){fireBone(e,target===home?home:target);u.fireCooldown=Math.max(.42,.82-state.level*.008)+Math.random()*.34}
   const rush=dist>15?1.28:1;
   const moveScale=(wantsShoot?.72:1)*u.speed*rush*dt;
-  let step=steer.clone().multiplyScalar(moveScale),nx=e.position.x+step.x,nz=e.position.z+step.z;
+  let nx=e.position.x+steer.x*moveScale,nz=e.position.z+steer.z*moveScale;
   if(blocked(nx,nz)){
     u.flankSign*=-1;
-    const alt=new THREE.Vector3(-steer.z,0,steer.x).multiplyScalar(u.flankSign*u.speed*dt*1.15);
-    nx=e.position.x+alt.x;nz=e.position.z+alt.z;
+    const ak=u.flankSign*u.speed*dt*1.15;nx=e.position.x-steer.z*ak;nz=e.position.z+steer.x*ak;
   }
   if(!blocked(nx,e.position.z))e.position.x=nx;
   if(!blocked(e.position.x,nz))e.position.z=nz;
-  const face=target.position.clone().sub(e.position).setY(0);
-  if(face.lengthSq()>.001){face.normalize();e.rotation.y=Math.atan2(face.x,face.z)+Math.PI}
+  const fdx=target.position.x-e.position.x,fdz=target.position.z-e.position.z;if(fdx*fdx+fdz*fdz>.001)e.rotation.y=Math.atan2(fdx,fdz)+Math.PI
   if(u.legs)for(let i=0;i<u.legs.length;i++)u.legs[i].rotation.x=Math.sin(now*12+i*Math.PI)*.48;const bs=u.baseScale||new THREE.Vector3(1,1,1);if(!u.hitFlash){const bob=1+Math.abs(Math.sin(now*6+u.dodgeSeed))*.012;e.scale.set(bs.x,bs.y*bob,bs.z)}
   const distPlayer=e.position.distanceTo(player.position);
   if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;state.kills++;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);if(player.userData.velocity)player.userData.velocity.set(0,0,0);retire(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили');else if(state.kills>=state.targetKills)winLevel()}
@@ -755,19 +749,19 @@ function updateMouse(dt,now){
   for(const p of pickups){const d=player.position.distanceTo(p.mesh.position);if(d<bestD){best=p;bestD=d}}
   if(best&&!u.fetch&&u.mode==='ride'){u.fetch=best;u.mode='fetch'}
   if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
-  const seat=new THREE.Vector3(1.18,1.88,-.18).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position);
+  const cs=Math.cos(player.rotation.y),sn=Math.sin(player.rotation.y),seatX=player.position.x+1.18*cs-.18*sn,seatZ=player.position.z-1.18*sn-.18*cs,seatY=player.position.y+1.88;
   let moving=false;
   if(u.mode==='fetch'&&u.fetch){
-    const d=u.fetch.mesh.position.clone().sub(mouseCompanion.position);d.y=0;
-    if(d.length()<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return';sfx.pickup()}
-    else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*10.4);mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(d.x,d.z)-mouseCompanion.rotation.y)*Math.min(1,dt*14);moving=true}
+    let dx=u.fetch.mesh.position.x-mouseCompanion.position.x,dz=u.fetch.mesh.position.z-mouseCompanion.position.z,d=Math.hypot(dx,dz);
+    if(d<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return';sfx.pickup()}
+    else{dx/=d;dz/=d;mouseCompanion.position.x+=dx*dt*10.4;mouseCompanion.position.z+=dz*dt*10.4;mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(dx,dz)-mouseCompanion.rotation.y)*Math.min(1,dt*14);moving=true}
   }else{
-    const d=seat.clone().sub(mouseCompanion.position);
-    if(u.mode==='ride'){mouseCompanion.position.x=seat.x;mouseCompanion.position.z=seat.z;moving=false}
-    else{mouseCompanion.position.lerp(seat,1-Math.exp(-dt*9));moving=d.length()>.12;if(d.length()<.18)u.mode='ride'}
+    const dx=seatX-mouseCompanion.position.x,dz=seatZ-mouseCompanion.position.z,d=Math.hypot(dx,dz);
+    if(u.mode==='ride'){mouseCompanion.position.x=seatX;mouseCompanion.position.z=seatZ}
+    else{const k=1-Math.exp(-dt*9);mouseCompanion.position.x+=dx*k;mouseCompanion.position.z+=dz*k;moving=d>.12;if(d<.18)u.mode='ride'}
     mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+Math.PI)-mouseCompanion.rotation.y)*Math.min(1,dt*10);
   }
-  const targetY=u.mode==='ride'?seat.y+Math.sin(now*5.5+u.phase)*.025:(.18+Math.abs(Math.sin(now*13+u.phase))*.09);
+  const targetY=u.mode==='ride'?seatY+Math.sin(now*5.5+u.phase)*.025:(.18+Math.abs(Math.sin(now*13+u.phase))*.09);
   mouseCompanion.position.y+=(targetY-mouseCompanion.position.y)*Math.min(1,dt*12);
   if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.28;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.04}
   mouseCompanion.rotation.z=moving?Math.sin(now*15+u.phase)*.08:Math.sin(now*4+u.phase)*.02;
@@ -776,15 +770,13 @@ function updateMouse(dt,now){
 }
 function updateRaccoons(dt,now){
   for(const r of [...raccoons]){
-    const u=r.userData,escort=u.escort&&u.escort.parent?u.escort:nearestEnemy(r.position,999);
-    u.escort=escort;const target=player;
-    const anchor=escort?escort.position.clone().add(new THREE.Vector3(Math.sin(u.phase)*2.2,0,2.0)):target.position.clone();
-    const d=anchor.sub(r.position);d.y=0;if(d.length()>.8){d.normalize();const nx=r.position.x+d.x*u.speed*dt,nz=r.position.z+d.z*u.speed*dt;if(!blocked(nx,r.position.z))r.position.x=nx;if(!blocked(r.position.x,nz))r.position.z=nz;r.rotation.y=Math.atan2(d.x,d.z)+Math.PI}
-    u.fireCooldown-=dt;if(r.position.distanceTo(target.position)<16&&u.fireCooldown<=0){fireRaccoonPoop(r,target);u.fireCooldown=.75+Math.random()*.55}
+    const u=r.userData,escort=u.escort&&u.escort.parent?u.escort:nearestEnemy(r.position,999);u.escort=escort;
+    const ax=escort?escort.position.x+Math.sin(u.phase)*2.2:player.position.x,az=escort?escort.position.z+2.0:player.position.z;
+    let dx=ax-r.position.x,dz=az-r.position.z,d=Math.hypot(dx,dz);if(d>.8){dx/=d;dz/=d;const nx=r.position.x+dx*u.speed*dt,nz=r.position.z+dz*u.speed*dt;if(!blocked(nx,r.position.z))r.position.x=nx;if(!blocked(r.position.x,nz))r.position.z=nz;r.rotation.y=Math.atan2(dx,dz)+Math.PI}
+    u.fireCooldown-=dt;if(Math.hypot(r.position.x-player.position.x,r.position.z-player.position.z)<16&&u.fireCooldown<=0){fireRaccoonPoop(r,player);u.fireCooldown=.75+Math.random()*.55}
     r.position.y=.02+Math.abs(Math.sin(now*8+u.phase))*.04;r.rotation.z=Math.sin(now*5+u.phase)*.018;if(u.cart)u.cart.rotation.x=Math.sin(now*7+u.phase)*.018
   }
 }
-
 function litterDust(now,dt=.016){
   player.userData.dustTimer=(player.userData.dustTimer||0)-dt;if(player.userData.dustTimer>0)return;player.userData.dustTimer=.075;
   const back=new THREE.Vector3(-playerFacing.x,0,-playerFacing.z).multiplyScalar(1.8).add(player.position);
@@ -798,7 +790,7 @@ function updatePlayer(dt,now){
   if(mag>.06){
     const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);
     const desiredYaw=Math.atan2(wx,wz);player.rotation.y+=normalizeAngle(desiredYaw-player.rotation.y)*Math.min(1,dt*10);
-    const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,targetV=new THREE.Vector3(wx*speed,0,wz*speed);
+    const boost=(state.valerian>0?1.38:1)*(state.poopSlow>0?.58:1),speed=8.7*tune.speed*boost*mag,targetV=player.userData.moveTarget||(player.userData.moveTarget=new THREE.Vector3());targetV.set(wx*speed,0,wz*speed);
     const vel=player.userData.velocity||(player.userData.velocity=new THREE.Vector3());vel.lerp(targetV,1-Math.exp(-dt*8.5));
     const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z,1.72))player.position.x=nx;else vel.x*=.2;if(!blocked(player.position.x,nz,1.72))player.position.z=nz;else vel.z*=.2;litterDust(now,dt)
   }else{const vel=player.userData.velocity||(player.userData.velocity=new THREE.Vector3());vel.multiplyScalar(Math.exp(-dt*10));if(vel.lengthSq()>.002){const nx=player.position.x+vel.x*dt,nz=player.position.z+vel.z*dt;if(!blocked(nx,player.position.z,1.72))player.position.x=nx;if(!blocked(player.position.x,nz,1.72))player.position.z=nz}player.rotation.z=Math.sin(now*2.5)*.012}
@@ -884,7 +876,7 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
     state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}
   }
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
-  const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,1-Math.exp(-dt*7));camera.lookAt(focus);
+  const radius=21;camFocus.set(player.position.x,1.6,player.position.z);camDesired.set(camFocus.x+Math.sin(cameraYaw)*radius,13.2,camFocus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(camDesired,1-Math.exp(-dt*7));camera.lookAt(camFocus);
   if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
   renderer.render(scene,camera)
 }
