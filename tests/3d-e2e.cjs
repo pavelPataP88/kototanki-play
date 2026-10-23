@@ -20,14 +20,16 @@ const {resolve}=require('node:path');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
+    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-reference-start.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
-    await page.waitForTimeout(1050);
+    await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);await page.evaluate(()=>window.__kototanki3d.spawnRaccoon());await page.waitForTimeout(120);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.raccoons))>=1);
     assert.ok((await page.locator('#place').textContent()).includes('·'));
 
+    await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));
     const p0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setMove(.75,-.75));
     await page.waitForTimeout(420);
@@ -44,8 +46,8 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
     await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
 
-    await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.spawnYarn());
-    await page.waitForTimeout(220);
+    await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.launchYarn());
+    await page.waitForTimeout(350);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.yarns))>=1);
 
     await page.waitForTimeout(260);
