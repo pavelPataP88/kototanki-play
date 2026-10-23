@@ -27,7 +27,7 @@ scene.fog=new THREE.Fog(0xcfeeff,40,115);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);
 camera.position.set(0,13.5,22);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth>=700?1.5:1.4));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -80,6 +80,7 @@ function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=14){const o=mesh(new THREE.SphereGe
 function cyl(p,rt,rb,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.CylinderGeometry(rt,rb,h,14),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry(r,h,12),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 
+function decor(g){g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});return g}
 function bolt(p,x,y,z,m=M.bronze){return sph(p,.055,m,x,y,z,[1,1,.55],8)}
 function whisker(p,x,y,z,len=.55,rz=0){const w=box(p,len,.025,.025,M.white,x,y,z);w.rotation.z=rz;return w}
 function makeBarrel(){
@@ -421,12 +422,12 @@ function addGardenProps(rng,n){
   const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(13.8,0,17.0);world.add(gn);
 
   // Raised tomato beds like the reference backyard.
-  for(const p of [[-15,-18,.15],[15,-16,-.12],[-15,12,-.08],[15,15,.18]]){const bed=makeGardenBed();bed.position.set(p[0],0,p[1]);bed.rotation.y=p[2];bed.scale.setScalar(.72);world.add(bed);collider(p[0],p[1],2.0)}
+  for(const p of [[-15,-18,.15],[15,-16,-.12],[-15,12,-.08],[15,15,.18]]){const bed=makeGardenBed();bed.position.set(p[0],0,p[1]);bed.rotation.y=p[2];bed.scale.setScalar(.72);world.add(decor(bed));collider(p[0],p[1],2.0)}
 
   // Barrels, pots and sunflowers.
-  for(const p of [[-18,-6],[18,-4],[-19,20]]){const b=makeBarrel();b.position.set(p[0],0,p[1]);b.scale.setScalar(.82);world.add(b);collider(p[0],p[1],.8)}
-  for(let i=0;i<7;i++){const pot=makeTerracottaPot();pot.position.set((i%2?-1:1)*(17+rng()*3),0,-20+i*6.3);pot.scale.setScalar(.65+rng()*.18);world.add(pot)}
-  for(let i=0;i<12;i++){const s=makeSunflower();s.position.set((i%2?-1:1)*(18+rng()*2.5),0,-25+i*4.5);s.scale.setScalar(.60+rng()*.35);world.add(s)}
+  for(const p of [[-18,-6],[18,-4],[-19,20]]){const b=makeBarrel();b.position.set(p[0],0,p[1]);b.scale.setScalar(.82);world.add(decor(b));collider(p[0],p[1],.8)}
+  for(let i=0;i<7;i++){const pot=makeTerracottaPot();pot.position.set((i%2?-1:1)*(17+rng()*3),0,-20+i*6.3);pot.scale.setScalar(.65+rng()*.18);world.add(decor(pot))}
+  for(let i=0;i<12;i++){const s=makeSunflower();s.position.set((i%2?-1:1)*(18+rng()*2.5),0,-25+i*4.5);s.scale.setScalar(.60+rng()*.35);world.add(decor(s))}
 
   // Mud puddles and cat-logo manholes.
   for(let i=0;i<4;i++){const x=(i-1.5)*7+(n%2?1.5:-1.5),z=-17+i*11;const mud=mesh(new THREE.CylinderGeometry(1.8,2.35,.055,22),std(0x775238,.92),x,.03,z);world.add(mud);const shine=mesh(new THREE.CylinderGeometry(1.25,1.8,.02,22),std(0x6c91a0,.25),x,.065,z);world.add(shine)}
@@ -438,7 +439,7 @@ function addGardenProps(rng,n){
 
   // Shed wall/tool rack at the far end.
   const shed=new THREE.Group();box(shed,12,4.5,.38,std(0x9b5e3a,.82),0,2.25,0);for(let x=-5.5;x<=5.5;x+=1.0)box(shed,.08,4.2,.12,M.woodLight,x,2.25,-.22);
-  box(shed,1.4,.12,.15,M.steel,-2.4,2.4,-.35,.35);box(shed,.12,2.5,.12,M.steel,-2.4,1.45,-.35);box(shed,1.1,.10,.14,M.steel,1.5,2.7,-.35,-.4);box(shed,.12,2.3,.12,M.wood,1.5,1.45,-.35);shed.position.set(0,0,-36);world.add(shed);
+  box(shed,1.4,.12,.15,M.steel,-2.4,2.4,-.35,.35);box(shed,.12,2.5,.12,M.steel,-2.4,1.45,-.35);box(shed,1.1,.10,.14,M.steel,1.5,2.7,-.35,-.4);box(shed,.12,2.3,.12,M.wood,1.5,1.45,-.35);shed.position.set(0,0,-36);world.add(decor(shed));
 
   for(let i=0;i<30;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*14),-25+rng()*49,50+i)
 }
@@ -679,5 +680,5 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.mi
   renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth>=700?1.5:1.4))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.4))});
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
