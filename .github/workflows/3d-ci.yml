@@ -17,6 +17,7 @@ on:
       - fix/visible-organic-overhaul-r3-20261023
       - fix/hero-reference-match-20261023
       - fix/hero-motion-mouse-r6-20261023
+      - feature/true-3d-hero-r7-20261023
   workflow_dispatch:
 permissions:
   contents: read

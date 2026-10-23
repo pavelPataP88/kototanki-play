@@ -16,11 +16,11 @@ const {resolve}=require('node:path');
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
     assert.equal(await page.locator('canvas').count(),1);
-    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'reference-impostor-r6');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'motion-mouse-r6');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-2.56)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.wheelCount),4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'mouse-reference-r6');
+    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'true-3d-r7');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'true-3d-r7');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-2.56)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.wheelCount),4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'mouse-reference-r6');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
-    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),true);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw+0.58)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));
-    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-motion-mouse-r6.png')});
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw+0.58)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));
+    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-true-3d-r7.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
@@ -30,12 +30,12 @@ const {resolve}=require('node:path');
     assert.ok((await page.locator('#place').textContent()).includes('·'));
 
     await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));
-    const p0=await page.evaluate(()=>window.__kototanki3d.player);const wheel0=await page.evaluate(()=>window.__kototanki3d.vehicle.wheelSpin);
+    const p0=await page.evaluate(()=>window.__kototanki3d.player);const wheel0=await page.evaluate(()=>window.__kototanki3d.vehicle.wheelSpin);const tail0=await page.evaluate(()=>window.__kototanki3d.vehicle.tailPose);
     await page.evaluate(()=>window.__kototanki3d.setMove(.75,-.75));
     await page.waitForTimeout(760);
     await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
     const p1=await page.evaluate(()=>window.__kototanki3d.player);const wheel1=await page.evaluate(()=>window.__kototanki3d.vehicle.wheelSpin);
-    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);
+    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);await page.waitForTimeout(180);const tail1=await page.evaluate(()=>window.__kototanki3d.vehicle.tailPose);assert.ok(Math.abs(tail1-tail0)>.01);
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
