@@ -16,11 +16,11 @@ const {resolve}=require('node:path');
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
     assert.equal(await page.locator('canvas').count(),1);
-    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'organic-r3');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'r3-visible');assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'organic-r3');
+    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'reference-impostor-r5');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'reference-impostor-r5');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-2.56)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'organic-r3');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw+0.58)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));
-    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-visible-r3.png')});
+    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-reference-impostor-r5.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
@@ -32,10 +32,10 @@ const {resolve}=require('node:path');
     await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));
     const p0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setMove(.75,-.75));
-    await page.waitForTimeout(420);
+    await page.waitForTimeout(760);
     await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
     const p1=await page.evaluate(()=>window.__kototanki3d.player);
-    assert.ok(Math.abs(p1.x-p0.x)>.12&&Math.abs(p1.z-p0.z)>.12);
+    assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
