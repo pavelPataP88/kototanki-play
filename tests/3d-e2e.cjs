@@ -20,7 +20,7 @@ const {resolve}=require('node:path');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.deepEqual(await page.evaluate(()=>({d:window.__kototanki3d.diagnostics.blockedDogs,a:window.__kototanki3d.diagnostics.blockedAllies})),{d:0,a:0});assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));assert.ok((await page.evaluate(()=>window.__kototanki3d.allies.every(a=>a.modelStyle==='organic-r8'))));assert.equal(await page.evaluate(()=>window.__kototanki3d.helper.modelStyle),'organic-r8');
-    await page.waitForFunction(()=>window.__kototanki3d.camera.homeFade<.55,{timeout:5000});const homeFade=await page.evaluate(()=>window.__kototanki3d.camera.homeFade);assert.ok(homeFade<.55);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
+    await page.waitForFunction(()=>window.__kototanki3d.camera.homeFade<.18,{timeout:5000});const homeFade=await page.evaluate(()=>window.__kototanki3d.camera.homeFade);assert.ok(homeFade<.18);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForFunction(()=>window.__kototanki3d.state.valerian>0,{timeout:5000});
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
