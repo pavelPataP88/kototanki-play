@@ -1,0 +1,26 @@
+name: Kototanki 3D checks
+on:
+  push:
+    branches:
+      - feature/3d-dark-fantasy-remake-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: mkdir -p artifacts && node tests/3d-e2e.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kototanki-3d-screenshots
+          path: artifacts/
+          if-no-files-found: ignore
