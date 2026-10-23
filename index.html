@@ -27,21 +27,22 @@
   const btn=document.getElementById('rotateScreen');
   const orientationState={requested:null,lastError:null,angle:screen.orientation?.angle??0};
   const resizeGame=()=>{setTimeout(()=>window.dispatchEvent(new Event('resize')),80);setTimeout(()=>window.dispatchEvent(new Event('resize')),350)};
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('orientation-timeout')),ms))]);
   async function rotate(){
     const landscape=innerWidth>innerHeight;
     const target=landscape?'portrait':'landscape';
     orientationState.requested=target;orientationState.lastError=null;
     try{
       if(!document.fullscreenElement&&document.documentElement.requestFullscreen){
-        await document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{});
+        await withTimeout(document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{}),900).catch(()=>{});
       }
       if(screen.orientation?.lock){
-        await screen.orientation.lock(target);
+        await withTimeout(screen.orientation.lock(target),1200);
       }else{
         orientationState.lastError='orientation-lock-unavailable';
       }
     }catch(e){
-      orientationState.lastError=e?.name||'orientation-lock-failed';
+      orientationState.lastError=e?.message||e?.name||'orientation-lock-failed';
     }
     resizeGame();
   }
