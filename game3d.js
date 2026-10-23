@@ -261,7 +261,7 @@ function makeCatTank(){
   cyl(vehicle,.22,.30,.34,brass,-2.28,.93,1.34);tubePart(vehicle,[[-2.28,1.08,1.34],[-2.44,.73,1.47]],.055,brass,7);
 
   // Long brass/green cannon from the reference, independent of the cat.
-  const turret=new THREE.Group();turret.position.set(.54,1.80,-.65);vehicle.add(turret);
+  const turret=new THREE.Group();turret.position.set(1.18,1.92,.10);vehicle.add(turret);
   organic(turret,.68,brass,0,.08,0,[1.18,.44,1.02],'soft');
   const barrel=new THREE.Group();turret.add(barrel);
   const gun1=cyl(barrel,.24,.29,1.30,green,0,.10,-.95,Math.PI/2,0);gun1.rotation.x=Math.PI/2;
@@ -271,30 +271,32 @@ function makeCatTank(){
   heroDecal(barrel,'paw',.46,.34,.33,.10,-1.65,-Math.PI/2);
 
   // Hero cat: large triangular head, green eyes, cream muzzle, red scarf, huge fluffy tail.
-  const cat=new THREE.Group();cat.position.set(-.78,1.58,.42);cat.scale.setScalar(1.24);cat.rotation.y=2.56;g.add(cat);
+  const cat=new THREE.Group();cat.position.set(-.48,1.72,.22);cat.scale.setScalar(1.20);cat.rotation.y=2.56;g.add(cat);
   organic(cat,.78,orange,0,.72,.05,[1.00,1.12,.94],'catBody');
   organic(cat,.49,creamFur,0,.54,-.48,[.92,.82,.78],'soft');
   organic(cat,.27,orange,-.50,.72,-.72,[1.18,.80,1.25],'paw');organic(cat,.27,orange,.50,.72,-.72,[1.18,.80,1.25],'paw');
 
-  // Huge fluffy tail as overlapping sculpted segments, matching the reference silhouette.
+  // Huge continuous fluffy tail, matching the reference's single sweeping plume.
   const tail=new THREE.Group();tail.position.set(.72,.68,.54);cat.add(tail);
-  const tailPts=[[0,0,0],[.33,.10,.26],[.58,.30,.50],[.74,.58,.68],[.68,.91,.72],[.48,1.20,.62],[.16,1.40,.49],[-.10,1.48,.38]];
-  for(let i=0;i<tailPts.length;i++){const p=tailPts[i],r=.30+.13*Math.sin((i/(tailPts.length-1))*Math.PI);organic(tail,r,orange,p[0],p[1],p[2],[1.18,1.02,1.18],'soft');if(i>2&&i<7)for(let k=0;k<3;k++)heroFurTuft(tail,p[0]+(k-1)*.12,p[1]+.10,p[2]+.10,orange,.42,(k-1)*.24)}
-  organic(tail,.34,creamFur,-.13,1.53,.37,[1.20,1.05,1.20],'soft');
+  const tailCurve=[[0,0,0],[.30,.10,.24],[.56,.30,.48],[.72,.60,.66],[.68,.92,.70],[.50,1.20,.60],[.22,1.40,.46],[-.08,1.50,.34]];
+  tubePart(tail,tailCurve,.29,orange,32);
+  tubePart(tail,tailCurve.map((p,i)=>[p[0]+.02*Math.sin(i),p[1]+.02,p[2]-.02]),.18,heroFur(0xf0a24c,0xffd18a,0xb25722),28);
+  for(let i=2;i<tailCurve.length;i++){const p=tailCurve[i];for(const side of [-1,1])heroFurTuft(tail,p[0]+side*.16,p[1]+.05,p[2]+.04,orange,.34,side*.32)}
+  organic(tail,.30,creamFur,-.10,1.53,.34,[1.25,1.06,1.20],'soft');
 
   // scarf tied at the neck with two flying tails
   roundedSlab(cat,1.28,.42,.20,scarf,0,1.18,-.04,.14,.035);
-  const s1=roundedSlab(cat,.34,1.10,.18,scarf,-.48,1.16,.56,.08,.025);s1.rotation.y=.15;s1.rotation.z=.10;
-  const s2=roundedSlab(cat,.30,1.02,.16,scarf,-.63,1.05,.60,.08,.025);s2.rotation.y=-.28;s2.rotation.z=-.18;
+  const s1=roundedSlab(cat,.24,.90,.14,scarf,-.50,1.16,.54,.07,.02);s1.rotation.y=.15;s1.rotation.z=.10;
+  const s2=roundedSlab(cat,.22,.82,.13,scarf,-.62,1.06,.58,.07,.02);s2.rotation.y=-.28;s2.rotation.z=-.18;
 
   const head=new THREE.Group();head.position.set(0,1.84,-.12);cat.add(head);
-  organic(head,.79,orange,0,0,0,[1.08,.98,1.00],'catHead');
+  organic(head,.76,orange,0,0,0,[1.12,.98,.98],'catHead');
   // pronounced forehead/cheeks for the reference expression
   organic(head,.28,orange,-.38,.05,-.35,[1.08,.92,.82],'soft');organic(head,.28,orange,.38,.05,-.35,[1.08,.92,.82],'soft');
   organic(head,.38,creamFur,-.20,-.17,-.59,[1.08,.72,.88],'muzzle');organic(head,.38,creamFur,.20,-.17,-.59,[1.08,.72,.88],'muzzle');
   softEar(head,-1,.44,.02,orange,false,1.08);softEar(head,1,.44,.02,orange,false,1.08);
   softEar(head,-1,.47,-.005,pink,false,.68);softEar(head,1,.47,-.005,pink,false,.68);
-  heroEye(head,-.29,.14,-.70,-1);heroEye(head,.29,.14,-.70,1);
+  heroEye(head,-.30,.16,-.70,-1);heroEye(head,.30,.16,-.70,1);
   organic(head,.095,pink,0,-.18,-.91,[1.02,.72,.60],'soft');
   tubePart(head,[[-.02,-.25,-.83],[0,-.31,-.88],[.05,-.34,-.83]],.025,M.black,6);
   // whiskers
