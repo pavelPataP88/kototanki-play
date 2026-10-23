@@ -3,12 +3,13 @@ on:
   push:
     branches:
       - feature/3d-dark-fantasy-remake-20261023
+      - feature/sol-max-upgrade-20261023
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
