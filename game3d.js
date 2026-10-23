@@ -543,8 +543,8 @@ function updateHomeOcclusion(dt){
   if(!home)return;
   const ax=camera.position.x,az=camera.position.z,bx=player.position.x,bz=player.position.z,px=home.position.x,pz=home.position.z;
   const vx=bx-ax,vz=bz-az,len2=vx*vx+vz*vz||1,t=clamp(((px-ax)*vx+(pz-az)*vz)/len2,0,1),cx=ax+vx*t,cz=az+vz*t,dist=Math.hypot(px-cx,pz-cz);
-  const target=t>.08&&t<.92&&dist<6.4?.035:1,fade=home.userData.fade+(target-home.userData.fade)*(1-Math.exp(-dt*8));home.userData.fade=fade;
-  for(const o of home.userData.fadeMeshes||[]){o.visible=fade>.07;o.material.opacity=fade;o.material.depthWrite=fade>.72}
+  const target=t>.08&&t<.92&&dist<6.4?0:1,fade=home.userData.fade+(target-home.userData.fade)*(1-Math.exp(-dt*12));home.userData.fade=fade;
+  for(const o of home.userData.fadeMeshes||[]){o.visible=fade>.18;o.material.opacity=fade;o.material.depthWrite=fade>.72}
 }
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
