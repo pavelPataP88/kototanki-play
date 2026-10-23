@@ -21,7 +21,6 @@ const {resolve}=require('node:path');
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw+0.58)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic'))));
     await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-organic-classic-camera.png')});
-    await page.evaluate(()=>window.__kototanki3d.stageModelPreview());await page.waitForTimeout(180);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-dog-closeup.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
