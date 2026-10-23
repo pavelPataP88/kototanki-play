@@ -76,7 +76,7 @@ function patternTexture(base,accent,repeat=4,kind='noise'){
   if(kind==='scratch'){x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;for(let i=0;i<14;i++){x.beginPath();x.moveTo(Math.random()*96,Math.random()*96);x.lineTo(Math.random()*96,Math.random()*96);x.stroke()}}
   const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeat,repeat);t.colorSpace=THREE.SRGBColorSpace;textureCache.set(key,t);return t
 }
-function texStd(base,accent,rough=.8,metal=0,repeat=4,kind='noise'){const tex=patternTexture(base,accent,repeat,kind),m=new THREE.MeshStandardMaterial({map:tex,roughness:rough,metalness:metal});if(kind==='fur'||kind==='scratch'){m.bumpMap=tex;m.bumpScale=kind==='fur'?.035:.018}return m}
+function texStd(base,accent,rough=.8,metal=0,repeat=4,kind='noise'){const tex=patternTexture(base,accent,repeat,kind);return new THREE.MeshStandardMaterial({map:tex,roughness:rough,metalness:metal})}
 const M={
   orange:std(0xe77c32,.72),cream:std(0xffdfad,.78),white:std(0xfff7e8,.75),black:std(0x17191d,.65),eye:std(0x63c7ff,.2),pupil:std(0x10131a,.2),
   steel:std(0x555e69,.35,.72),darkSteel:std(0x303741,.42,.68),bronze:std(0xb26c32,.36,.62),tank:std(0xb9702d,.48,.48),tankDark:std(0x604122,.55,.45),red:std(0xd84435,.55),
@@ -134,7 +134,7 @@ function roundedSlab(parent,w,d,h,mat,x=0,y=0,z=0,r=.22,bevel=.06){
   const o=mesh(geo,mat,x,y,z);parent.add(o);return o
 }
 function organic(parent,r,mat,x=0,y=0,z=0,scale=[1,1,1],kind='soft'){
-  const geo=new THREE.SphereGeometry(r,26,18),a=geo.attributes.position;
+  const geo=new THREE.SphereGeometry(r,20,14),a=geo.attributes.position;
   for(let i=0;i<a.count;i++){
     let px=a.getX(i),py=a.getY(i),pz=a.getZ(i),nx=px/r,ny=py/r,nz=pz/r;
     if(kind==='dogBody'){px*=.92+.10*Math.max(0,-nz);py*=.92+.10*Math.max(0,-nz);pz*=1+.06*Math.max(0,nz);py+=.07*r*(1-nz)}
@@ -150,7 +150,7 @@ function organic(parent,r,mat,x=0,y=0,z=0,scale=[1,1,1],kind='soft'){
 }
 function tubePart(parent,pts,r,mat,segments=18){
   const curve=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));
-  const o=mesh(new THREE.TubeGeometry(curve,segments,r,9,false),mat);parent.add(o);return o
+  const o=mesh(new THREE.TubeGeometry(curve,segments,r,7,false),mat);parent.add(o);return o
 }
 function softEar(parent,side,y,z,mat,floppy=false,scale=1){
   const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(.50*side*scale,.12*scale);sh.lineTo(.18*side*scale,.88*scale);sh.lineTo(-.10*side*scale,.18*scale);sh.closePath();
@@ -258,12 +258,11 @@ function makeDog(type=0){
   for(const x of [-.28,0,.28])softEar(g,x<0?-1:1,1.72+x*.2,-.52,fur,false,.22);
   roundedSlab(g,1.30,.66,.15,std(type%2?0xd13c35:0xb52f2b,.62),0,1.44,-.20,.12,.02);
   // Shoulder/haunch masses, cheek fur and toe definition make the silhouette read as a dog at game distance.
-  organic(g,.42,fur,-.42,1.08,-.42,[.82,1.05,.92],'dogBody');organic(g,.42,fur,.42,1.08,-.42,[.82,1.05,.92],'dogBody');
-  organic(g,.46,fur,-.40,1.05,.76,[.90,1.0,1.02],'dogBody');organic(g,.46,fur,.40,1.05,.76,[.90,1.0,1.02],'dogBody');
+  organic(g,.46,fur,0,1.12,-.44,[1.25,1.02,.90],'dogBody');
+  organic(g,.49,fur,0,1.05,.78,[1.22,.98,1.00],'dogBody');
   organic(head,.24,fur,-.28,-.08,-.36,[1.05,.90,.78],'soft');organic(head,.24,fur,.28,-.08,-.36,[1.05,.90,.78],'soft');
   organic(head,.18,dark,0,.05,-.61,[1.05,.70,1.05],'muzzle');
   const innerEar=std(type%2?0x8e665e:0xb98269,.78);softEar(head,-1,.33,-.055,innerEar,floppy,.48);softEar(head,1,.33,-.055,innerEar,floppy,.48);
-  for(const x of [-.48,.48])for(const z of [-.72,.88])for(const toe of [-.07,0,.07])tubePart(g,[[x+toe,.18,z],[x+toe,.14,z-.16]],.022,dark,5);
   for(const z of [-.10,.12,.34,.56]){const tuft=softEar(g,z<.25?-1:1,1.74,z+.28,fur,false,.18);tuft.rotation.x=-.25}
   g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic'};
   g.scale.set(breed===1?1.08:breed===2?.94:1,breed===1?.92:1,1);return g
