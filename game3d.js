@@ -456,8 +456,11 @@ function makeRaccoon(){
   softEar(head,-1,.30,-.02,M.raccoon,false,.50);softEar(head,1,.30,-.02,M.raccoon,false,.50);
   organic(head,.075,M.black,0,-.12,-.72,[1,.72,.80],'soft');
   for(const x of [-.28,.28])for(const z of [-.16,.24]){tubePart(g,[[x,.94,z],[x,.60,z],[x+.04*Math.sign(x),.26,z-.06]],.075,M.raccoonDark,10);organic(g,.12,M.raccoonDark,x,.18,z-.10,[1.2,.55,1.35],'paw')}
-  // Curved striped tail.
-  const tailMat=[M.raccoonDark,M.raccoon,M.raccoonDark,M.raccoon,M.raccoonDark];for(let i=0;i<5;i++)tubePart(g,[[.36+i*.12,1.02,.38+i*.12],[.54+i*.12,1.26,.52+i*.12],[.66+i*.12,1.50,.48+i*.12]],.13-i*.012,tailMat[i],8);
+  // One animated raccoon tail, with alternating dark ring overlays.
+  const raccoonTail=new THREE.Group();raccoonTail.position.set(.30,1.02,.36);g.add(raccoonTail);
+  const rtPts=[[0,0,0],[.26,.16,.25],[.48,.38,.43],[.62,.62,.46],[.58,.84,.34]];
+  taperedTubePart(raccoonTail,rtPts,M.raccoon,18,8,t=>.15-.045*t);
+  for(const [t,r] of [[.18,.145],[.46,.13],[.72,.112]]){const p=new THREE.CatmullRomCurve3(rtPts.map(v=>new THREE.Vector3(...v))).getPointAt(t),ring=mesh(new THREE.TorusGeometry(r,.038,6,14),M.raccoonDark,p.x,p.y,p.z);ring.rotation.x=Math.PI/2;raccoonTail.add(ring)}
   const cart=new THREE.Group();cart.position.set(0,.24,.92);g.add(cart);roundedSlab(cart,1.48,1.16,.18,M.steel,0,.45,0,.16,.035);
   for(const x of [-.62,.62])for(const z of [-.46,.46])tubePart(cart,[[x,.45,z],[x,.86,z],[x,1.16,z]],.035,M.steel,8);
   for(let x=-.52;x<=.52;x+=.26)tubePart(cart,[[x,.48,-.50],[x,.83,-.50],[x,1.08,-.50]],.023,M.steel,6);
@@ -466,7 +469,7 @@ function makeRaccoon(){
   const shield=mesh(new THREE.CylinderGeometry(.62,.62,.12,22),M.steel,.78,1.16,-.20);shield.rotation.z=Math.PI/2;g.add(shield);
   tubePart(g,[[-.64,1.05,-.03],[-.80,1.55,-.08],[-1.02,2.05,-.18]],.055,M.wood,10);
   const hoop=mesh(new THREE.TorusGeometry(.48,.055,8,22),M.steel,-1.08,2.20,-.25);hoop.rotation.y=Math.PI/2;hoop.rotation.z=-.45;g.add(hoop);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,modelStyle:'organic-r3'};return g
+  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,raccoonTail,modelStyle:'organic-r8'};return g
 }
 function makePoopBall(mat=M.trash){
   const g=new THREE.Group(),a=mesh(poopGeoA,mat,0,0,0),b=mesh(poopGeoB,mat,.02,.15,0);a.scale.set(1.15,.8,1);b.scale.set(1,.7,1);g.add(a,b);return g
@@ -478,7 +481,9 @@ function fireRaccoonPoop(r,target){
   if(!r?.parent||!target)return;const origin=r.position.clone().add(new THREE.Vector3(0,1.25,0)),aim=target.position.clone().add(new THREE.Vector3(0,1,0)),dir=aim.sub(origin).normalize(),m=makePoopBall(M.trash);m.position.copy(origin);scene.add(m);enemyPoops.push({mesh:m,v:dir.multiplyScalar(11.5),life:2.8,spin:rand(-10,10),owner:r});sfx.poop()
 }
 function spawnRaccoon(escort=null){
-  const r=makeRaccoon();r.userData.escort=escort||nearestEnemy(home.position,999);if(escort)r.position.copy(escort.position).add(new THREE.Vector3(rand(-2,2),0,rand(1.5,3)));else r.position.set(rand(-18,18),0,-28);scene.add(r);raccoons.push(r);return r
+  const r=makeRaccoon();r.userData.escort=escort||nearestEnemy(home.position,999);
+  const anchor=escort?.position||new THREE.Vector3(rand(-18,18),0,-25),p=findClearSpawn(anchor.x+rand(-3,3),anchor.z+rand(1.5,3),1.05,18);
+  r.position.set(p[0],0,p[1]);scene.add(r);raccoons.push(r);return r
 }
 
 function makeAllyCat(i=0){
@@ -815,7 +820,7 @@ function updateRaccoons(dt,now){
     const ax=escort?escort.position.x+Math.sin(u.phase)*2.2:player.position.x,az=escort?escort.position.z+2.0:player.position.z;
     let dx=ax-r.position.x,dz=az-r.position.z,d=Math.hypot(dx,dz);if(d>.8){dx/=d;dz/=d;const nx=r.position.x+dx*u.speed*dt,nz=r.position.z+dz*u.speed*dt;if(!blocked(nx,r.position.z))r.position.x=nx;if(!blocked(r.position.x,nz))r.position.z=nz;r.rotation.y=Math.atan2(dx,dz)+Math.PI}
     u.fireCooldown-=dt;if(Math.hypot(r.position.x-player.position.x,r.position.z-player.position.z)<16&&u.fireCooldown<=0){fireRaccoonPoop(r,player);u.fireCooldown=.75+Math.random()*.55}
-    r.position.y=.02+Math.abs(Math.sin(now*8+u.phase))*.04;r.rotation.z=Math.sin(now*5+u.phase)*.018;if(u.cart)u.cart.rotation.x=Math.sin(now*7+u.phase)*.018
+    r.position.y=.02+Math.abs(Math.sin(now*8+u.phase))*.04;r.rotation.z=Math.sin(now*5+u.phase)*.018;if(u.cart)u.cart.rotation.x=Math.sin(now*7+u.phase)*.018;if(u.raccoonTail){u.raccoonTail.rotation.z=Math.sin(now*4.6+u.phase)*.34;u.raccoonTail.rotation.x=Math.sin(now*3.3+u.phase)*.08}
   }
 }
 function litterDust(now,dt=.016){
