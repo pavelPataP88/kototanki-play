@@ -15,7 +15,7 @@ const locations = [
 ];
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,last:0};
-const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], particles=[];
+const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], particles=[], allies=[];
 let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0;
 
 const scene=new THREE.Scene();
@@ -98,6 +98,45 @@ function makeDog(type=0){
   g.userData={hp:1+Math.floor(type/2),speed:2.45+type*.26,type,legs};return g;
 }
 
+
+function makeAllyCat(i=0){
+  const g=new THREE.Group(),fur=[M.orange,std(0x8d6748,.8),std(0xc7c2b4,.8),std(0x4d5660,.8)][i%4];
+  sph(g,.45,fur,0,1.15,0,[1,.95,.9]);sph(g,.38,M.cream,0,1.05,-.28,[.9,.68,.65]);
+  sph(g,.42,fur,0,1.9,-.05,[1,.95,.95]);sph(g,.24,M.cream,0,1.78,-.35,[1,.7,.75]);
+  cone(g,.2,.48,fur,-.25,2.32,-.02,0,-.12);cone(g,.2,.48,fur,.25,2.32,-.02,0,.12);
+  sph(g,.08,M.eye,-.16,1.98,-.39);sph(g,.08,M.eye,.16,1.98,-.39);sph(g,.035,M.pupil,-.16,1.98,-.45);sph(g,.035,M.pupil,.16,1.98,-.45);
+  box(g,.72,.34,.46,M.red,0,1.25,.05);
+  const legs=[];for(const x of [-.23,.23])for(const z of [-.14,.18]){const leg=cyl(g,.075,.09,.58,fur,x,.48,z);legs.push(leg)}
+  const gun=new THREE.Group();box(gun,.14,.15,.9,M.darkSteel,0,0,-.38);cyl(gun,.045,.055,.9,M.steel,0,.01,-1.05,Math.PI/2,0);gun.position.set(.42,1.33,-.12);gun.rotation.z=-.12;g.add(gun);
+  const tail=cyl(g,.06,.08,.9,fur,.46,1.08,.26,0,-.95);tail.rotation.x=.35;
+  g.userData={legs,fireCooldown:rand(.15,.8),slot:i,phase:rand(0,6.28)};g.scale.setScalar(.9);return g
+}
+function spawnCatSquad(){
+  for(const a of allies)scene.remove(a);allies.length=0;
+  const count=Math.min(8,5+Math.floor((state.level-1)/6));
+  for(let i=0;i<count;i++){const a=makeAllyCat(i);const row=Math.floor(i/3),col=i%3;a.position.set((col-1)*2.3+(row%2?1.1:0),0,20+row*2.4);scene.add(a);allies.push(a)}
+}
+function fireAlly(a,target){
+  const dir=target.position.clone().sub(a.position).setY(.2).normalize();
+  const m=mesh(new THREE.SphereGeometry(.09,7,5),M.glow);m.position.copy(a.position).add(new THREE.Vector3(0,1.35,0)).add(dir.clone().multiplyScalar(.8));scene.add(m);
+  feathers.push({mesh:m,v:dir.multiplyScalar(16),life:1.7,ally:true})
+}
+function updateAllies(dt,now){
+  for(let i=0;i<allies.length;i++){
+    const a=allies[i],u=a.userData,target=nearestEnemy(a.position,18);
+    let goal;
+    if(target)goal=target.position.clone().add(new THREE.Vector3((i%3-1)*1.6,0,4.2+(i%2)*1.2));
+    else goal=player.position.clone().add(new THREE.Vector3((i%3-1)*2.2,0,-2-Math.floor(i/3)*2.2));
+    goal.x=clamp(goal.x,-18,18);goal.z=clamp(goal.z,-20,22);
+    const d=goal.clone().sub(a.position);d.y=0;
+    if(d.length()>.55){d.normalize();const step=d.multiplyScalar(4.2*dt);const nx=a.position.x+step.x,nz=a.position.z+step.z;if(!blocked(nx,a.position.z))a.position.x=nx;if(!blocked(a.position.x,nz))a.position.z=nz;a.rotation.y=Math.atan2(d.x,d.z)}
+    for(let k=0;k<u.legs.length;k++)u.legs[k].rotation.x=Math.sin(now*11+u.phase+k*Math.PI)*.55;
+    a.position.y=.03+Math.abs(Math.sin(now*11+u.phase))*.07;
+    u.fireCooldown-=dt;
+    if(target&&u.fireCooldown<=0){fireAlly(a,target);u.fireCooldown=.7+Math.random()*.55}
+  }
+}
+
 function makeHouse(roofColor=0x2f6fa8,scale=1){
   const g=new THREE.Group(),roof=std(roofColor,.78);box(g,5.2,3.2,4.5,M.plaster,0,1.6,0);box(g,5.45,.28,.32,M.wood,0,2.65,-2.28);box(g,.28,3.1,4.7,M.wood,-2.25,1.7,0);box(g,.28,3.1,4.7,M.wood,2.25,1.7,0);
   const r=mesh(new THREE.ConeGeometry(3.85,2.7,4),roof,0,4.25,0);r.rotation.y=Math.PI/4;g.add(r);box(g,1.05,2.0,.2,M.wood,0,1.1,-2.3);
@@ -114,7 +153,7 @@ function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6f
 function makeBase(){const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);return g}
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
-function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));world=new THREE.Group();scene.add(world)}
+function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geometry)o.geometry.dispose()})}obstacles.length=0;enemies.splice(0).forEach(e=>scene.remove(e));shots.splice(0).forEach(e=>scene.remove(e.mesh));feathers.splice(0).forEach(e=>scene.remove(e.mesh));particles.splice(0).forEach(e=>scene.remove(e.mesh));allies.splice(0).forEach(a=>scene.remove(a));world=new THREE.Group();scene.add(world)}
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
@@ -136,7 +175,7 @@ function buildLevel(n){
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
-  state.level=n;state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
+  state.level=n;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper)}makeCharacters();
@@ -167,13 +206,22 @@ function winLevel(){state.playing=false;state.score+=state.level*120;updateUI();
 function lose(t){state.playing=false;showOverlay('ПОРАЖЕНИЕ',t+'. Перегруппируйся и дави их снова.','ПОВТОРИТЬ',()=>{buildLevel(state.level);overlay.style.display='none'})}
 function showOverlay(title,desc,label,cb){overlay.style.display='flex';overlay.querySelector('h1').textContent=title;$('subtitle').textContent=desc;startBtn.textContent=label;startBtn.onclick=cb}
 
-for(const b of document.querySelectorAll('[data-move]')){const k=b.dataset.move,beg=e=>{e.preventDefault();keys.add(k)},end=e=>{e.preventDefault();keys.delete(k)};b.addEventListener('pointerdown',beg);b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('pointerleave',end)}
+function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right')}
+for(const b of document.querySelectorAll('[data-move]')){
+  const k=b.dataset.move;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{b.setPointerCapture(e.pointerId)}catch{}keys.add(k)});
+  const end=e=>{e.preventDefault();keys.delete(k);try{if(b.hasPointerCapture(e.pointerId))b.releasePointerCapture(e.pointerId)}catch{}};
+  b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',()=>keys.delete(k));
+}
+document.addEventListener('pointerup',clearMovement,{passive:true});document.addEventListener('pointercancel',clearMovement,{passive:true});
+window.addEventListener('blur',clearMovement);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMovement()});
+for(const evt of ['contextmenu','selectstart','dragstart'])document.addEventListener(evt,e=>{if(e.target.closest('#controls'))e.preventDefault()});
 document.addEventListener('keydown',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.add(m[e.code]);if(e.code==='Space')fireSausage();if(e.code==='KeyB')bomb()});
 document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.delete(m[e.code])});
-$('fire').addEventListener('pointerdown',e=>{e.preventDefault();fireSausage()});$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();bomb()});
+$('fire').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireSausage()});$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();bomb()});
 startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}const desired=new THREE.Vector3(player.position.x*.42,13.2,player.position.z+21);camera.position.lerp(desired,.065);camera.lookAt(player.position.x*.28,1.5,player.position.z-5.8);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
+function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}const desired=new THREE.Vector3(player.position.x*.42,13.2,player.position.z+21);camera.position.lerp(desired,.065);camera.lookAt(player.position.x*.28,1.5,player.position.z-5.8);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get controls(){return [...keys]},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};

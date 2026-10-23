@@ -4,6 +4,7 @@ on:
     branches:
       - feature/3d-dark-fantasy-remake-20261023
       - feature/sol-max-upgrade-20261023
+      - fix/touch-and-cat-squad-20261023
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-save playwright@1.58.2
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: mkdir -p artifacts && node tests/3d-e2e.cjs
       - if: always()
         uses: actions/upload-artifact@v4
