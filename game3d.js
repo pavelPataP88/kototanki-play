@@ -85,6 +85,7 @@ const M={
   bird:std(0x202a34,.8),birdWing:std(0x151d25,.82),beak:std(0xf4ad22,.58),bone:std(0xf7e6bd,.72),collar:std(0x2f77bd,.48,.12),tray:texStd(0x2f78a8,0x1f577a,.45,.12,3,'scratch'),trayLight:texStd(0x6cb7d8,0x3d8cb1,.38,.08,3,'scratch'),litter:texStd(0xd8c39a,0xaa9169,.98,0,8,'noise'),mouse:texStd(0xa8a39d,0x787570,.82,0,4,'fur'),mouseEar:std(0xf0a7b8,.72),raccoon:texStd(0x6e7278,0x4d5258,.84,0,5,'fur'),raccoonDark:texStd(0x2f343a,0x181b1e,.84,0,5,'fur'),trash:texStd(0x7b6b54,0x514535,.92,0,4,'noise'),
   glow:new THREE.MeshStandardMaterial({color:0xffbd57,emissive:0xff7b1f,emissiveIntensity:4,roughness:.45})
 };
+for(const m of Object.values(M))if(m?.isMaterial)m.userData.shared=true;
 function mesh(g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;return o}
 function box(p,sx,sy,sz,m,x=0,y=0,z=0,ry=0){const o=mesh(new THREE.BoxGeometry(sx,sy,sz),m,x,y,z);o.rotation.y=ry;p.add(o);return o}
 function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=14){const o=mesh(new THREE.SphereGeometry(r,seg,Math.max(10,seg-4)),m,x,y,z);o.scale.set(...s);p.add(o);return o}
@@ -93,20 +94,23 @@ function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry
 
 function sharedGeo(g){g.userData.shared=true;return g}
 const fxSphereGeo=sharedGeo(new THREE.SphereGeometry(1,7,5));
-const trailMat=new THREE.MeshBasicMaterial({color:0xffc77a});
-const dustMatA=new THREE.MeshBasicMaterial({color:0xd5bd8e,transparent:true,opacity:.8});
-const dustMatB=new THREE.MeshBasicMaterial({color:0xb99866,transparent:true,opacity:.8});
+const trailMat=new THREE.MeshBasicMaterial({color:0xffc77a});trailMat.userData.shared=true;
+const dustMatA=new THREE.MeshBasicMaterial({color:0xd5bd8e,transparent:true,opacity:.8});dustMatA.userData.shared=true;
+const dustMatB=new THREE.MeshBasicMaterial({color:0xb99866,transparent:true,opacity:.8});dustMatB.userData.shared=true;
 const effectMatCache=new Map();
-function effectMat(color){if(!effectMatCache.has(color))effectMatCache.set(color,new THREE.MeshBasicMaterial({color}));return effectMatCache.get(color)}
+function effectMat(color){if(!effectMatCache.has(color)){const m=new THREE.MeshBasicMaterial({color});m.userData.shared=true;effectMatCache.set(color,m)}return effectMatCache.get(color)}
 function fxSphere(pos,scale,mat){const m=mesh(fxSphereGeo,mat,pos.x,pos.y,pos.z);m.scale.setScalar(scale);m.castShadow=false;m.receiveShadow=false;return m}
-function retire(o){if(!o)return;if(o.parent)o.parent.remove(o);o.traverse?.(x=>{if(x.geometry&&!x.geometry.userData?.shared)x.geometry.dispose()})}
+function retire(o){if(!o)return;if(o.parent)o.parent.remove(o);o.traverse?.(x=>{
+  if(x.geometry&&!x.geometry.userData?.shared)x.geometry.dispose();
+  const mats=Array.isArray(x.material)?x.material:[x.material];for(const m of mats)if(m?.isMaterial&&!m.userData?.shared)m.dispose()
+})}
 const sausageBodyGeo=sharedGeo(new THREE.CylinderGeometry(.13,.13,.72,14));
 const sausageTipGeo=sharedGeo(new THREE.SphereGeometry(.14,10,6));
-const sausageMat=std(0xd54f2d,.45);
+const sausageMat=std(0xd54f2d,.45);sausageMat.userData.shared=true;
 const boneShaftGeo=sharedGeo(new THREE.CylinderGeometry(.10,.13,.72,14));
 const boneEndGeo=sharedGeo(new THREE.SphereGeometry(.13,9,7));
 const featherGeo=sharedGeo(new THREE.ConeGeometry(.11,.72,5));
-const featherMat=std(0x273846,.55,.12);
+const featherMat=std(0x273846,.55,.12);featherMat.userData.shared=true;
 const poopGeoA=sharedGeo(new THREE.SphereGeometry(.19,9,7));
 const poopGeoB=sharedGeo(new THREE.SphereGeometry(.13,8,6));
 function decor(g){g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});return g}
@@ -508,14 +512,14 @@ function makeCastle(){const g=new THREE.Group();for(const x of [-6,-2,2,6]){box(
 function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6fb8ff];for(let i=0;i<12;i++){const a=(i*2.4+seed)%6.28,r=.25+(i%5)*.22;const f=sph(p,.07,std(colors[i%colors.length],.7),x+Math.cos(a)*r,.12,z+Math.sin(a)*r,[1,1,1],8);f.castShadow=false}}
 function makeBase(){
   const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);
-  g.userData.fade=1;g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=1;o.userData.baseOpacity=1}});return g
+  g.userData.fade=1;g.userData.fadeMeshes=[];g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.userData.shared=false;o.material.transparent=true;o.material.opacity=1;g.userData.fadeMeshes.push(o)}});return g
 }
 function updateHomeOcclusion(dt){
   if(!home)return;
   const ax=camera.position.x,az=camera.position.z,bx=player.position.x,bz=player.position.z,px=home.position.x,pz=home.position.z;
   const vx=bx-ax,vz=bz-az,len2=vx*vx+vz*vz||1,t=clamp(((px-ax)*vx+(pz-az)*vz)/len2,0,1),cx=ax+vx*t,cz=az+vz*t,dist=Math.hypot(px-cx,pz-cz);
   const target=t>.08&&t<.92&&dist<6.4?.18:1,fade=home.userData.fade+(target-home.userData.fade)*(1-Math.exp(-dt*8));home.userData.fade=fade;
-  home.traverse(o=>{if(o.isMesh){o.material.opacity=fade;o.material.depthWrite=fade>.72}})
+  for(const o of home.userData.fadeMeshes||[]){o.material.opacity=fade;o.material.depthWrite=fade>.72}
 }
 
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
@@ -653,7 +657,7 @@ function buildLevel(n){
   for(let i=0;i<8;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);addGardenProps(rng,n);spawnPoopField(n,rng);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
-  player.position.set(0,0,18);helper.position.set(2,4.4,16);mouseCompanion.position.set(1.05,1.62,18.15);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
+  player.position.set(0,0,18);player.rotation.set(0,0,0);playerFacing.set(0,0,-1);if(player.userData.velocity)player.userData.velocity.set(0,0,0);if(player.userData.moveTarget)player.userData.moveTarget.set(0,0,0);helper.position.set(2,4.4,16);helperCooldown=0;mouseCompanion.position.set(1.18,1.88,17.82);mouseCompanion.rotation.set(0,Math.PI,0);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
   state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(.28,0,-.96).normalize();spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3+tune.extraBombs;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
