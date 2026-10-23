@@ -12,6 +12,7 @@ on:
       - fix/dog-ai-diagonal-20261023
       - feature/twin-stick-chaos-20261023
       - feature/litterbox-war-20261023
+      - feature/litterbox-mouse-raccoons-20261023
   workflow_dispatch:
 permissions:
   contents: read
