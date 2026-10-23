@@ -16,7 +16,8 @@ const locations = [
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,last:0};
 const keys=new Set(), obstacles=[], enemies=[], shots=[], feathers=[], particles=[], allies=[];
-let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0;
+let player, helper, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
+const cameraDrag={active:false,id:null,lastX:0};
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87cfff);
@@ -175,7 +176,7 @@ function buildLevel(n){
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);helper.position.set(2,4.4,16);
-  state.level=n;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
+  state.level=n;cameraYaw=0;cameraYawVelocity=0;spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=8+Math.floor(n*1.55);state.spawnTimer=.8;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.playing=true;updateUI();showToast(loc.name+' · ВОЛНА '+n)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(.82);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper)}makeCharacters();
@@ -201,10 +202,33 @@ function updateProjectiles(dt){
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(new THREE.ConeGeometry(.11,.72,5),std(0x273846,.55,.12));m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
 function updateHelper(dt,now){const anchor=player.position.clone();anchor.x+=Math.cos(now*1.55)*3.6;anchor.z+=Math.sin(now*1.55)*2.4;anchor.y=4.3+Math.sin(now*4.2)*.4;helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){w.leftWing.rotation.z=.35+Math.sin(now*10)*.42;w.rightWing.rotation.z=-.35-Math.sin(now*10)*.42}helperCooldown-=dt;const target=nearestEnemy(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
 function updateEnemies(dt,now){for(const e of [...enemies]){const goal=home.position.clone();goal.z-=2.4;let dir=goal.sub(e.position);dir.y=0;const d=dir.length();if(d<3.8){state.home--;updateUI();pulseFlash();burst(e.position,0xffb54d,12);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.home<=0)lose('База разрушена');continue}dir.normalize();const step=dir.multiplyScalar(e.userData.speed*dt);let nx=e.position.x+step.x,nz=e.position.z+step.z;if(blocked(nx,nz)){const turn=new THREE.Vector3(-dir.z,0,dir.x).multiplyScalar((Math.random()<.5?-1:1)*e.userData.speed*dt*1.35);nx=e.position.x+turn.x;nz=e.position.z+turn.z}e.position.x=nx;e.position.z=nz;e.rotation.y=Math.atan2(dir.x,dir.z);if(e.userData.legs)for(let i=0;i<e.userData.legs.length;i++)e.userData.legs[i].rotation.x=Math.sin(now*9+i*Math.PI)*.42;if(e.position.distanceTo(player.position)<2.25&&state.invuln<=0){state.lives--;state.invuln=1.3;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);scene.remove(e);enemies.splice(enemies.indexOf(e),1);if(state.lives<=0)lose('Кота победили')}}}
-function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;playerFacing.set(x,0,z);player.rotation.y=Math.atan2(x,z);const speed=8.7,nx=player.position.x+x*speed*dt,nz=player.position.z+z*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
+function updatePlayer(dt,now){let x=0,z=0;if(keys.has('left'))x--;if(keys.has('right'))x++;if(keys.has('up'))z--;if(keys.has('down'))z++;if(x||z){const l=Math.hypot(x,z);x/=l;z/=l;const cs=Math.cos(cameraYaw),sn=Math.sin(cameraYaw),wx=x*cs+z*sn,wz=-x*sn+z*cs;playerFacing.set(wx,0,wz);player.rotation.y=Math.atan2(wx,wz);const speed=8.7,nx=player.position.x+wx*speed*dt,nz=player.position.z+wz*speed*dt;if(!blocked(nx,player.position.z))player.position.x=nx;if(!blocked(player.position.x,nz))player.position.z=nz;for(const w of player.userData.tracks||[])w.rotation.x+=dt*8}else{player.rotation.z=Math.sin(now*2.5)*.012}player.position.y=.06+Math.sin(now*4)*.025}
 function winLevel(){state.playing=false;state.score+=state.level*120;updateUI();if(state.level>=30){showOverlay('ПОБЕДА!','Кототанк и Галчонок отбили все 30 волн. Крепость спасена.','ИГРАТЬ СНАЧАЛА',()=>{state.score=0;buildLevel(1);overlay.style.display='none'});return}showOverlay('ВОЛНА '+state.level+' ОТБИТА','Впереди новая яркая локация, больше врагов и более жёсткий бой.','ДАЛЬШЕ ▶',()=>{buildLevel(state.level+1);overlay.style.display='none'})}
 function lose(t){state.playing=false;showOverlay('ПОРАЖЕНИЕ',t+'. Перегруппируйся и дави их снова.','ПОВТОРИТЬ',()=>{buildLevel(state.level);overlay.style.display='none'})}
 function showOverlay(title,desc,label,cb){overlay.style.display='flex';overlay.querySelector('h1').textContent=title;$('subtitle').textContent=desc;startBtn.textContent=label;startBtn.onclick=cb}
+
+function bindCameraOrbit(){
+  const surface=renderer.domElement;
+  surface.style.touchAction='none';
+  surface.addEventListener('pointerdown',e=>{
+    if(!state.playing)return;
+    cameraDrag.active=true;cameraDrag.id=e.pointerId;cameraDrag.lastX=e.clientX;cameraYawVelocity=0;
+    try{surface.setPointerCapture(e.pointerId)}catch{}
+  });
+  surface.addEventListener('pointermove',e=>{
+    if(!cameraDrag.active||e.pointerId!==cameraDrag.id)return;
+    const dx=e.clientX-cameraDrag.lastX;cameraDrag.lastX=e.clientX;
+    const delta=-dx*.009;cameraYaw+=delta;cameraYawVelocity=delta*38;
+    e.preventDefault();
+  });
+  const end=e=>{
+    if(e.pointerId!==cameraDrag.id)return;
+    cameraDrag.active=false;cameraDrag.id=null;
+    try{if(surface.hasPointerCapture(e.pointerId))surface.releasePointerCapture(e.pointerId)}catch{}
+  };
+  surface.addEventListener('pointerup',end);surface.addEventListener('pointercancel',end);surface.addEventListener('lostpointercapture',()=>{cameraDrag.active=false;cameraDrag.id=null});
+}
+bindCameraOrbit();
 
 function clearMovement(){keys.delete('up');keys.delete('down');keys.delete('left');keys.delete('right')}
 for(const b of document.querySelectorAll('[data-move]')){
@@ -221,7 +245,7 @@ document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireSausage()});$('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();bomb()});
 startBtn.onclick=()=>{state.score=0;buildLevel(1);overlay.style.display='none'};
 
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}const desired=new THREE.Vector3(player.position.x*.42,13.2,player.position.z+21);camera.position.lerp(desired,.065);camera.lookAt(player.position.x*.28,1.5,player.position.z-5.8);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
+function animate(ms){requestAnimationFrame(animate);const now=ms*.001,dt=Math.min(.04,state.last?now-state.last:.016);state.last=now;if(state.playing){state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}player.visible=state.invuln<=0||Math.floor(now*12)%2===0;updatePlayer(dt,now);updateHelper(dt,now);updateAllies(dt,now);updateProjectiles(dt);updateEnemies(dt,now);state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0){spawnDog();state.spawnTimer=Math.max(.40,1.45-state.level*.024)}}if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}const radius=21,focus=new THREE.Vector3(player.position.x,1.6,player.position.z),desired=new THREE.Vector3(focus.x+Math.sin(cameraYaw)*radius,13.2,focus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(desired,.11);camera.lookAt(focus);if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}renderer.render(scene,camera)}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get controls(){return [...keys]},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown}))},get controls(){return [...keys]},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},start(){buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
