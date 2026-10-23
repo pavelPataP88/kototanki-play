@@ -29,6 +29,7 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);await page.evaluate(()=>window.__kototanki3d.spawnRaccoon());await page.waitForTimeout(120);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.raccoons))>=1);
     assert.ok((await page.locator('#place').textContent()).includes('·'));
 
+    await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));
     const p0=await page.evaluate(()=>window.__kototanki3d.player);
     await page.evaluate(()=>window.__kototanki3d.setMove(.75,-.75));
     await page.waitForTimeout(420);
