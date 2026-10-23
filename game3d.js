@@ -91,9 +91,16 @@ function sph(p,r,m,x=0,y=0,z=0,s=[1,1,1],seg=14){const o=mesh(new THREE.SphereGe
 function cyl(p,rt,rb,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.CylinderGeometry(rt,rb,h,14),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry(r,h,12),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 
+const fxSphereGeo=new THREE.SphereGeometry(1,7,5);
+const trailMat=new THREE.MeshBasicMaterial({color:0xffc77a});
+const dustMatA=new THREE.MeshBasicMaterial({color:0xd5bd8e,transparent:true,opacity:.8});
+const dustMatB=new THREE.MeshBasicMaterial({color:0xb99866,transparent:true,opacity:.8});
+const effectMatCache=new Map();
+function effectMat(color){if(!effectMatCache.has(color))effectMatCache.set(color,new THREE.MeshBasicMaterial({color}));return effectMatCache.get(color)}
+function fxSphere(pos,scale,mat){const m=mesh(fxSphereGeo,mat,pos.x,pos.y,pos.z);m.scale.setScalar(scale);m.castShadow=false;m.receiveShadow=false;return m}
 function decor(g){g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});return g}
 function bolt(p,x,y,z,m=M.bronze){return sph(p,.055,m,x,y,z,[1,1,.55],8)}
-function whisker(p,x,y,z,len=.55,rz=0){const w=box(p,len,.025,.025,M.white,x,y,z);w.rotation.z=rz;return w}
+function whisker(p,x,y,z,len=.55,rz=0){const w=box(p,len,.025,.025,M.white,x,y,z);w.rotation.z=rz;w.castShadow=false;return w}
 function makeBarrel(){
   const g=new THREE.Group(),m=std(0x8b5a2e,.82),band=M.darkSteel;
   cyl(g,.72,.76,1.48,m,0,.74,0);for(const y of [.16,.72,1.30])cyl(g,.77,.77,.10,band,0,y,0);
@@ -223,7 +230,7 @@ function heroDecalTexture(kind){
 }
 function heroDecal(parent,kind,w,h,x,y,z,ry=0){
   const m=new THREE.MeshBasicMaterial({map:heroDecalTexture(kind),transparent:true,depthWrite:false,side:THREE.DoubleSide});
-  const p=mesh(new THREE.PlaneGeometry(w,h),m,x,y,z);p.rotation.y=ry;parent.add(p);return p
+  const p=mesh(new THREE.PlaneGeometry(w,h),m,x,y,z);p.rotation.y=ry;p.castShadow=false;p.receiveShadow=false;parent.add(p);return p
 }
 
 function makeHeroImpostor(){return null}
@@ -238,7 +245,7 @@ function makeCatTank(){
   taperedTray(vehicle,4.15,4.65,5.25,5.85,1.08,blue,0,.30,.10);
   litterRim(vehicle,5.34,5.96,.24,cream,1.40);
   roundedSlab(vehicle,4.34,4.78,.34,M.litter,0,1.06,.10,.50,.06);
-  for(let i=0;i<34;i++)organic(vehicle,.055+Math.random()*.075,i%3===0?std(0xc8ad7b,.98):i%3===1?std(0xead8ad,.98):std(0xb79a66,.98),rand(-1.88,1.88),1.27+rand(-.02,.06),rand(-1.95,1.95),[1.55,.36,1.12],'soft');
+  for(let i=0;i<34;i++){const grain=organic(vehicle,.055+Math.random()*.075,i%3===0?std(0xc8ad7b,.98):i%3===1?std(0xead8ad,.98):std(0xb79a66,.98),rand(-1.88,1.88),1.27+rand(-.02,.06),rand(-1.95,1.95),[1.55,.36,1.12],'soft');grain.castShadow=false}
 
   const wheels=[];
   for(const x of [-2.42,2.42])for(const z of [-1.66,1.66]){
@@ -317,7 +324,6 @@ function makeCatTank(){
   // True 3D hero: no sprites, no view switching.
   vehicle.visible=true;cat.visible=true;
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=128;const sx=shadowCanvas.getContext('2d'),sg=sx.createRadialGradient(64,64,5,64,64,60);sg.addColorStop(0,'rgba(30,20,12,.55)');sg.addColorStop(.55,'rgba(30,20,12,.28)');sg.addColorStop(1,'rgba(30,20,12,0)');sx.fillStyle=sg;sx.fillRect(0,0,128,128);const st=new THREE.CanvasTexture(shadowCanvas),sm=new THREE.MeshBasicMaterial({map:st,transparent:true,depthWrite:false,opacity:.75});const contactStrong=mesh(new THREE.PlaneGeometry(6.4,7.1),sm,0,.025,.18);contactStrong.rotation.x=-Math.PI/2;contactStrong.castShadow=false;contactStrong.receiveShadow=false;g.add(contactStrong);
-  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
   g.userData={tracks:wheels,wheels,cat,head,earL,earR,scarfTails:[s1,s2],turret,barrel,vehicle,tail,tailSegments,catYaw:cat.rotation.y,recoil:0,kind:'litterbox',modelStyle:'true-3d-r8'};return g
 }
 function makeMouse(){
@@ -568,6 +574,7 @@ function updateChaosItems(dt,now){
     if(y.life<=0){scene.remove(y.mesh);yarnBalls.splice(i,1)}
   }
 }
+function distSqOffset(a,b,by=0){const dx=a.x-b.x,dy=a.y-(b.y+by),dz=a.z-b.z;return dx*dx+dy*dy+dz*dz}
 function normalizeAngle(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
 function updateAim(dt){
   if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.18){
@@ -638,7 +645,7 @@ function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(
 function blocked(x,z,radius=1.05){if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
 function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
-function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
+function burst(pos,color=0xffaa55,count=12){const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(new THREE.Vector3(pos.x,pos.y+1.1,pos.z),.07+Math.random()*.10,mat);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();scene.remove(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
 function fireSausage(){
@@ -653,22 +660,22 @@ function fireSausage(){
 function bomb(){if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;sfx.bomb();burst(player.position,0xff7646,36);const radius=9.5*tune.bombRadius;for(const e of [...enemies])if(e.position.distanceTo(player.position)<radius)damageEnemy(e,5);for(const r of [...raccoons])if(r.position.distanceTo(player.position)<radius)damageRaccoon(r,5)}
 function updateProjectiles(dt){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.v.y-=10*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}}
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=mesh(new THREE.SphereGeometry(.045,5,4),new THREE.MeshBasicMaterial({color:0xffc77a}),s.mesh.position.x,s.mesh.position.y,s.mesh.position.z);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.2,0)))<1.25){damageEnemy(e,s.damage||1);hit=true;break}if(!hit)for(const r of [...raccoons])if(s.mesh.position.distanceTo(r.position.clone().add(new THREE.Vector3(0,1.1,0)))<1.05){damageRaccoon(r,s.damage||1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);shots.splice(i,1)}}
-  for(let i=feathers.length-1;i>=0;i--){const s=feathers[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;let hit=false;for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1.1,0)))<1){damageEnemy(e,1);hit=true;break}if(!hit)for(const r of [...raccoons])if(s.mesh.position.distanceTo(r.position.clone().add(new THREE.Vector3(0,1.0,0)))<.9){damageRaccoon(r,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);feathers.splice(i,1)}}
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=fxSphere(s.mesh.position,.045,trailMat);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;for(const e of [...enemies])if(distSqOffset(s.mesh.position,e.position,1.2)<1.5625){damageEnemy(e,s.damage||1);hit=true;break}if(!hit)for(const r of [...raccoons])if(distSqOffset(s.mesh.position,r.position,1.1)<1.1025){damageRaccoon(r,s.damage||1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);shots.splice(i,1)}}
+  for(let i=feathers.length-1;i>=0;i--){const s=feathers[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;let hit=false;for(const e of [...enemies])if(distSqOffset(s.mesh.position,e.position,1.1)<1){damageEnemy(e,1);hit=true;break}if(!hit)for(const r of [...raccoons])if(distSqOffset(s.mesh.position,r.position,1.0)<.81){damageRaccoon(r,1);hit=true;break}if(hit||s.life<0){scene.remove(s.mesh);feathers.splice(i,1)}}
   for(let i=boneShots.length-1;i>=0;i--){const s=boneShots[i];s.mesh.position.addScaledVector(s.v,dt);s.mesh.rotation.x+=s.spin*dt;s.mesh.rotation.z+=s.spin*.7*dt;s.life-=dt;let hit=false;
-    if(s.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0,1.15,0)))<1.25&&state.invuln<=0){state.lives--;state.invuln=1.15;updateUI();pulseFlash();shake=.48;burst(player.position,0xf7e6bd,12);hit=true;if(state.lives<=0)lose('Кота закидали костями')}
-    if(!hit){for(const a of [...allies]){if(s.mesh.position.distanceTo(a.position.clone().add(new THREE.Vector3(0,1.0,0)))<.9){a.userData.hp--;burst(a.position,0xf7e6bd,8);hit=true;if(a.userData.hp<=0){scene.remove(a);allies.splice(allies.indexOf(a),1)}break}}}
-    if(!hit&&s.mesh.position.distanceTo(home.position.clone().add(new THREE.Vector3(0,1.5,0)))<2.8){state.home--;updateUI();pulseFlash();burst(home.position,0xf7e6bd,10);hit=true;if(state.home<=0)lose('База разбита костями')}
+    if(distSqOffset(s.mesh.position,player.position,1.15)<1.5625&&state.invuln<=0){state.lives--;state.invuln=1.15;updateUI();pulseFlash();shake=.48;burst(player.position,0xf7e6bd,12);hit=true;if(state.lives<=0)lose('Кота закидали костями')}
+    if(!hit){for(const a of [...allies]){if(distSqOffset(s.mesh.position,a.position,1.0)<.81){a.userData.hp--;burst(a.position,0xf7e6bd,8);hit=true;if(a.userData.hp<=0){scene.remove(a);allies.splice(allies.indexOf(a),1)}break}}}
+    if(!hit&&distSqOffset(s.mesh.position,home.position,1.5)<7.84){state.home--;updateUI();pulseFlash();burst(home.position,0xf7e6bd,10);hit=true;if(state.home<=0)lose('База разбита костями')}
     if(hit||s.life<0){scene.remove(s.mesh);boneShots.splice(i,1)}
   }
   for(let i=mousePoops.length-1;i>=0;i--){const s=mousePoops[i];s.mesh.position.addScaledVector(s.v,dt);s.mesh.rotation.x+=s.spin*dt;s.mesh.rotation.z+=s.spin*.8*dt;s.life-=dt;let hit=false;
-    for(const e of [...enemies])if(s.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,.9,0)))<1.0){damageEnemy(e,1);burst(e.position,0x6a3c1f,8);hit=true;break}
-    if(!hit)for(const r of [...raccoons])if(s.mesh.position.distanceTo(r.position.clone().add(new THREE.Vector3(0,.9,0)))<.9){damageRaccoon(r,1);burst(r.position,0x6a3c1f,8);hit=true;break}
+    for(const e of [...enemies])if(distSqOffset(s.mesh.position,e.position,.9)<1){damageEnemy(e,1);burst(e.position,0x6a3c1f,8);hit=true;break}
+    if(!hit)for(const r of [...raccoons])if(distSqOffset(s.mesh.position,r.position,.9)<.81){damageRaccoon(r,1);burst(r.position,0x6a3c1f,8);hit=true;break}
     if(hit||s.life<0){scene.remove(s.mesh);mousePoops.splice(i,1)}
   }
   for(let i=enemyPoops.length-1;i>=0;i--){const s=enemyPoops[i];s.mesh.position.addScaledVector(s.v,dt);s.mesh.rotation.x+=s.spin*dt;s.life-=dt;let hit=false;
-    if(s.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0,1.0,0)))<1.1&&state.invuln<=0){state.lives--;state.invuln=1.0;state.poopSlow=2.1;sfx.poop();burst(player.position,0x5a351f,12);hit=true;updateUI();if(state.lives<=0)lose('Еноты закидали лоток мусором')}
-    if(!hit){for(const a of [...allies])if(s.mesh.position.distanceTo(a.position.clone().add(new THREE.Vector3(0,.9,0)))<.85){a.userData.hp--;hit=true;if(a.userData.hp<=0){scene.remove(a);allies.splice(allies.indexOf(a),1)}break}}
+    if(distSqOffset(s.mesh.position,player.position,1.0)<1.21&&state.invuln<=0){state.lives--;state.invuln=1.0;state.poopSlow=2.1;sfx.poop();burst(player.position,0x5a351f,12);hit=true;updateUI();if(state.lives<=0)lose('Еноты закидали лоток мусором')}
+    if(!hit){for(const a of [...allies])if(distSqOffset(s.mesh.position,a.position,.9)<.7225){a.userData.hp--;hit=true;if(a.userData.hp<=0){scene.remove(a);allies.splice(allies.indexOf(a),1)}break}}
     if(hit||s.life<0){scene.remove(s.mesh);enemyPoops.splice(i,1)}
   }
 }
@@ -768,7 +775,7 @@ function updateRaccoons(dt,now){
 function litterDust(now,dt=.016){
   player.userData.dustTimer=(player.userData.dustTimer||0)-dt;if(player.userData.dustTimer>0)return;player.userData.dustTimer=.075;
   const back=new THREE.Vector3(-playerFacing.x,0,-playerFacing.z).multiplyScalar(1.8).add(player.position);
-  for(let i=0;i<3;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.08,6,4),new THREE.MeshBasicMaterial({color:i%2?0xd5bd8e:0xb99866,transparent:true,opacity:.8}),back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7));m.castShadow=false;scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
+  for(let i=0;i<2;i++){const p=new THREE.Vector3(back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7)),m=fxSphere(p,.07+Math.random()*.08,i%2?dustMatA:dustMatB);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
 }
 function updatePlayer(dt,now){
   const prevX=player.position.x,prevZ=player.position.z;
