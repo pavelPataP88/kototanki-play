@@ -269,11 +269,11 @@ function updateHeroWheels(dt=.016){
   const list=player?.userData?.tracks;if(!list?.length)return;
   const imp=player.userData.impostor?.userData,dominant=imp?(imp.blend>.5?imp.b.userData.view:imp.a.userData.view):'front3q';
   const layouts={
-    front:[[ -1.22,.57,.98],[1.22,.57,.98],[0,0,0]],
-    front3q:[[-1.62,.52,.92],[1.52,.64,1.00],[-.52,.38,.70]],
-    side:[[-1.95,.48,1.00],[1.70,.50,1.00],[0,0,0]],
-    rear3q:[[-1.55,.50,.90],[1.48,.55,.96],[.54,.38,.68]],
-    rear:[[-1.20,.52,.92],[1.20,.52,.92],[0,0,0]]
+    front:[[-1.22,.57,.98],[1.22,.57,.98],[0,0,0],[0,0,0]],
+    front3q:[[-1.62,.52,.92],[1.52,.64,1.00],[-.52,.38,.70],[0,0,0]],
+    side:[[-1.95,.48,1.00],[1.70,.50,1.00],[0,0,0],[0,0,0]],
+    rear3q:[[-1.55,.50,.90],[1.48,.55,.96],[.54,.38,.68],[0,0,0]],
+    rear:[[-1.20,.52,.92],[1.20,.52,.92],[0,0,0],[0,0,0]]
   };
   const arr=layouts[dominant]||layouts.front3q,right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).normalize(),up=new THREE.Vector3(0,1,0);
   for(let i=0;i<list.length;i++){const w=list[i],p=arr[i]||[0,0,0];w.visible=p[2]>0;if(!w.visible)continue;const worldOff=right.clone().multiplyScalar(p[0]).addScaledVector(up,p[1]),local=worldOff.applyAxisAngle(new THREE.Vector3(0,1,0),-player.rotation.y);w.position.copy(local);w.position.z-=.10;w.scale.setScalar(p[2]);w.material.rotation=w.userData.spin||0}
@@ -367,7 +367,7 @@ function makeCatTank(){
   const wheelOverlay=new THREE.Group();g.add(wheelOverlay);
   const wcv=document.createElement('canvas');wcv.width=wcv.height=128;const wx=wcv.getContext('2d'),wg=wx.createRadialGradient(64,64,12,64,64,60);wg.addColorStop(0,'#d28b34');wg.addColorStop(.28,'#6b472d');wg.addColorStop(.42,'#d8b06a');wg.addColorStop(.48,'#282a2d');wg.addColorStop(1,'rgba(24,25,27,0)');wx.fillStyle=wg;wx.fillRect(0,0,128,128);wx.strokeStyle='#e2c081';wx.lineWidth=6;for(let a=0;a<8;a++){wx.beginPath();wx.moveTo(64+Math.cos(a*Math.PI/4)*18,64+Math.sin(a*Math.PI/4)*18);wx.lineTo(64+Math.cos(a*Math.PI/4)*48,64+Math.sin(a*Math.PI/4)*48);wx.stroke()}wx.strokeStyle='#232427';wx.lineWidth=8;wx.beginPath();wx.arc(64,64,48,0,Math.PI*2);wx.stroke();
   const wtex=new THREE.CanvasTexture(wcv);wtex.colorSpace=THREE.SRGBColorSpace;const visualWheels=[];
-  for(let i=0;i<3;i++){const wm=new THREE.SpriteMaterial({map:wtex,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});const ws=new THREE.Sprite(wm);ws.renderOrder=12;ws.scale.set(.95,.95,1);wheelOverlay.add(ws);visualWheels.push(ws)}
+  for(let i=0;i<4;i++){const wm=new THREE.SpriteMaterial({map:wtex,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});const ws=new THREE.Sprite(wm);ws.renderOrder=12;ws.scale.set(.95,.95,1);wheelOverlay.add(ws);visualWheels.push(ws)}
   g.userData={tracks:visualWheels,wheels:visualWheels,cat,head,turret,barrel,vehicle,tail,impostor,wheelOverlay,catYaw:cat.rotation.y,kind:'litterbox',modelStyle:'reference-impostor-r6'};return g
 }
 function makeMouse(){
