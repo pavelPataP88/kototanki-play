@@ -20,6 +20,14 @@ const {resolve}=require('node:path');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
+    const mouse0=await page.evaluate(()=>window.__kototanki3d.mouse);
+    await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.2,0));
+    await page.waitForTimeout(420);
+    const mouse1=await page.evaluate(()=>window.__kototanki3d.mouse);
+    assert.ok(Math.hypot(mouse1.x-mouse0.x,mouse1.z-mouse0.z)>.35);
+    await page.waitForTimeout(280);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
+    assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);await page.evaluate(()=>window.__kototanki3d.spawnRaccoon());await page.waitForTimeout(120);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.raccoons))>=1);
     assert.ok((await page.locator('#place').textContent()).includes('·'));
@@ -39,9 +47,6 @@ const {resolve}=require('node:path');
     assert.ok(Math.abs(aim1.head-aim0.head)>.05);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>0);
     await page.evaluate(()=>window.__kototanki3d.setAim(0,-1,false));
-
-    const mouse0=await page.evaluate(()=>window.__kototanki3d.mouse);await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(5,0));await page.waitForTimeout(520);const mouse1=await page.evaluate(()=>window.__kototanki3d.mouse);assert.ok(Math.hypot(mouse1.x-mouse0.x,mouse1.z-mouse0.z)>.5);await page.waitForTimeout(900);assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
-    assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
 
     await page.waitForTimeout(550);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.mousePoops))>=0);await page.evaluate(()=>window.__kototanki3d.spawnYarn());
     await page.waitForTimeout(220);
