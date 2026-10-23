@@ -22,7 +22,7 @@ const {resolve}=require('node:path');
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));
     await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
-    await page.waitForTimeout(1800);
+    await page.waitForFunction(()=>window.__kototanki3d.state.valerian>0,{timeout:5000});
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
