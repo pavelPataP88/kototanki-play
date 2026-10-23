@@ -16,11 +16,11 @@ const {resolve}=require('node:path');
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
     assert.equal(await page.locator('canvas').count(),1);
-    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.ok(await page.evaluate(()=>!!window.__kototanki3d.mouse));
+    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'organic');assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'organic');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
-    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);
-    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-reference-start.png')});
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw+0.58)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic'))));
+    await page.waitForTimeout(650);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-organic-classic-camera.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForTimeout(1800);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
