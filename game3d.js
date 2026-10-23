@@ -128,8 +128,8 @@ function makeCatTank(){
   box(vehicle,.72,.42,.08,M.red,-2.38,1.06,-.85,.22);box(vehicle,.58,.34,.08,M.woodLight,-2.38,.88,1.18,-.16);
   sph(vehicle,.18,M.glow,-1.62,.62,2.92,[1,.9,1],10);
   // Fish-bone battle flag.
-  box(vehicle,.10,2.6,.10,M.wood,-1.72,2.65,1.65);
-  const flag=box(vehicle,1.55,.82,.08,M.cream,-.94,3.58,1.65);flag.rotation.z=-.06;
+  box(vehicle,.10,2.35,.10,M.wood,-1.88,2.48,1.92);
+  const flag=box(vehicle,1.28,.68,.08,M.cream,-1.24,3.28,1.92);flag.rotation.z=-.06;
   g.userData={tracks:wheels,wheels,cat,head,turret,barrel,vehicle,kind:'litterbox'};return g
 }
 
@@ -288,7 +288,7 @@ function clearWorld(){if(world){scene.remove(world);world.traverse(o=>{if(o.geom
 function collider(x,z,r){obstacles.push({x,z,r})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
-    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.64+rng()*.12);h.position.set(side*(18+rng()*3),0,-14+i*20+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
+    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.58+rng()*.10);h.position.set(side*(22+rng()*2.5),0,-16+i*18+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
   }
   for(let i=0;i<5;i++){const f=makeFence(5+rng()*3);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f)}
   const wt=makeWatchTower();wt.position.set(-12,0,-8);wt.scale.setScalar(.72);world.add(wt);collider(-12,-8,1.5)
@@ -393,17 +393,17 @@ function buildLevel(n){
   for(let i=0;i<8;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);addGardenProps(rng,n);spawnPoopField(n,rng);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
-  player.position.set(0,0,18);helper.position.set(2,4.4,16);mouseCompanion.position.set(.8,1.6,18.7);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
-  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
+  player.position.set(0,0,18);helper.position.set(2,4.4,16);mouseCompanion.position.set(1.05,1.62,18.15);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
+  state.level=n;cameraYaw=-.58;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(0,0,-1);spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast(loc.name+' · '+layoutName+' · ВОЛНА '+n)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(.96);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(.9);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.04);scene.add(player);helper=makeBird();helper.scale.setScalar(.82);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.18);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
 function blocked(x,z){if(Math.abs(x)>24||z<-31||z>30)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+1.15)return true;return false}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
-function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-30);else d.position.set(side<.84?-23:23,0,rand(-26,-3));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
+function spawnDog(){const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();if(side<.68)d.position.set(rand(-18,18),0,-23);else d.position.set(side<.84?-22:22,0,rand(-20,4));d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)}
 function burst(pos,color=0xffaa55,count=12){for(let i=0;i<count;i++){const m=mesh(new THREE.SphereGeometry(.07+Math.random()*.10,7,5),new THREE.MeshBasicMaterial({color}),pos.x,pos.y+1.1,pos.z);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
 function damageEnemy(e,dmg){e.userData.hp-=dmg;e.scale.setScalar(.88);setTimeout(()=>{if(e.parent)e.scale.setScalar(1)},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();scene.remove(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.kills>=state.targetKills)winLevel()}}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();scene.remove(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
@@ -505,9 +505,9 @@ function updateMouse(dt,now){
     if(d.length()<.65){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
     else{d.normalize();mouseCompanion.position.addScaledVector(d,dt*7.4);mouseCompanion.position.y+=(.16-mouseCompanion.position.y)*Math.min(1,dt*12);mouseCompanion.rotation.y=Math.atan2(d.x,d.z)}
   }else{
-    const ride=player.position.clone().add(new THREE.Vector3(.78,1.62,.70)).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position.clone().multiplyScalar(0));
+    const ride=player.position.clone().add(new THREE.Vector3(1.05,1.62,.18)).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position.clone().multiplyScalar(0));
     // Above expression keeps the offset in the litter-box frame without parenting the mouse.
-    ride.copy(new THREE.Vector3(.78,1.62,.70).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position));
+    ride.copy(new THREE.Vector3(1.05,1.62,.18).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y).add(player.position));
     const d=ride.sub(mouseCompanion.position);
     mouseCompanion.position.lerp(mouseCompanion.position.clone().add(d),Math.min(1,dt*8));
     if(d.length()<.45)u.mode='ride';
