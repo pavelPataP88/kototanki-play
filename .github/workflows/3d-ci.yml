@@ -7,6 +7,7 @@ on:
       - fix/touch-and-cat-squad-20261023
       - fix/screen-rotation-20261023
       - fix/camera-orbit-20261023
+      - feature/dog-bones-20261023
   workflow_dispatch:
 permissions:
   contents: read
