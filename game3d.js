@@ -626,13 +626,13 @@ function makeGatehouseLandmark(){
   return g
 }
 function addZoneLandmark(zone,loc){
-  let g,label=arena.landmark,x=0,z=arena.minZ+7,r=4.2;
-  if(zone===0){g=makeBarnLandmark();x=-(arena.halfW-7);z=arena.minZ+8;r=4.6}
-  else if(zone===1){g=makeWindmillLandmark();x=arena.halfW-7;z=arena.minZ+9;r=3.0}
-  else if(zone===2){g=makeAlpineLandmark(loc);x=-(arena.halfW-7);z=arena.minZ+9;r=4.8}
-  else if(zone===3){g=makeGardenLandmark();x=0;z=arena.minZ+10;r=4.0}
-  else if(zone===4){g=makeMarketLandmark();x=arena.halfW-8;z=arena.minZ+10;r=5.4}
-  else{g=makeGatehouseLandmark();x=0;z=arena.minZ+5;r=0}
+  let g,label=arena.landmark,x=0,z=arena.minZ+(arena.maxZ-arena.minZ)*.34,r=4.2;
+  if(zone===0){g=makeBarnLandmark();x=-(arena.halfW-7);r=4.6}
+  else if(zone===1){g=makeWindmillLandmark();x=arena.halfW-7;r=3.0}
+  else if(zone===2){g=makeAlpineLandmark(loc);x=-(arena.halfW-7);r=4.8}
+  else if(zone===3){g=makeGardenLandmark();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.30;r=4.0}
+  else if(zone===4){g=makeMarketLandmark();x=arena.halfW-8;r=5.4}
+  else{g=makeGatehouseLandmark();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.35;r=0}
   g.position.set(x,0,z);world.add(decor(g));
   if(zone===5){collider(-4.6,z,2.3);collider(4.6,z,2.3)}else collider(x,z,r);
   return label
