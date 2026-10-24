@@ -54,18 +54,23 @@ function updateRenderQuality(rawDt){
   if(!state.playing)applyRenderQuality()
 }
 
-const audio={ctx:null,master:null};
+const audio={ctx:null,master:null,noiseBuffer:null};
 function initAudio(){
   if(audio.ctx)return;
   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-  audio.ctx=new AC();audio.master=audio.ctx.createGain();audio.master.gain.value=.16;audio.master.connect(audio.ctx.destination)
+  const ac=audio.ctx=new AC();audio.master=ac.createGain();audio.master.gain.value=.16;audio.master.connect(ac.destination);
+  const len=ac.sampleRate,buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+  audio.noiseBuffer=buf
 }
 function tone(freq=440,dur=.08,type='square',gain=.22,slide=1){
   initAudio();const ac=audio.ctx;if(!ac)return;
   const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,ac.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*slide),ac.currentTime+dur);g.gain.setValueAtTime(gain,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(audio.master);o.start();o.stop(ac.currentTime+dur)
 }
 function noise(dur=.14,gain=.12){
-  initAudio();const ac=audio.ctx;if(!ac)return;const len=Math.max(1,Math.floor(ac.sampleRate*dur)),buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);const s=ac.createBufferSource(),g=ac.createGain();s.buffer=buf;g.gain.value=gain;s.connect(g);g.connect(audio.master);s.start()
+  initAudio();const ac=audio.ctx,buf=audio.noiseBuffer;if(!ac||!buf)return;
+  const now=ac.currentTime,length=Math.min(dur,buf.duration-.001),maxOffset=Math.max(0,buf.duration-length-.001),offset=Math.random()*maxOffset;
+  const src=ac.createBufferSource(),g=ac.createGain();src.buffer=buf;g.gain.setValueAtTime(Math.max(.001,gain),now);g.gain.exponentialRampToValueAtTime(.001,now+length);src.connect(g);g.connect(audio.master);src.start(now,offset,length);src.stop(now+length)
 }
 const sfx={
   shoot(){tone(210,.07,'square',.18,1.8)},
@@ -120,7 +125,17 @@ const dustMatA=new THREE.MeshBasicMaterial({color:0xd5bd8e,transparent:true,opac
 const dustMatB=new THREE.MeshBasicMaterial({color:0xb99866,transparent:true,opacity:.8});dustMatB.userData.shared=true;
 const effectMatCache=new Map();
 function effectMat(color){if(!effectMatCache.has(color)){const m=new THREE.MeshBasicMaterial({color});m.userData.shared=true;effectMatCache.set(color,m)}return effectMatCache.get(color)}
-function fxSphere(pos,scale,mat){const m=mesh(fxSphereGeo,mat,pos.x,pos.y,pos.z);m.scale.setScalar(scale);m.castShadow=false;m.receiveShadow=false;return m}
+const fxMeshPool=[],particleRecordPool=[];
+function fxSphere(pos,scale,mat){
+  const m=fxMeshPool.pop()||new THREE.Mesh(fxSphereGeo,mat);m.material=mat;m.position.copy(pos);m.rotation.set(0,0,0);m.scale.setScalar(scale);m.visible=true;m.castShadow=false;m.receiveShadow=false;return m
+}
+function spawnParticle(pos,scale,mat,vx,vy,vz,life){
+  const p=particleRecordPool.pop()||{};p.mesh=fxSphere(pos,scale,mat);p.vx=vx;p.vy=vy;p.vz=vz;p.life=life;scene.add(p.mesh);particles.push(p);return p
+}
+function releaseParticle(p){
+  if(p.mesh.parent)p.mesh.parent.remove(p.mesh);p.mesh.visible=false;fxMeshPool.push(p.mesh);p.mesh=null;particleRecordPool.push(p)
+}
+function clearParticles(){for(let i=particles.length-1;i>=0;i--)releaseParticle(particles[i]);particles.length=0}
 function retire(o){if(!o)return;if(o.parent)o.parent.remove(o);o.traverse?.(x=>{
   if(x.geometry&&!x.geometry.userData?.shared)x.geometry.dispose();
   const mats=Array.isArray(x.material)?x.material:[x.material];for(const m of mats)if(m?.isMaterial&&!m.userData?.shared)m.dispose()
@@ -581,7 +596,7 @@ function updateHomeOcclusion(dt){
 function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
 function clearWorld(){
   if(world)retire(world);obstacles.length=0;
-  enemies.splice(0).forEach(retire);shots.splice(0).forEach(e=>retire(e.mesh));feathers.splice(0).forEach(e=>retire(e.mesh));boneShots.splice(0).forEach(e=>retire(e.mesh));mousePoops.splice(0).forEach(e=>retire(e.mesh));enemyPoops.splice(0).forEach(e=>retire(e.mesh));raccoons.splice(0).forEach(retire);particles.splice(0).forEach(e=>retire(e.mesh));allies.splice(0).forEach(retire);pickups.splice(0).forEach(p=>retire(p.mesh));hazards.splice(0).forEach(h=>retire(h.mesh));yarnBalls.splice(0).forEach(y=>retire(y.mesh));world=new THREE.Group();scene.add(world)
+  enemies.splice(0).forEach(retire);shots.splice(0).forEach(e=>retire(e.mesh));feathers.splice(0).forEach(e=>retire(e.mesh));boneShots.splice(0).forEach(e=>retire(e.mesh));mousePoops.splice(0).forEach(e=>retire(e.mesh));enemyPoops.splice(0).forEach(e=>retire(e.mesh));raccoons.splice(0).forEach(retire);clearParticles();allies.splice(0).forEach(retire);pickups.splice(0).forEach(p=>retire(p.mesh));hazards.splice(0).forEach(h=>retire(h.mesh));yarnBalls.splice(0).forEach(y=>retire(y.mesh));world=new THREE.Group();scene.add(world)
 }
 function collider(x,z,r){obstacles.push({kind:'circle',x,z,r})}
 function colliderSegment(x,z,half,r=.16,angle=0){obstacles.push({kind:'segment',x,z,half,r,angle})}
@@ -755,7 +770,7 @@ function spawnDog(){
   const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
 function burst(pos,color=0xffaa55,count=12){
-  const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(pos,.07+Math.random()*.10,mat);m.position.y+=1.1;scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}
+  const mat=effectMat(color);for(let i=0;i<count;i++)spawnParticle(pos,.07+Math.random()*.10,mat,rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5),.4+Math.random()*.55)
 }
 function damageEnemy(e,dmg){
   e.userData.hp-=dmg;const bs=e.userData.baseScale;e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);
@@ -779,8 +794,8 @@ function bomb(){
   for(let i=raccoons.length-1;i>=0;i--){const r=raccoons[i];if(r.position.distanceToSquared(player.position)<r2)damageRaccoon(r,5)}
 }
 function updateProjectiles(dt){
-  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.v.y-=10*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){retire(p.mesh);particles.splice(i,1)}}
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65){const tm=fxSphere(s.mesh.position,.045,trailMat);scene.add(tm);particles.push({mesh:tm,v:new THREE.Vector3(rand(-.3,.3),rand(.2,.8),rand(-.3,.3)),life:.18})}let hit=false;
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.vy-=10*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.mesh.position.z+=p.vz*dt;p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){particles.splice(i,1);releaseParticle(p)}}
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65)spawnParticle(s.mesh.position,.045,trailMat,rand(-.3,.3),rand(.2,.8),rand(-.3,.3),.18)let hit=false;
     for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(distSqOffset(s.mesh.position,e.position,1.2)<1.5625){damageEnemy(e,s.damage||1);hit=true;break}}
     if(!hit)for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(distSqOffset(s.mesh.position,r.position,1.1)<1.1025){damageRaccoon(r,s.damage||1);hit=true;break}}
     if(hit||s.life<0){retire(s.mesh);shots.splice(i,1)}
@@ -886,7 +901,7 @@ function updateRaccoons(dt,now){
 function litterDust(now,dt=.016){
   player.userData.dustTimer=(player.userData.dustTimer||0)-dt;if(player.userData.dustTimer>0)return;player.userData.dustTimer=.075;
   const back=player.userData.dustBack||(player.userData.dustBack=new THREE.Vector3());back.set(-playerFacing.x*1.8,0,-playerFacing.z*1.8).add(player.position);
-  for(let i=0;i<2;i++){const m=fxSphere(back,.07+Math.random()*.08,i%2?dustMatA:dustMatB);m.position.set(back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7));scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
+  for(let i=0;i<2;i++){const px=back.x+rand(-.9,.9),pz=back.z+rand(-.7,.7),mat=i%2?dustMatA:dustMatB;const p=spawnParticle(back,.07+Math.random()*.08,mat,rand(-.8,.8),rand(.7,1.8),rand(-.8,.8),.25+Math.random()*.2);p.mesh.position.set(px,.28,pz)}
 }
 function updatePlayer(dt,now){
   const prevX=player.position.x,prevZ=player.position.z;
