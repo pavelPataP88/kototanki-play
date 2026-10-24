@@ -112,7 +112,7 @@ const {resolve}=require('node:path');
     // and verify that repeated teardown/rebuild does not strand NPCs inside colliders or leak badly.
     const sweep0=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     await page.evaluate(()=>window.__kototanki3d.start());
-    const places=new Set();
+    const places=new Set(),chapters=new Set(),landmarks=new Set(),worlds=[];
     for(let level=1;level<=30;level++){
       if(level>1)await page.evaluate(()=>window.__kototanki3d.next());
       await page.waitForTimeout(70);
@@ -120,15 +120,19 @@ const {resolve}=require('node:path');
         state:window.__kototanki3d.state,
         diag:window.__kototanki3d.diagnostics,
         player:window.__kototanki3d.player,
+        world:window.__kototanki3d.world,
         place:document.querySelector('#place').textContent
       }));
       assert.equal(snap.state.level,level);
       assert.equal(snap.diag.blockedDogs,0);
       assert.equal(snap.diag.blockedAllies,0);
       assert.ok(Number.isFinite(snap.player.x)&&Number.isFinite(snap.player.z));
-      places.add(snap.place);
+      assert.ok(Math.abs(snap.player.x)<snap.world.halfW&&snap.player.z>snap.world.minZ&&snap.player.z<snap.world.maxZ);
+      places.add(snap.place);chapters.add(snap.world.chapter);landmarks.add(snap.world.landmark);worlds.push(snap.world);
     }
-    assert.equal(places.size,30);
+    assert.equal(places.size,30);assert.equal(chapters.size,6);assert.equal(landmarks.size,6);
+    assert.ok(worlds[29].width-worlds[0].width>=13);assert.ok(worlds[29].depth-worlds[0].depth>=15);
+    console.log('WORLD_PROGRESSION',JSON.stringify({chapters:[...chapters],landmarks:[...landmarks],first:worlds[0],last:worlds[29]}));
     const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
     assert.ok(sweep1.geometries<2500);assert.ok(sweep1.textures<150);
