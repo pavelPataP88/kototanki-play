@@ -13,6 +13,15 @@ const locations = [
   {name:'ЗОЛОТАЯ ОСЕНЬ',sky:0x8fcfff,fog:0xffead1,ground:0x9ea24b,road:0xc99b65,roof:0xbf4e35,leaf:0xd48132,kind:'autumn'},
   {name:'СОЛНЕЧНАЯ ЦИТАДЕЛЬ',sky:0x7fc6ff,fog:0xffe3ba,ground:0x8da04c,road:0xd2a265,roof:0xc44835,leaf:0x63933b,kind:'citadel'}
 ];
+const zoneSpecs=[
+  {chapter:'ДЕРЕВЕНСКИЙ ДВОР',landmark:'АМБАР И СИЛОС',halfW:24,minZ:-31,maxZ:30},
+  {chapter:'ФЕРМЕРСКИЕ ПОЛЯ',landmark:'СТАРАЯ МЕЛЬНИЦА',halfW:26,minZ:-34,maxZ:31},
+  {chapter:'ГОРНЫЙ ПОСЁЛОК',landmark:'АЛЬПИЙСКОЕ ШАЛЕ',halfW:27.5,minZ:-36,maxZ:32},
+  {chapter:'ДВОРЦОВЫЙ ПАРК',landmark:'ПАВИЛЬОН И ОРАНЖЕРЕЯ',halfW:28.5,minZ:-38,maxZ:33},
+  {chapter:'ОСЕННЯЯ ЯРМАРКА',landmark:'РЫНОЧНЫЙ ДВОР',halfW:29.5,minZ:-40,maxZ:34},
+  {chapter:'КРЕПОСТНОЙ ДВОР',landmark:'ЦИТАДЕЛЬНЫЕ ВОРОТА',halfW:31,minZ:-42,maxZ:35}
+];
+let arena=zoneSpecs[0],worldMeta={zone:0,chapter:zoneSpecs[0].chapter,landmark:zoneSpecs[0].landmark,halfW:24,minZ:-31,maxZ:30};
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,valerian:0,poopSlow:0,last:0,uiTimer:0};
 const keys=new Set(), obstacles=[], enemies=[], raccoons=[], shots=[], feathers=[], boneShots=[], mousePoops=[], enemyPoops=[], particles=[], allies=[], pickups=[], hazards=[], yarnBalls=[];
@@ -574,6 +583,60 @@ function makeFence(len=5){
 }
 function makeWatchTower(){const g=new THREE.Group();for(const x of [-1.15,1.15])for(const z of [-1.15,1.15])cyl(g,.13,.18,4.6,M.wood,x,2.3,z);box(g,3.0,.3,3.0,M.woodLight,0,4.25,0);for(const x of [-1.35,1.35])box(g,.16,1.2,3.0,M.wood,x,4.9,0);for(const z of [-1.35,1.35])box(g,3.0,1.2,.16,M.wood,0,4.9,z);const roof=mesh(new THREE.ConeGeometry(2.35,2.2,4),std(0x3c78af,.8),0,6.1,0);roof.rotation.y=Math.PI/4;g.add(roof);return g}
 function makeCastle(){const g=new THREE.Group();for(const x of [-6,-2,2,6]){box(g,2.2,6.5,2.2,M.stone,x,3.25,0);const roof=mesh(new THREE.ConeGeometry(1.75,2.4,4),std(0x3976b1,.75),x,7.6,0);roof.rotation.y=Math.PI/4;g.add(roof)}box(g,11.5,4.8,2.0,M.stone,0,2.4,.6);box(g,4,8.2,3.0,M.plaster,0,4.1,1.0);const roof=mesh(new THREE.ConeGeometry(2.6,3.0,4),std(0xc34d40,.72),0,9.25,1.0);roof.rotation.y=Math.PI/4;g.add(roof);g.scale.setScalar(1.18);return g}
+function makeBarnLandmark(){
+  const g=new THREE.Group(),red=std(0xa54c36,.84),trim=std(0xf0dfbd,.78),roofMat=std(0x5b4335,.88);
+  box(g,8.4,4.2,6.2,red,0,2.1,0);const roof=mesh(new THREE.ConeGeometry(5.5,3.0,4),roofMat,0,5.35,0);roof.rotation.y=Math.PI/4;g.add(roof);
+  box(g,3.1,3.3,.22,trim,0,1.85,-3.18);box(g,.18,3.1,.28,red,0,1.85,-3.34);box(g,2.9,.18,.28,red,0,1.85,-3.34);
+  const silo=new THREE.Group();cyl(silo,1.55,1.65,5.8,std(0xb8b4a6,.76),0,2.9,0);cone(silo,1.75,1.65,std(0x7b7165,.76),0,6.62,0);silo.position.set(6,0,1.0);g.add(silo);
+  return g
+}
+function makeWindmillLandmark(){
+  const g=new THREE.Group(),stone=std(0xc8b79a,.88),wood=std(0x6a472d,.82),roofMat=std(0x8e5139,.82);
+  cyl(g,1.55,2.15,5.6,stone,0,2.8,0);cone(g,2.2,2.4,roofMat,0,6.2,0);
+  const hub=sph(g,.34,wood,0,4.55,-1.72,[1,1,.65],10);hub.castShadow=false;
+  for(let i=0;i<4;i++){const blade=box(g,.34,4.6,.18,wood,0,4.55,-1.88);blade.rotation.z=i*Math.PI/2+.34;blade.castShadow=false}
+  for(const p of [[-4.8,0,1.4],[4.5,0,2.1]]){const bale=cyl(g,1.0,1.0,1.5,std(0xc49a43,.92),p[0],.8,p[2],Math.PI/2,0);bale.castShadow=false}
+  return g
+}
+function makeAlpineLandmark(loc){
+  const g=new THREE.Group(),base=std(0x8c8b83,.92),dark=std(0x5c4736,.88);
+  box(g,9.2,1.1,6.5,base,0,.55,0);const h=makeHouse(loc.roof,1.12);h.position.y=.7;g.add(h);
+  box(g,1.0,5.2,1.0,dark,3.2,4.0,1.4);const cap=mesh(new THREE.ConeGeometry(.9,1.4,4),std(0x3f3e3a,.9),3.2,7.2,1.4);cap.rotation.y=Math.PI/4;g.add(cap);
+  return g
+}
+function makeGardenLandmark(){
+  const g=new THREE.Group(),stone=std(0xe9dfc9,.72),roofMat=std(0x7b5bb6,.68),glass=std(0xa8e4d7,.25);
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;cyl(g,.16,.19,3.2,stone,Math.cos(a)*3.2,1.6,Math.sin(a)*3.2)}
+  const roof=mesh(new THREE.ConeGeometry(4.4,2.0,8),roofMat,0,4.05,0);g.add(roof);cyl(g,3.2,3.2,.24,stone,0,.12,0);
+  const greenhouse=new THREE.Group();box(greenhouse,6.4,2.7,3.6,glass,0,1.35,0);for(const x of [-3.25,3.25])box(greenhouse,.12,3.0,3.8,stone,x,1.5,0);greenhouse.position.set(8.0,0,0);g.add(greenhouse);
+  return g
+}
+function makeMarketLandmark(){
+  const g=new THREE.Group(),wood=std(0x765137,.84),cloth=std(0xd8703d,.62),cream=std(0xf2d9a7,.72);
+  box(g,11.5,.35,5.5,wood,0,3.8,0);for(const x of [-5.2,5.2])for(const z of [-2.2,2.2])box(g,.25,3.8,.25,wood,x,1.9,z);
+  for(let i=-2;i<=2;i++){const stall=new THREE.Group();box(stall,1.8,.18,1.5,cream,0,.9,0);box(stall,2.1,.16,1.8,cloth,0,2.0,0);stall.position.set(i*2.25,0,-.4);g.add(stall)}
+  const tower=new THREE.Group();box(tower,2.3,5.0,2.3,wood,0,2.5,0);cone(tower,1.8,2.2,cloth,0,6.05,0);tower.position.set(-7.0,0,0);g.add(tower);
+  return g
+}
+function makeGatehouseLandmark(){
+  const g=new THREE.Group(),stone=std(0x8c8a83,.94),roofMat=std(0xb94d3c,.78),dark=std(0x433b37,.9);
+  for(const x of [-4.6,4.6]){cyl(g,2.25,2.45,7.0,stone,x,3.5,0);cone(g,2.75,2.7,roofMat,x,8.35,0)}
+  box(g,6.4,2.1,2.2,stone,0,6.2,0);for(const x of [-2.7,-1.8,-.9,0,.9,1.8,2.7])box(g,.42,.7,2.4,stone,x,7.55,0);
+  box(g,5.4,4.6,.5,dark,0,2.3,.2);box(g,2.8,4.0,.7,stone,-4.6,2.0,2.4);box(g,2.8,4.0,.7,stone,4.6,2.0,2.4);
+  return g
+}
+function addZoneLandmark(zone,loc){
+  let g,label=arena.landmark,x=0,z=arena.minZ+7,r=4.2;
+  if(zone===0){g=makeBarnLandmark();x=-(arena.halfW-7);z=arena.minZ+8;r=4.6}
+  else if(zone===1){g=makeWindmillLandmark();x=arena.halfW-7;z=arena.minZ+9;r=3.0}
+  else if(zone===2){g=makeAlpineLandmark(loc);x=-(arena.halfW-7);z=arena.minZ+9;r=4.8}
+  else if(zone===3){g=makeGardenLandmark();x=0;z=arena.minZ+10;r=4.0}
+  else if(zone===4){g=makeMarketLandmark();x=arena.halfW-8;z=arena.minZ+10;r=5.4}
+  else{g=makeGatehouseLandmark();x=0;z=arena.minZ+5;r=0}
+  g.position.set(x,0,z);world.add(decor(g));
+  if(zone===5){collider(-4.6,z,2.3);collider(4.6,z,2.3)}else collider(x,z,r);
+  return label
+}
 function flowerPatch(p,x,z,seed=0){
   const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6fb8ff],inst=new THREE.InstancedMesh(flowerGeo,flowerMat,12),d=new THREE.Object3D(),c=new THREE.Color();
   for(let i=0;i<12;i++){const a=(i*2.4+seed)%6.28,r=.25+(i%5)*.22;d.position.set(x+Math.cos(a)*r,.12,z+Math.sin(a)*r);d.scale.set(1,1,1);d.updateMatrix();inst.setMatrixAt(i,d.matrix);inst.setColorAt(i,c.setHex(colors[i%colors.length]))}
@@ -601,11 +664,12 @@ function clearWorld(){
 function collider(x,z,r){obstacles.push({kind:'circle',x,z,r})}
 function colliderSegment(x,z,half,r=.16,angle=0){obstacles.push({kind:'segment',x,z,half,r,angle})}
 function addVillageSet(loc,rng){
+  const edge=arena.halfW-2.2;
   for(const side of [-1,1])for(let i=0;i<2;i++){
-    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.58+rng()*.10);h.position.set(side*(22+rng()*2.5),0,-16+i*18+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
+    const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.58+rng()*.10);h.position.set(side*(edge+rng()*.8),0,arena.minZ+13+i*18+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
   }
-  for(let i=0;i<5;i++){const len=5+rng()*3,f=makeFence(len);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f);colliderSegment(f.position.x,f.position.z,len/2,.16,f.rotation.y)}
-  const wt=makeWatchTower();wt.position.set(-12,0,-8);wt.scale.setScalar(.72);world.add(wt);collider(-12,-8,1.5)
+  for(let i=0;i<5;i++){const len=5+rng()*3,f=makeFence(len);f.position.set((i%2?-1:1)*(Math.min(16,arena.halfW-9)+rng()*2.5),0,arena.minZ+11+i*((arena.maxZ-arena.minZ-20)/4));f.rotation.y=(i%2?1:-1)*.08;world.add(f);colliderSegment(f.position.x,f.position.z,len/2,.16,f.rotation.y)}
+  const wt=makeWatchTower();wt.position.set(-Math.min(13,arena.halfW-8),0,arena.minZ+22);wt.scale.setScalar(.72);world.add(wt);collider(wt.position.x,wt.position.z,1.5)
 }
 const layoutNames=['КРИВЫЕ ОГОРОДЫ','РЫНОЧНАЯ ПЛОЩАДЬ','ЗАБОРНЫЙ ЛАБИРИНТ','КАМЕННЫЙ КРУГ','МЕЛЬНИЧНЫЙ ПЕРЕКРЁСТОК'];
 function addLevelLayout(n,loc,rng){
@@ -690,49 +754,43 @@ function updateAim(dt){
 }
 
 function addGardenProps(rng,n){
-  // Bird bath.
-  const bath=new THREE.Group();cyl(bath,.55,.72,1.2,M.stone,0,.62,0);cyl(bath,1.45,1.25,.28,std(0x6aaed0,.35),0,1.30,0);sph(bath,1.05,std(0x63bddd,.18),0,1.43,0,[1,.12,1],16);bath.position.set(-11.5,0,5.5);world.add(bath);collider(-11.5,5.5,1.2);
-  // Pink flamingo and gnome.
-  const fl=new THREE.Group();cyl(fl,.06,.06,2.1,std(0xe95f91,.65),0,1.05,0);sph(fl,.52,std(0xee6b9d,.68),0,2.16,0,[.72,1,1.25]);cyl(fl,.11,.14,1.45,std(0xee6b9d,.68),.22,2.72,-.15,.3,.15);sph(fl,.25,std(0xee6b9d,.68),.36,3.32,-.28);cone(fl,.12,.45,M.black,.52,3.27,-.44,Math.PI/2,0);fl.position.set(11.8,0,8.0);world.add(fl);
-  const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(13.8,0,17.0);world.add(gn);
-
-  // Raised tomato beds like the reference backyard.
-  for(const p of [[-15,-18,.15],[15,-16,-.12],[-15,12,-.08],[15,15,.18]]){const bed=makeGardenBed();bed.position.set(p[0],0,p[1]);bed.rotation.y=p[2];bed.scale.setScalar(.72);world.add(decor(bed));collider(p[0],p[1],2.0)}
-
-  // Barrels, pots and sunflowers.
-  for(const p of [[-18,-6],[18,-4],[-19,20]]){const b=makeBarrel();b.position.set(p[0],0,p[1]);b.scale.setScalar(.82);world.add(decor(b));collider(p[0],p[1],.8)}
-  for(let i=0;i<7;i++){const pot=makeTerracottaPot();pot.position.set((i%2?-1:1)*(17+rng()*3),0,-20+i*6.3);pot.scale.setScalar(.65+rng()*.18);world.add(decor(pot))}
-  for(let i=0;i<12;i++){const s=makeSunflower();s.position.set((i%2?-1:1)*(18+rng()*2.5),0,-25+i*4.5);s.scale.setScalar(.60+rng()*.35);world.add(decor(s))}
-
-  // Mud puddles and cat-logo manholes.
-  for(let i=0;i<4;i++){const x=(i-1.5)*7+(n%2?1.5:-1.5),z=-17+i*11;const mud=mesh(new THREE.CylinderGeometry(1.8,2.35,.055,22),std(0x775238,.92),x,.03,z);world.add(mud);const shine=mesh(new THREE.CylinderGeometry(1.25,1.8,.02,22),std(0x6c91a0,.25),x,.065,z);world.add(shine)}
+  const edge=arena.halfW-2.2,span=arena.maxZ-arena.minZ;
+  const bath=new THREE.Group();cyl(bath,.55,.72,1.2,M.stone,0,.62,0);cyl(bath,1.45,1.25,.28,std(0x6aaed0,.35),0,1.30,0);sph(bath,1.05,std(0x63bddd,.18),0,1.43,0,[1,.12,1],16);bath.position.set(-Math.min(11.5,edge-4),0,4.5);world.add(bath);collider(bath.position.x,bath.position.z,1.2);
+  const fl=new THREE.Group();cyl(fl,.06,.06,2.1,std(0xe95f91,.65),0,1.05,0);sph(fl,.52,std(0xee6b9d,.68),0,2.16,0,[.72,1,1.25]);cyl(fl,.11,.14,1.45,std(0xee6b9d,.68),.22,2.72,-.15,.3,.15);sph(fl,.25,std(0xee6b9d,.68),.36,3.32,-.28);cone(fl,.12,.45,M.black,.52,3.27,-.44,Math.PI/2,0);fl.position.set(Math.min(12,edge-4),0,8.0);world.add(fl);
+  const gn=new THREE.Group();cyl(gn,.28,.38,.85,std(0x2f6fa8,.8),0,.46,0);sph(gn,.30,std(0xf2c7a3,.7),0,1.03,-.05);cone(gn,.38,1.05,std(0xd44738,.7),0,1.66,0);sph(gn,.22,M.white,0,.82,-.24,[1,1.25,.6]);gn.position.set(Math.min(14,edge-3),0,Math.min(17,arena.maxZ-9));world.add(gn);
+  const bedX=Math.min(15,arena.halfW-7);for(const p of [[-bedX,-18,.15],[bedX,-16,-.12],[-bedX,12,-.08],[bedX,15,.18]]){const bed=makeGardenBed();bed.position.set(p[0],0,clamp(p[1],arena.minZ+10,arena.maxZ-8));bed.rotation.y=p[2];bed.scale.setScalar(.72);world.add(decor(bed));collider(bed.position.x,bed.position.z,2.0)}
+  const barrelX=arena.halfW-5;for(const p of [[-barrelX,-6],[barrelX,-4],[-barrelX,Math.min(20,arena.maxZ-8)]]){const b=makeBarrel();b.position.set(p[0],0,p[1]);b.scale.setScalar(.82);world.add(decor(b));collider(p[0],p[1],.8)}
+  for(let i=0;i<7;i++){const pot=makeTerracottaPot();pot.position.set((i%2?-1:1)*(edge-2-rng()*1.5),0,arena.minZ+10+i*(span-20)/6);pot.scale.setScalar(.65+rng()*.18);world.add(decor(pot))}
+  for(let i=0;i<10;i++){const sf=makeSunflower();sf.position.set((i%2?-1:1)*(edge-1-rng()*1.4),0,arena.minZ+8+i*(span-16)/9);sf.scale.setScalar(.60+rng()*.35);world.add(decor(sf))}
+  for(let i=0;i<4;i++){const x=(i-1.5)*7+(n%2?1.5:-1.5),z=clamp(-17+i*11,arena.minZ+8,arena.maxZ-8);const mud=mesh(new THREE.CylinderGeometry(1.8,2.35,.055,22),std(0x775238,.92),x,.03,z);world.add(mud);const shine=mesh(new THREE.CylinderGeometry(1.25,1.8,.02,22),std(0x6c91a0,.25),x,.065,z);world.add(shine)}
   for(let i=0;i<2;i++){const x=i?12:-12,z=i?-4:2;const lid=mesh(new THREE.CylinderGeometry(1.25,1.25,.10,24),M.darkSteel,x,.07,z);world.add(lid);sph(world,.30,M.cream,x,.14,z,[1,.18,1],10)}
-
-  // White picket fence.
-  const fenceMat=std(0xf4eee0,.78);
-  for(const side of [-1,1])for(let z=-24;z<=20;z+=5.5){for(let k=0;k<4;k++){const x=side*22.2;box(world,.24,1.65,.24,fenceMat,x,.82,z+k*1.18);cone(world,.22,.42,fenceMat,x,1.85,z+k*1.18)}box(world,.18,.18,4.7,fenceMat,side*22.2,1.22,z+1.75);box(world,.18,.18,4.7,fenceMat,side*22.2,.52,z+1.75)}
-
-  // Shed wall/tool rack at the far end.
+  const fenceMat=std(0xf4eee0,.78),start=arena.minZ+6,end=arena.maxZ-10,step=(end-start)/8;
+  for(const side of [-1,1])for(let zi=0;zi<8;zi++){const z=start+zi*step;for(let k=0;k<4;k++){box(world,.24,1.65,.24,fenceMat,side*edge,.82,z+k*1.18);cone(world,.22,.42,fenceMat,side*edge,1.85,z+k*1.18)}box(world,.18,.18,4.7,fenceMat,side*edge,1.22,z+1.75);box(world,.18,.18,4.7,fenceMat,side*edge,.52,z+1.75)}
   const shed=new THREE.Group();box(shed,12,4.5,.38,std(0x9b5e3a,.82),0,2.25,0);for(let x=-5.5;x<=5.5;x+=1.0)box(shed,.08,4.2,.12,M.woodLight,x,2.25,-.22);
-  box(shed,1.4,.12,.15,M.steel,-2.4,2.4,-.35,.35);box(shed,.12,2.5,.12,M.steel,-2.4,1.45,-.35);box(shed,1.1,.10,.14,M.steel,1.5,2.7,-.35,-.4);box(shed,.12,2.3,.12,M.wood,1.5,1.45,-.35);shed.position.set(0,0,-36);world.add(decor(shed));
-
-  for(let i=0;i<30;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*14),-25+rng()*49,50+i)
+  box(shed,1.4,.12,.15,M.steel,-2.4,2.4,-.35,.35);box(shed,.12,2.5,.12,M.steel,-2.4,1.45,-.35);box(shed,1.1,.10,.14,M.steel,1.5,2.7,-.35,-.4);box(shed,.12,2.3,.12,M.wood,1.5,1.45,-.35);shed.position.set(0,0,arena.minZ-4.5);world.add(decor(shed));
+  for(let i=0;i<26;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*Math.max(8,arena.halfW-13)),arena.minZ+7+rng()*(span-16),50+i)
 }
 function buildLevel(n){
-  clearWorld();const loc=locations[Math.floor((n-1)/5)],rng=seedRng(1207+n*9137);scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
+  clearWorld();const zone=Math.min(5,Math.floor((n-1)/5)),loc=locations[zone],rng=seedRng(1207+n*9137);arena=zoneSpecs[zone];
+  worldMeta={zone,chapter:arena.chapter,landmark:arena.landmark,halfW:arena.halfW,minZ:arena.minZ,maxZ:arena.maxZ};
+  scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
   hemi.color.setHex(0xe9f9ff);hemi.groundColor.setHex(loc.ground);sun.color.setHex(0xfff0c2);
-  ground=mesh(new THREE.PlaneGeometry(70,82),texStd(loc.ground,shade(loc.ground,.70),.98,0,14,'noise'),0,0,0);ground.rotation.x=-Math.PI/2;world.add(ground);
-  const road=mesh(new THREE.PlaneGeometry(10,78),texStd(loc.road,shade(loc.road,.72),.96,0,10,'noise'),0,.025,-1);road.rotation.x=-Math.PI/2;world.add(road);
-  const castle=makeCastle();castle.position.set(0,0,-43);castle.scale.setScalar(.8);world.add(castle);
-  for(const x of [-25,25]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,-46);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
-  addVillageSet(loc,rng);const layoutName=addLevelLayout(n,loc,rng);ui.place.textContent=loc.name+' · '+layoutName;
-  for(let i=0;i<18;i++){let x=(rng()<.5?-1:1)*(8+rng()*20),z=-30+rng()*57;if(Math.hypot(x,z-23)<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<18)collider(x,z,.75)}
-  for(let i=0;i<8;i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*18),0,-25+rng()*50);world.add(r)}
-  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);addGardenProps(rng,n);spawnPoopField(n,rng);
-  home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
-  player.position.set(0,0,18);player.rotation.set(0,0,0);playerFacing.set(0,0,-1);if(player.userData.velocity)player.userData.velocity.set(0,0,0);if(player.userData.moveTarget)player.userData.moveTarget.set(0,0,0);helper.position.set(2,5.15,16);helperCooldown=0;mouseCompanion.position.set(1.18,1.88,17.82);mouseCompanion.rotation.set(0,Math.PI,0);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
+  const span=arena.maxZ-arena.minZ,centerZ=(arena.minZ+arena.maxZ)/2,groundW=arena.halfW*2+22,groundD=span+22;
+  ground=mesh(new THREE.PlaneGeometry(groundW,groundD),texStd(loc.ground,shade(loc.ground,.70),.98,0,14,'noise'),0,0,centerZ);ground.rotation.x=-Math.PI/2;world.add(ground);
+  const road=mesh(new THREE.PlaneGeometry(10,span+16),texStd(loc.road,shade(loc.road,.72),.96,0,10,'noise'),0,.025,centerZ);road.rotation.x=-Math.PI/2;world.add(road);
+  const castle=makeCastle();castle.position.set(0,0,arena.minZ-12);castle.scale.setScalar(zone===5?1.05:.72);world.add(decor(castle));
+  for(const x of [-(arena.halfW+2),arena.halfW+2]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,arena.minZ-14);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
+  addVillageSet(loc,rng);const landmarkName=addZoneLandmark(zone,loc),layoutName=addLevelLayout(n,loc,rng);ui.place.textContent=loc.name+' · '+layoutName;
+  for(let i=0;i<18+zone;i++){let x=(rng()<.5?-1:1)*(8+rng()*Math.max(10,arena.halfW-8)),z=arena.minZ+4+rng()*(span-9);if(Math.hypot(x,z-(arena.maxZ-7))<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<arena.halfW-6)collider(x,z,.75)}
+  for(let i=0;i<8+Math.floor(zone/2);i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*Math.max(8,arena.halfW-9)),0,arena.minZ+7+rng()*(span-14));world.add(r)}
+  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*Math.max(9,arena.halfW-11)),arena.minZ+7+rng()*(span-14),i);addGardenProps(rng,n);spawnPoopField(n,rng);
+  home=makeBase();home.position.set(0,0,arena.maxZ-3);home.scale.setScalar(.88);world.add(home);
+  const startZ=arena.maxZ-12;player.position.set(0,0,startZ);player.rotation.set(0,0,0);playerFacing.set(0,0,-1);if(player.userData.velocity)player.userData.velocity.set(0,0,0);if(player.userData.moveTarget)player.userData.moveTarget.set(0,0,0);
+  helper.position.set(2,5.15,startZ-2);helperCooldown=0;mouseCompanion.position.set(1.18,1.88,startZ-.18);mouseCompanion.rotation.set(0,Math.PI,0);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
   camFocus.set(player.position.x,1.6,player.position.z);camFocusTarget.copy(camFocus);state.last=0;motionClock.dt=1/60;applyRenderQuality();
-  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(.28,0,-.96).normalize();spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3+tune.extraBombs;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
+  state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(.28,0,-.96).normalize();spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3+tune.extraBombs;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;
+  for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,startZ-6));spawnValerian(new THREE.Vector3(4,0,startZ-13))}
+  updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+arena.chapter+' · '+landmarkName)
 }
 
 function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scene.add(player);helper=makeBird();helper.scale.setScalar(.72);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.30);scene.add(mouseCompanion)}makeCharacters();
@@ -741,7 +799,7 @@ function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(s
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
 function distSqXZ(a,b){const dx=a.x-b.x,dz=a.z-b.z;return dx*dx+dz*dz}
 function blocked(x,z,radius=1.05){
-  if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;
+  if(Math.abs(x)>arena.halfW-radius||z<arena.minZ+radius||z>arena.maxZ-radius)return true;
   for(const o of obstacles){
     const limit=o.r+radius,limit2=limit*limit;
     if(o.kind==='segment'){
@@ -758,15 +816,17 @@ function nearestHostile(from,max=999){
   let best=null,d2=max*max;for(const e of enemies){const q=from.distanceToSquared(e.position);if(q<d2){d2=q;best=e}}for(const r of raccoons){const q=from.distanceToSquared(r.position);if(q<d2){d2=q;best=r}}return best
 }
 function findClearSpawn(x,z,radius=1.2,tries=14){
-  let sx=x,sz=z;
+  let sx=x,sz=z;const minX=-arena.halfW+2,maxX=arena.halfW-2,minZ=arena.minZ+2,maxZ=arena.maxZ-5;
   const clear=(px,pz)=>{const dx=px-player.position.x,dz=pz-player.position.z;return !blocked(px,pz,radius)&&dx*dx+dz*dz>64};
-  for(let i=0;i<tries;i++){if(clear(sx,sz))return [sx,sz];sx=clamp(x+rand(-5,5),-22,22);sz=clamp(z+rand(-4,5),-28,25)}
-  for(let ring=2;ring<=12;ring+=2)for(let i=0;i<16;i++){const a=i*Math.PI/8,px=clamp(x+Math.cos(a)*ring,-22,22),pz=clamp(z+Math.sin(a)*ring,-28,25);if(clear(px,pz))return [px,pz]}
-  return [clamp(x,-21,21),clamp(z,-28,25)]
+  for(let i=0;i<tries;i++){if(clear(sx,sz))return [sx,sz];sx=clamp(x+rand(-5,5),minX,maxX);sz=clamp(z+rand(-4,5),minZ,maxZ)}
+  for(let ring=2;ring<=14;ring+=2)for(let i=0;i<16;i++){const a=i*Math.PI/8,px=clamp(x+Math.cos(a)*ring,minX,maxX),pz=clamp(z+Math.sin(a)*ring,minZ,maxZ);if(clear(px,pz))return [px,pz]}
+  return [clamp(x,minX,maxX),clamp(z,minZ,maxZ)]
 }
 function spawnDog(){
   const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();
-  let x,z;if(side<.68){x=rand(-18,18);z=-23}else{x=side<.84?-22:22;z=rand(-20,4)}
+  const flank=arena.halfW-2,front=arena.minZ+8;let x,z;
+  if(side<.62){x=rand(-arena.halfW+6,arena.halfW-6);z=front}
+  else{x=side<.81?-flank:flank;z=rand(arena.minZ+10,Math.min(5,arena.maxZ-16))}
   const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
 function burst(pos,color=0xffaa55,count=12){
@@ -1012,4 +1072,4 @@ function animate(ms){
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,renderQuality.max);renderer.setPixelRatio(renderQuality.ratio)});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get world(){return {...worldMeta,width:arena.halfW*2,depth:arena.maxZ-arena.minZ}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
