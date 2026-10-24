@@ -22,6 +22,7 @@ on:
       - feature/mobile-performance-r9-20261024
       - feature/runtime-cleanup-r10-20261024
       - feature/smooth-motion-r11-20261024
+      - feature/world-progression-r12-20261024
   workflow_dispatch:
 permissions:
   contents: read
