@@ -352,23 +352,24 @@ function makeCatTank(){
 }
 function makeMouse(){
   const g=new THREE.Group(),fur=heroFur(0xaeb1b6,0xe0e3e6,0x74777d),belly=heroFur(0xd9d4cc,0xf2eee8,0xb9b2a8),pink=new THREE.MeshPhysicalMaterial({color:0xf0a5b0,roughness:.62,clearcoat:.08}),eye=new THREE.MeshPhysicalMaterial({color:0x17191d,roughness:.18,clearcoat:.75});
-  // Pear-shaped body and chest.
-  organic(g,.34,fur,0,.43,.02,[1.28,.96,1.42],'soft');
-  organic(g,.22,belly,0,.45,-.28,[.86,1.16,.72],'soft');
-  const head=new THREE.Group();head.position.set(0,.77,-.32);g.add(head);
-  organic(head,.30,fur,0,0,0,[1.02,.96,1.08],'soft');
-  // Big round pink ears.
-  for(const side of [-1,1]){organic(head,.19,pink,side*.23,.16,.03,[.34,1.08,1.02],'soft');organic(head,.145,fur,side*.23,.16,.04,[.30,1.05,1.0],'soft')}
+  // Compact pear-shaped mouse body: visible at game distance without reading as a rabbit.
+  organic(g,.34,fur,0,.43,.02,[1.20,.94,1.34],'soft');
+  organic(g,.21,belly,0,.44,-.27,[.82,1.10,.68],'soft');
+  const head=new THREE.Group();head.position.set(0,.75,-.31);g.add(head);
+  organic(head,.285,fur,0,0,0,[1.02,.94,1.08],'soft');
+  // Smaller, rounder ears keep the silhouette mouse-like.
+  for(const side of [-1,1]){organic(head,.155,pink,side*.20,.14,.03,[.50,.90,.86],'soft');organic(head,.116,fur,side*.20,.14,.04,[.45,.87,.84],'soft')}
   // Eyes, muzzle and nose.
-  organic(head,.067,eye,-.105,.045,-.278,[1,.95,.48],'soft');organic(head,.067,eye,.105,.045,-.278,[1,.95,.48],'soft');
-  organic(head,.11,belly,0,-.07,-.25,[1.18,.72,.86],'soft');organic(head,.055,pink,0,-.055,-.365,[1,.78,.72],'soft');
-  for(const side of [-1,1])for(const yy of [-.11,-.03,.05])tubePart(head,[[side*.08,yy,-.31],[side*.26,yy+(yy*.15),-.39],[side*.47,yy+(yy*.22),-.34]],.008,M.white,5);
-  // Tiny paws gripping the litter-box rim.
-  organic(g,.10,pink,-.23,.35,-.31,[1.18,.52,1.30],'paw');organic(g,.10,pink,.23,.35,-.31,[1.18,.52,1.30],'paw');
+  organic(head,.064,eye,-.10,.042,-.268,[1,.95,.48],'soft');organic(head,.064,eye,.10,.042,-.268,[1,.95,.48],'soft');
+  organic(head,.105,belly,0,-.07,-.24,[1.16,.70,.84],'soft');organic(head,.052,pink,0,-.055,-.345,[1,.78,.72],'soft');
+  for(const side of [-1,1])for(const yy of [-.10,-.025,.05])tubePart(head,[[side*.08,yy,-.29],[side*.25,yy+(yy*.15),-.37],[side*.43,yy+(yy*.22),-.33]],.007,M.white,5);
+  // Front paws grip the rim; rear legs are rigged for the fetch/run cycle.
+  organic(g,.095,pink,-.22,.34,-.30,[1.16,.50,1.26],'paw');organic(g,.095,pink,.22,.34,-.30,[1.16,.50,1.26],'paw');
+  const legs=[];for(const side of [-1,1]){const hip=new THREE.Group();hip.position.set(side*.22,.32,.18);g.add(hip);tubePart(hip,[[0,0,0],[side*.02,-.15,.10],[side*.03,-.27,.18]],.045,fur,8);organic(hip,.075,pink,side*.02,-.30,.22,[1.18,.52,1.36],'paw');legs.push(hip)}
   // One continuous pink tail.
-  tubePart(g,[[.25,.35,.22],[.50,.32,.43],[.72,.26,.57],[.91,.18,.48],[1.02,.16,.30]],.035,pink,18);
+  tubePart(g,[[.24,.34,.22],[.48,.31,.42],[.69,.25,.56],[.88,.18,.48],[.99,.16,.31]],.032,pink,18);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
-  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),head,modelStyle:'mouse-reference-r6'};return g
+  g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),head,legs,gait:0,modelStyle:'mouse-reference-r6'};return g
 }
 function makeBird(){
   const g=new THREE.Group(),feather=texStd(0x263341,0x111a22,.82,0,4,'fur'),wingMat=texStd(0x18232e,0x0d1319,.86,0,4,'fur'),beak=std(0xf4ad22,.58),scarf=std(0xd84435,.55);
@@ -452,7 +453,7 @@ function makeRaccoon(){
   organic(head,.042,M.pupil,-.20,.13,-.62,[1,1,.48],'soft');organic(head,.042,M.pupil,.20,.13,-.62,[1,1,.48],'soft');
   softEar(head,-1,.30,-.02,M.raccoon,false,.50);softEar(head,1,.30,-.02,M.raccoon,false,.50);
   organic(head,.075,M.black,0,-.12,-.72,[1,.72,.80],'soft');
-  for(const x of [-.28,.28])for(const z of [-.16,.24]){tubePart(g,[[x,.94,z],[x,.60,z],[x+.04*Math.sign(x),.26,z-.06]],.075,M.raccoonDark,10);organic(g,.12,M.raccoonDark,x,.18,z-.10,[1.2,.55,1.35],'paw')}
+  const legs=[];for(const x of [-.28,.28])for(const z of [-.16,.24]){const hip=new THREE.Group();hip.position.set(x,.94,z);g.add(hip);tubePart(hip,[[0,0,0],[0,-.34,0],[.04*Math.sign(x),-.68,-.06]],.075,M.raccoonDark,10);organic(hip,.12,M.raccoonDark,0,-.76,-.10,[1.2,.55,1.35],'paw');legs.push(hip)}
   // One animated raccoon tail, with alternating dark ring overlays.
   const raccoonTail=new THREE.Group();raccoonTail.position.set(.30,1.02,.36);g.add(raccoonTail);
   const rtPts=[[0,0,0],[.26,.16,.25],[.48,.38,.43],[.62,.62,.46],[.58,.84,.34]];
@@ -461,12 +462,12 @@ function makeRaccoon(){
   const cart=new THREE.Group();cart.position.set(0,.24,.92);g.add(cart);roundedSlab(cart,1.48,1.16,.18,M.steel,0,.45,0,.16,.035);
   for(const x of [-.62,.62])for(const z of [-.46,.46])tubePart(cart,[[x,.45,z],[x,.86,z],[x,1.16,z]],.035,M.steel,8);
   for(let x=-.52;x<=.52;x+=.26)tubePart(cart,[[x,.48,-.50],[x,.83,-.50],[x,1.08,-.50]],.023,M.steel,6);
-  for(const x of [-.56,.56])wheel(cart,x,.46);
+  const cartWheels=[];for(const x of [-.56,.56])cartWheels.push(wheel(cart,x,.46));
   organic(cart,.45,std(0xb73731,.55,.25),0,1.12,.04,[1,1,1],'soft');
   const shield=mesh(new THREE.CylinderGeometry(.62,.62,.12,22),M.steel,.78,1.16,-.20);shield.rotation.z=Math.PI/2;g.add(shield);
   tubePart(g,[[-.64,1.05,-.03],[-.80,1.55,-.08],[-1.02,2.05,-.18]],.055,M.wood,10);
   const hoop=mesh(new THREE.TorusGeometry(.48,.055,8,22),M.steel,-1.08,2.20,-.25);hoop.rotation.y=Math.PI/2;hoop.rotation.z=-.45;g.add(hoop);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,raccoonTail,head,gait:0,modelStyle:'organic-r8'};return g
+  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,cartWheels,legs,raccoonTail,head,gait:0,wheelSpin:0,modelStyle:'organic-r8'};return g
 }
 function makePoopBall(mat=M.trash){
   const g=new THREE.Group(),a=mesh(poopGeoA,mat,0,0,0),b=mesh(poopGeoB,mat,.02,.15,0);a.scale.set(1.15,.8,1);b.scale.set(1,.7,1);g.add(a,b);return g
@@ -687,7 +688,7 @@ function buildLevel(n){
   state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(.28,0,-.96).normalize();spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3+tune.extraBombs;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
-function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scene.add(player);helper=makeBird();helper.scale.setScalar(.72);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.52);scene.add(mouseCompanion)}makeCharacters();
+function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scene.add(player);helper=makeBird();helper.scale.setScalar(.72);scene.add(helper);mouseCompanion=makeMouse();mouseCompanion.scale.setScalar(1.30);scene.add(mouseCompanion)}makeCharacters();
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
@@ -812,10 +813,12 @@ function updateMouse(dt,now){
     else{const k=1-Math.exp(-dt*9);mouseCompanion.position.x+=dx*k;mouseCompanion.position.z+=dz*k;moving=d>.12;if(d<.18)u.mode='ride'}
     mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+Math.PI)-mouseCompanion.rotation.y)*Math.min(1,dt*10);
   }
-  const targetY=u.mode==='ride'?seatY+Math.sin(now*5.5+u.phase)*.025:(.18+Math.abs(Math.sin(now*13+u.phase))*.09);
+  u.gait=(u.gait||0)+(moving?dt*18:dt*2.2);
+  const targetY=u.mode==='ride'?seatY+Math.sin(now*5.5+u.phase)*.018:(.16+Math.abs(Math.sin(u.gait+u.phase))*.065);
   mouseCompanion.position.y+=(targetY-mouseCompanion.position.y)*Math.min(1,dt*12);
-  if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.28;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.04}
-  mouseCompanion.rotation.z=moving?Math.sin(now*15+u.phase)*.08:Math.sin(now*4+u.phase)*.02;
+  if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=i?Math.PI:0,target=moving?Math.sin(u.gait+phase)*.50:-.18;u.legs[i].rotation.x+=(target-u.legs[i].rotation.x)*(1-Math.exp(-dt*13))}
+  if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.22;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.03}
+  mouseCompanion.rotation.z=moving?Math.sin(u.gait+u.phase)*.045:Math.sin(now*4+u.phase)*.015;
   u.fireCooldown-=dt;const target=nearestHostile(mouseCompanion.position,18);
   if(target&&u.fireCooldown<=0&&u.mode!=='fetch'){fireMousePoop(target);u.fireCooldown=.48+Math.random()*.35}
 }
@@ -827,8 +830,10 @@ function updateRaccoons(dt,now){
     const moved=Math.hypot(r.position.x-oldX,r.position.z-oldZ);u.gait=(u.gait||0)+moved*9;if(moved>.002){const yaw=Math.atan2(r.position.x-oldX,r.position.z-oldZ)+Math.PI;r.rotation.y+=normalizeAngle(yaw-r.rotation.y)*(1-Math.exp(-dt*8))}
     const px=player.position.x-r.position.x,pz=player.position.z-r.position.z;if(u.head){const targetYaw=Math.atan2(px,pz)+Math.PI,local=clamp(normalizeAngle(targetYaw-r.rotation.y),-.85,.85);u.head.rotation.y+=normalizeAngle(local-u.head.rotation.y)*(1-Math.exp(-dt*8))}
     u.fireCooldown-=dt;if(Math.hypot(px,pz)<16&&u.fireCooldown<=0){fireRaccoonPoop(r,player);u.fireCooldown=.75+Math.random()*.55}
-    r.position.y=.02+(moved>.001?Math.abs(Math.sin(u.gait))*.035:0);r.rotation.z=(moved>.001?Math.sin(u.gait)*.012:0);
-    if(u.cart)u.cart.rotation.x=Math.sin(u.gait)*.022;if(u.raccoonTail){u.raccoonTail.rotation.z=Math.sin(now*4.6+u.phase)*.34;u.raccoonTail.rotation.x=Math.sin(now*3.3+u.phase)*.08}
+    if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=(i===0||i===3)?0:Math.PI;u.legs[i].rotation.x=Math.sin(u.gait+phase)*.38*(moved>.001?1:.08)}
+    if(moved>.001&&u.cartWheels){u.wheelSpin=(u.wheelSpin||0)+moved/.42;for(const w of u.cartWheels)w.rotation.x=-u.wheelSpin}
+    r.position.y=.02+(moved>.001?Math.abs(Math.sin(u.gait))*.035:0);r.rotation.z=(moved>.001?Math.sin(u.gait)*.010:0);
+    if(u.cart)u.cart.rotation.x=Math.sin(u.gait)*.018;if(u.raccoonTail){u.raccoonTail.rotation.z=Math.sin(now*4.6+u.phase)*.34;u.raccoonTail.rotation.x=Math.sin(now*3.3+u.phase)*.08}
   }
 }
 function litterDust(now,dt=.016){
