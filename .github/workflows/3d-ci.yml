@@ -19,6 +19,7 @@ on:
       - fix/hero-motion-mouse-r6-20261023
       - feature/true-3d-hero-r7-20261023
       - feature/studio-overhaul-r8-20261023
+      - feature/mobile-performance-r9-20261024
   workflow_dispatch:
 permissions:
   contents: read
