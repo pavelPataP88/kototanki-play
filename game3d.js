@@ -552,24 +552,25 @@ function clearWorld(){
   if(world)retire(world);obstacles.length=0;
   enemies.splice(0).forEach(retire);shots.splice(0).forEach(e=>retire(e.mesh));feathers.splice(0).forEach(e=>retire(e.mesh));boneShots.splice(0).forEach(e=>retire(e.mesh));mousePoops.splice(0).forEach(e=>retire(e.mesh));enemyPoops.splice(0).forEach(e=>retire(e.mesh));raccoons.splice(0).forEach(retire);particles.splice(0).forEach(e=>retire(e.mesh));allies.splice(0).forEach(retire);pickups.splice(0).forEach(p=>retire(p.mesh));hazards.splice(0).forEach(h=>retire(h.mesh));yarnBalls.splice(0).forEach(y=>retire(y.mesh));world=new THREE.Group();scene.add(world)
 }
-function collider(x,z,r){obstacles.push({x,z,r})}
+function collider(x,z,r){obstacles.push({kind:'circle',x,z,r})}
+function colliderSegment(x,z,half,r=.16,angle=0){obstacles.push({kind:'segment',x,z,half,r,angle})}
 function addVillageSet(loc,rng){
   for(const side of [-1,1])for(let i=0;i<2;i++){
     const h=makeHouse([loc.roof,0xc44e3e,0x3b7baa][(i+(side>0?1:0))%3],.58+rng()*.10);h.position.set(side*(22+rng()*2.5),0,-16+i*18+rng()*2);h.rotation.y=side>0?-.18:.18;world.add(h);collider(h.position.x,h.position.z,2.4)
   }
-  for(let i=0;i<5;i++){const f=makeFence(5+rng()*3);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f)}
+  for(let i=0;i<5;i++){const len=5+rng()*3,f=makeFence(len);f.position.set((i%2?-1:1)*(11+rng()*5),0,-20+i*10);f.rotation.y=(i%2?1:-1)*.08;world.add(f);colliderSegment(f.position.x,f.position.z,len/2,.16,f.rotation.y)}
   const wt=makeWatchTower();wt.position.set(-12,0,-8);wt.scale.setScalar(.72);world.add(wt);collider(-12,-8,1.5)
 }
 const layoutNames=['КРИВЫЕ ОГОРОДЫ','РЫНОЧНАЯ ПЛОЩАДЬ','ЗАБОРНЫЙ ЛАБИРИНТ','КАМЕННЫЙ КРУГ','МЕЛЬНИЧНЫЙ ПЕРЕКРЁСТОК'];
 function addLevelLayout(n,loc,rng){
   const layout=(n-1)%layoutNames.length;
   if(layout===0){
-    for(const x of [-9,9])for(const z of [-18,-6,6]){const f=makeFence(6.5);f.position.set(x,0,z);f.rotation.y=(z/6)*.12;world.add(f);collider(x,z,1.8)}
+    for(const x of [-9,9])for(const z of [-18,-6,6]){const f=makeFence(6.5);f.position.set(x,0,z);f.rotation.y=(z/6)*.12;world.add(f);colliderSegment(x,z,3.25,.16,f.rotation.y)}
   }else if(layout===1){
     const plaza=mesh(new THREE.CylinderGeometry(8,8,.10,28),std(0xd9c08d,.95),0,.05,-4);world.add(plaza);
     for(let i=0;i<8;i++){const a=i*Math.PI/4,r=10;const rock=makeRock(.72);rock.position.set(Math.cos(a)*r,0,-4+Math.sin(a)*r);world.add(rock);collider(rock.position.x,rock.position.z,.75)}
   }else if(layout===2){
-    for(let i=0;i<7;i++){const f=makeFence(8);f.position.set((i%2?7:-7),0,-25+i*8);f.rotation.y=(i%2?.58:-.58);world.add(f);collider(f.position.x,f.position.z,1.7)}
+    for(let i=0;i<7;i++){const f=makeFence(8);f.position.set((i%2?7:-7),0,-25+i*8);f.rotation.y=(i%2?.58:-.58);world.add(f);colliderSegment(f.position.x,f.position.z,4,.16,f.rotation.y)}
   }else if(layout===3){
     for(let i=0;i<12;i++){const a=i*Math.PI/6,r=12+(i%2)*3;const rock=makeRock(.75+(i%3)*.12);rock.position.set(Math.cos(a)*r,0,-3+Math.sin(a)*r);world.add(rock);collider(rock.position.x,rock.position.z,1.0)}
   }else{
@@ -690,11 +691,24 @@ function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scen
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
-function blocked(x,z,radius=1.05){if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;for(const o of obstacles)if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true;return false}
+function blocked(x,z,radius=1.05){
+  if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;
+  for(const o of obstacles){
+    if(o.kind==='segment'){
+      const cs=Math.cos(o.angle),sn=Math.sin(o.angle),dx=x-o.x,dz=z-o.z,along=dx*cs+dz*sn,side=-dx*sn+dz*cs,q=clamp(along,-o.half,o.half);
+      if(Math.hypot(along-q,side)<o.r+radius)return true
+    }else if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true
+  }
+  return false
+}
 function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
 function nearestHostile(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}for(const r of raccoons){const q=from.distanceTo(r.position);if(q<d){d=q;best=r}}return best}
 function findClearSpawn(x,z,radius=1.2,tries=14){
-  let sx=x,sz=z;for(let i=0;i<tries;i++){if(!blocked(sx,sz,radius)&&Math.hypot(sx-player.position.x,sz-player.position.z)>8)return [sx,sz];sx=clamp(x+rand(-5,5),-22,22);sz=clamp(z+rand(-4,5),-28,25)}return [clamp(x,-21,21),clamp(z,-28,25)]
+  let sx=x,sz=z;
+  const clear=(px,pz)=>!blocked(px,pz,radius)&&Math.hypot(px-player.position.x,pz-player.position.z)>8;
+  for(let i=0;i<tries;i++){if(clear(sx,sz))return [sx,sz];sx=clamp(x+rand(-5,5),-22,22);sz=clamp(z+rand(-4,5),-28,25)}
+  for(let ring=2;ring<=12;ring+=2)for(let i=0;i<16;i++){const a=i*Math.PI/8,px=clamp(x+Math.cos(a)*ring,-22,22),pz=clamp(z+Math.sin(a)*ring,-28,25);if(clear(px,pz))return [px,pz]}
+  return [clamp(x,-21,21),clamp(z,-28,25)]
 }
 function spawnDog(){
   const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();
