@@ -102,6 +102,9 @@ function cyl(p,rt,rb,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.CylinderG
 function cone(p,r,h,m,x=0,y=0,z=0,rx=0,rz=0){const o=mesh(new THREE.ConeGeometry(r,h,12),m,x,y,z);o.rotation.x=rx;o.rotation.z=rz;p.add(o);return o}
 
 function sharedGeo(g){g.userData.shared=true;return g}
+const fenceUnitGeo=sharedGeo(new THREE.BoxGeometry(1,1,1));
+const flowerGeo=sharedGeo(new THREE.SphereGeometry(.07,8,6));
+const flowerMat=std(0xffffff,.7);flowerMat.userData.shared=true;
 const fxSphereGeo=sharedGeo(new THREE.SphereGeometry(1,7,5));
 const trailMat=new THREE.MeshBasicMaterial({color:0xffc77a});trailMat.userData.shared=true;
 const dustMatA=new THREE.MeshBasicMaterial({color:0xd5bd8e,transparent:true,opacity:.8});dustMatA.userData.shared=true;
@@ -532,10 +535,20 @@ function makeHouse(roofColor=0x2f6fa8,scale=1){
 }
 function makeTree(leaf=0x55a83e,scale=1){const g=new THREE.Group();cyl(g,.34,.48,4.2,M.wood,0,2.1,0);const lm=std(leaf,.98);for(const [x,y,z,r] of [[0,4.5,0,1.65],[-.9,4.25,.25,1.1],[.9,4.3,-.15,1.18],[0,5.25,.1,1.1]])sph(g,r,lm,x,y,z,[1,1.05,1]);g.scale.setScalar(scale);return g}
 function makeRock(scale=1){const o=mesh(new THREE.DodecahedronGeometry(1.05,1),M.stone,0,.8,0);o.scale.set(scale,scale*.72,scale);o.rotation.set(rand(-.18,.18),rand(0,Math.PI),rand(-.12,.12));return o}
-function makeFence(len=5){const g=new THREE.Group();for(let x=-len/2;x<=len/2;x+=1.55)box(g,.18,1.25,.18,M.wood,x,.62,0);box(g,len,.18,.16,M.wood,0,.92,0);box(g,len,.18,.16,M.wood,0,.36,0);return g}
+function makeFence(len=5){
+  const g=new THREE.Group(),posts=[];for(let x=-len/2;x<=len/2;x+=1.55)posts.push(x);
+  const inst=new THREE.InstancedMesh(fenceUnitGeo,M.wood,posts.length+2),d=new THREE.Object3D();let n=0;
+  for(const x of posts){d.position.set(x,.62,0);d.scale.set(.18,1.25,.18);d.updateMatrix();inst.setMatrixAt(n++,d.matrix)}
+  for(const y of [.92,.36]){d.position.set(0,y,0);d.scale.set(len,.18,.16);d.updateMatrix();inst.setMatrixAt(n++,d.matrix)}
+  inst.instanceMatrix.needsUpdate=true;inst.castShadow=true;inst.receiveShadow=true;inst.computeBoundingSphere();g.add(inst);return g
+}
 function makeWatchTower(){const g=new THREE.Group();for(const x of [-1.15,1.15])for(const z of [-1.15,1.15])cyl(g,.13,.18,4.6,M.wood,x,2.3,z);box(g,3.0,.3,3.0,M.woodLight,0,4.25,0);for(const x of [-1.35,1.35])box(g,.16,1.2,3.0,M.wood,x,4.9,0);for(const z of [-1.35,1.35])box(g,3.0,1.2,.16,M.wood,0,4.9,z);const roof=mesh(new THREE.ConeGeometry(2.35,2.2,4),std(0x3c78af,.8),0,6.1,0);roof.rotation.y=Math.PI/4;g.add(roof);return g}
 function makeCastle(){const g=new THREE.Group();for(const x of [-6,-2,2,6]){box(g,2.2,6.5,2.2,M.stone,x,3.25,0);const roof=mesh(new THREE.ConeGeometry(1.75,2.4,4),std(0x3976b1,.75),x,7.6,0);roof.rotation.y=Math.PI/4;g.add(roof)}box(g,11.5,4.8,2.0,M.stone,0,2.4,.6);box(g,4,8.2,3.0,M.plaster,0,4.1,1.0);const roof=mesh(new THREE.ConeGeometry(2.6,3.0,4),std(0xc34d40,.72),0,9.25,1.0);roof.rotation.y=Math.PI/4;g.add(roof);g.scale.setScalar(1.18);return g}
-function flowerPatch(p,x,z,seed=0){const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6fb8ff];for(let i=0;i<12;i++){const a=(i*2.4+seed)%6.28,r=.25+(i%5)*.22;const f=sph(p,.07,std(colors[i%colors.length],.7),x+Math.cos(a)*r,.12,z+Math.sin(a)*r,[1,1,1],8);f.castShadow=false}}
+function flowerPatch(p,x,z,seed=0){
+  const colors=[0xffffff,0xffdb4d,0xf06c9c,0x6fb8ff],inst=new THREE.InstancedMesh(flowerGeo,flowerMat,12),d=new THREE.Object3D(),c=new THREE.Color();
+  for(let i=0;i<12;i++){const a=(i*2.4+seed)%6.28,r=.25+(i%5)*.22;d.position.set(x+Math.cos(a)*r,.12,z+Math.sin(a)*r);d.scale.set(1,1,1);d.updateMatrix();inst.setMatrixAt(i,d.matrix);inst.setColorAt(i,c.setHex(colors[i%colors.length]))}
+  inst.instanceMatrix.needsUpdate=true;if(inst.instanceColor)inst.instanceColor.needsUpdate=true;inst.castShadow=false;inst.receiveShadow=true;inst.computeBoundingSphere();p.add(inst)
+}
 function makeBase(){
   const g=new THREE.Group();const h=makeHouse(0x2d6da3,1.15);g.add(h);const tower=makeWatchTower();tower.position.set(5.2,0,1.2);tower.scale.setScalar(.78);g.add(tower);box(g,.12,4,.12,M.steel,-4.2,5.4,.5);box(g,1.5,.75,.12,std(0xe94338,.7),-3.45,6.5,.5);
   g.userData.fade=1;g.userData.fadeMeshes=[];g.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.userData.shared=false;o.material.transparent=true;o.material.opacity=1;g.userData.fadeMeshes.push(o)}});return g
