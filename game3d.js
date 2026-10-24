@@ -26,23 +26,28 @@ scene.background=new THREE.Color(0x87cfff);
 scene.fog=new THREE.Fog(0xcfeeff,40,115);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);const camFocus=new THREE.Vector3(),camDesired=new THREE.Vector3();
 camera.position.set(0,13.5,22);
+const mobilePerf=matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const qualityMax=Math.min(devicePixelRatio,mobilePerf?1.0:1.4),qualityMin=mobilePerf?.68:.90,qualityStart=mobilePerf?Math.min(qualityMax,.90):qualityMax;
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
+renderer.setPixelRatio(qualityStart);
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.type=mobilePerf?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.24;
 root.appendChild(renderer.domElement);
-const renderQuality={ratio:Math.min(devicePixelRatio,1.4),ema:1/60,timer:0,good:0};
+const renderQuality={ratio:qualityStart,ema:1/60,timer:0,good:0,min:qualityMin,max:qualityMax,mobile:mobilePerf};
 function updateRenderQuality(rawDt){
-  renderQuality.ema=renderQuality.ema*.94+rawDt*.06;renderQuality.timer+=rawDt;
-  if(renderQuality.timer<2.0)return;renderQuality.timer=0;
-  const targetMax=Math.min(devicePixelRatio,1.4);
-  if(renderQuality.ema>.027&&renderQuality.ratio>1.0){renderQuality.ratio=Math.max(1.0,renderQuality.ratio-.10);renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0}
-  else if(renderQuality.ema<.019&&renderQuality.ratio<targetMax){renderQuality.good++;if(renderQuality.good>=2){renderQuality.ratio=Math.min(targetMax,renderQuality.ratio+.05);renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0}}
-  else renderQuality.good=0
+  renderQuality.ema=renderQuality.ema*.92+rawDt*.08;renderQuality.timer+=rawDt;
+  const cadence=mobilePerf?.75:1.6;if(renderQuality.timer<cadence)return;renderQuality.timer=0;
+  const slow=renderQuality.ema>(mobilePerf?.022:.025),verySlow=renderQuality.ema>.032;
+  if(slow&&renderQuality.ratio>renderQuality.min){
+    const step=verySlow?(mobilePerf?.16:.12):(mobilePerf?.10:.08);
+    renderQuality.ratio=Math.max(renderQuality.min,renderQuality.ratio-step);renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0
+  }else if(renderQuality.ema<(mobilePerf?.0175:.0185)&&renderQuality.ratio<renderQuality.max){
+    renderQuality.good++;const need=mobilePerf?6:3;if(renderQuality.good>=need){renderQuality.ratio=Math.min(renderQuality.max,renderQuality.ratio+(mobilePerf?.035:.05));renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0}
+  }else renderQuality.good=0
 }
 
 const audio={ctx:null,master:null};
@@ -71,7 +76,7 @@ const sfx={
 
 
 const hemi=new THREE.HemisphereLight(0xdff5ff,0x6e8c43,1.35); scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffefc0,3.9); sun.position.set(-18,35,16); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-34;sun.shadow.camera.right=34;sun.shadow.camera.top=40;sun.shadow.camera.bottom=-40;sun.shadow.camera.near=1;sun.shadow.camera.far=85;sun.shadow.bias=-.0002;sun.shadow.normalBias=.035;sun.shadow.radius=2;scene.add(sun);
+const sun=new THREE.DirectionalLight(0xffefc0,3.9); sun.position.set(-18,35,16); sun.castShadow=true; const shadowSize=mobilePerf?512:1024;sun.shadow.mapSize.set(shadowSize,shadowSize); sun.shadow.camera.left=-34;sun.shadow.camera.right=34;sun.shadow.camera.top=40;sun.shadow.camera.bottom=-40;sun.shadow.camera.near=1;sun.shadow.camera.far=85;sun.shadow.bias=-.0002;sun.shadow.normalBias=.035;sun.shadow.radius=mobilePerf?1:2;scene.add(sun);
 const fill=new THREE.DirectionalLight(0xa7d8ff,.72);fill.position.set(22,15,-28);scene.add(fill);
 
 function std(color,rough=.72,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal})}
@@ -127,6 +132,8 @@ const featherMat=std(0x273846,.55,.12);featherMat.userData.shared=true;
 const poopGeoA=sharedGeo(new THREE.SphereGeometry(.19,9,7));
 const poopGeoB=sharedGeo(new THREE.SphereGeometry(.13,8,6));
 function decor(g){g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});return g}
+function shadowBudget(g,budget){if(!mobilePerf)return g;let used=0;g.traverse(o=>{if(o.isMesh)o.castShadow=used++<budget});return g}
+function noShadow(g){g.traverse(o=>{if(o.isMesh)o.castShadow=false});return g}
 function bolt(p,x,y,z,m=M.bronze){return sph(p,.055,m,x,y,z,[1,1,.55],8)}
 function whisker(p,x,y,z,len=.55,rz=0){const w=box(p,len,.025,.025,M.white,x,y,z);w.rotation.z=rz;w.castShadow=false;return w}
 function makeBarrel(){
@@ -371,7 +378,7 @@ function makeMouse(){
   const legs=[];for(const side of [-1,1]){const hip=new THREE.Group();hip.position.set(side*.22,.32,.18);g.add(hip);tubePart(hip,[[0,0,0],[side*.02,-.15,.10],[side*.03,-.27,.18]],.045,fur,8);organic(hip,.075,pink,side*.02,-.30,.22,[1.18,.52,1.36],'paw');legs.push(hip)}
   // One continuous pink tail.
   tubePart(g,[[.24,.34,.22],[.48,.31,.42],[.69,.25,.56],[.88,.18,.48],[.99,.16,.31]],.032,pink,18);
-  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});shadowBudget(g,4);
   g.userData={fireCooldown:.4,fetch:null,mode:'ride',phase:rand(0,6.28),head,legs,gait:0,modelStyle:'mouse-reference-r6'};return g
 }
 function makeBird(){
@@ -385,7 +392,7 @@ function makeBird(){
   organic(leftWing,.42,wingMat,-.23,0,0,[1.45,.30,.78],'soft');organic(rightWing,.42,wingMat,.23,0,0,[1.45,.30,.78],'soft');
   roundedSlab(g,.88,.34,.17,scarf,0,.72,.02,.10,.025);
   const tail=new THREE.Group();tail.position.set(0,.36,.40);g.add(tail);for(const x of [-.22,0,.22]){const f=softEar(tail,x<0?-1:1,.0,.0,wingMat,false,.42);f.position.x=x;f.rotation.x=-1.25}
-  g.userData={leftWing,rightWing,head,tail,phase:rand(0,6.28),modelStyle:'organic-r8'};return g
+  shadowBudget(g,4);g.userData={leftWing,rightWing,head,tail,phase:rand(0,6.28),modelStyle:'organic-r8'};return g
 }
 
 function makeDog(type=0){
@@ -426,14 +433,14 @@ function makeDog(type=0){
   organic(head,.18,dark,0,.05,-.61,[1.05,.70,1.05],'muzzle');
   const innerEar=std(type%2?0x8e665e:0xb98269,.78);softEar(head,-1,.33,-.055,innerEar,floppy,.48);softEar(head,1,.33,-.055,innerEar,floppy,.48);
   for(const z of [-.10,.12,.34,.56]){const tuft=softEar(g,z<.25?-1:1,1.74,z+.28,fur,false,.18);tuft.rotation.x=-.25}
-  g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,dogEarL,dogEarR,dogTail,head,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic-r3'};
+  shadowBudget(g,8);g.userData={hp:1+Math.floor(type/2),speed:4.35+type*.42,type,legs,dogEarL,dogEarR,dogTail,head,fireCooldown:rand(.25,.75),preferredRange:7.2+type*.45,flankSign:Math.random()<.5?-1:1,thinkTimer:rand(0,.35),target:null,dodgeSeed:rand(0,6.28),modelStyle:'organic-r3'};
   g.scale.set(breed===1?1.30:breed===2?1.16:1.22,breed===1?1.10:1.18,1.24);g.userData.baseScale=g.scale.clone();return g
 }
 function makeBone(){
   const g=new THREE.Group();
   const shaft=mesh(boneShaftGeo,M.bone);shaft.rotation.x=Math.PI/2;g.add(shaft);
   for(const x of [-.42,.42])for(const y of [-.11,.11]){const end=mesh(boneEndGeo,M.bone,x,y,0);g.add(end)}
-  g.rotation.z=.4;return g
+  g.rotation.z=.4;noShadow(g);return g
 }
 function fireBone(dog,target=player){
   if(!dog?.parent||!target)return;
@@ -470,10 +477,10 @@ function makeRaccoon(){
   const shield=mesh(new THREE.CylinderGeometry(.62,.62,.12,22),M.steel,.78,1.16,-.20);shield.rotation.z=Math.PI/2;g.add(shield);
   tubePart(g,[[-.64,1.05,-.03],[-.80,1.55,-.08],[-1.02,2.05,-.18]],.055,M.wood,10);
   const hoop=mesh(new THREE.TorusGeometry(.48,.055,8,22),M.steel,-1.08,2.20,-.25);hoop.rotation.y=Math.PI/2;hoop.rotation.z=-.45;g.add(hoop);
-  g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,cartWheels,legs,raccoonTail,head,gait:0,wheelSpin:0,modelStyle:'organic-r8'};return g
+  shadowBudget(g,7);g.userData={hp:2,speed:4.1,fireCooldown:rand(.55,1.1),escort:null,phase:rand(0,6.28),cart,cartWheels,legs,raccoonTail,head,gait:0,wheelSpin:0,modelStyle:'organic-r8'};return g
 }
 function makePoopBall(mat=M.trash){
-  const g=new THREE.Group(),a=mesh(poopGeoA,mat,0,0,0),b=mesh(poopGeoB,mat,.02,.15,0);a.scale.set(1.15,.8,1);b.scale.set(1,.7,1);g.add(a,b);return g
+  const g=new THREE.Group(),a=mesh(poopGeoA,mat,0,0,0),b=mesh(poopGeoB,mat,.02,.15,0);a.scale.set(1.15,.8,1);b.scale.set(1,.7,1);g.add(a,b);noShadow(g);return g
 }
 function fireMousePoop(target){
   if(!mouseCompanion||!target)return;const origin=mouseCompanion.position.clone().add(new THREE.Vector3(0,.7,0)),aim=target.position.clone().add(new THREE.Vector3(0,1,0)),dir=aim.sub(origin).normalize(),m=makePoopBall(std(0x5a351f,.9));m.position.copy(origin);scene.add(m);mousePoops.push({mesh:m,v:dir.multiplyScalar(15),life:2.2,spin:rand(-12,12)});sfx.poop()
@@ -500,7 +507,7 @@ function makeAllyCat(i=0){
   const tail=new THREE.Group();tail.position.set(.40,1.00,.28);g.add(tail);tubePart(tail,[[0,0,0],[.24,.18,.30],[.37,.48,.48],[.25,.72,.55]],.085,fur,14);
   roundedSlab(g,.72,.38,.16,M.red,0,1.16,.04,.10,.02);
   const gun=new THREE.Group();gun.position.set(.42,1.30,-.18);g.add(gun);roundedSlab(gun,.14,.16,.86,M.darkSteel,0,0,-.34,.04,.01);const gb=mesh(new THREE.CylinderGeometry(.05,.055,.82,10),M.steel,0,.01,-.98);gb.rotation.x=Math.PI/2;gun.add(gb);
-  g.userData={legs,head,earL,earR,tail,gun,fireCooldown:rand(.15,.8),slot:i,phase:rand(0,6.28),hp:2,modelStyle:'organic-r8'};g.scale.setScalar(.9);return g
+  shadowBudget(g,7);g.userData={legs,head,earL,earR,tail,gun,fireCooldown:rand(.15,.8),slot:i,phase:rand(0,6.28),hp:2,modelStyle:'organic-r8'};g.scale.setScalar(.9);return g
 }
 function spawnCatSquad(){
   for(const a of allies)retire(a);allies.length=0;
@@ -510,7 +517,7 @@ function spawnCatSquad(){
 }
 function fireAlly(a,target){
   const dir=target.position.clone().sub(a.position).setY(.2).normalize();
-  const m=mesh(allyShotGeo,M.glow);m.position.copy(a.position).add(new THREE.Vector3(0,1.35,0)).add(dir.clone().multiplyScalar(.8));scene.add(m);
+  const m=mesh(allyShotGeo,M.glow);m.castShadow=false;m.position.copy(a.position).add(new THREE.Vector3(0,1.35,0)).add(dir.clone().multiplyScalar(.8));scene.add(m);
   feathers.push({mesh:m,v:dir.multiplyScalar(16),life:1.7,ally:true})
 }
 function updateAllies(dt,now){
@@ -740,7 +747,7 @@ function fireSausage(){
   let dir=aimFacing.clone();
   if(!aimInput.active){const target=nearestHostile(player.position,22);if(target){dir.copy(target.position).sub(player.position).setY(0).normalize();aimFacing.copy(dir)}}
   if(dir.lengthSq()<.01)dir.copy(playerFacing);dir.normalize();
-  const g=new THREE.Group(),body=mesh(sausageBodyGeo,sausageMat),tip=mesh(sausageTipGeo,M.glow,0,0,-.42);body.rotation.x=Math.PI/2;g.add(body,tip);const origin=player.userData.shotOrigin||(player.userData.shotOrigin=new THREE.Vector3());if(player.userData.muzzle)player.userData.muzzle.getWorldPosition(origin);else origin.copy(player.position).add(new THREE.Vector3(0,1.55,0));g.position.copy(origin).addScaledVector(dir,.38);g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
+  const g=new THREE.Group(),body=mesh(sausageBodyGeo,sausageMat),tip=mesh(sausageTipGeo,M.glow,0,0,-.42);body.castShadow=tip.castShadow=false;body.rotation.x=Math.PI/2;g.add(body,tip);const origin=player.userData.shotOrigin||(player.userData.shotOrigin=new THREE.Vector3());if(player.userData.muzzle)player.userData.muzzle.getWorldPosition(origin);else origin.copy(player.position).add(new THREE.Vector3(0,1.55,0));g.position.copy(origin).addScaledVector(dir,.38);g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
   player.userData.recoil=Math.min(1,(player.userData.recoil||0)+.72);burst(g.position,0xffc15a,5);shake=Math.max(shake,.16);sfx.shoot()
 }
 function bomb(){if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;sfx.bomb();burst(player.position,0xff7646,36);const radius=9.5*tune.bombRadius;for(const e of [...enemies])if(e.position.distanceTo(player.position)<radius)damageEnemy(e,5);for(const r of [...raccoons])if(r.position.distanceTo(player.position)<radius)damageRaccoon(r,5)}
@@ -957,5 +964,5 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,rawDt=stat
   renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,devicePixelRatio,1.4);renderer.setPixelRatio(renderQuality.ratio)});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,frameMs:renderQuality.ema*1000,homeFade:home?.userData?.fade??1}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,renderQuality.max);renderer.setPixelRatio(renderQuality.ratio)});
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,frameMs:renderQuality.ema*1000,homeFade:home?.userData?.fade??1}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
