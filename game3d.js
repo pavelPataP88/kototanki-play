@@ -991,7 +991,7 @@ function animate(ms){
   requestAnimationFrame(animate);
   const now=ms*.001,rawDt=state.last?now-state.last:1/60;state.last=now;
   const safeRaw=rawDt>0&&rawDt<.12?Math.min(.05,rawDt):1/60,alpha=1-Math.exp(-safeRaw*7);
-  motionClock.raw=safeRaw;motionClock.dt+=(safeRaw-motionClock.dt)*alpha;motionClock.dt=clamp(motionClock.dt,1/120,.05);motionClock.jitter=motionClock.jitter*.92+Math.abs(safeRaw-motionClock.dt)*.08;
+  motionClock.raw=safeRaw;const dtAdjust=clamp((safeRaw-motionClock.dt)*alpha,-.0022,.0022);motionClock.dt=clamp(motionClock.dt+dtAdjust,1/120,.05);motionClock.jitter=motionClock.jitter*.92+Math.abs(safeRaw-motionClock.dt)*.08;
   const dt=motionClock.dt;updateRenderQuality(safeRaw);
   if(state.playing){
     state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);state.valerian=Math.max(0,state.valerian-dt);state.poopSlow=Math.max(0,state.poopSlow-dt);
