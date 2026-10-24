@@ -975,7 +975,7 @@ startBtn.onclick=()=>{initAudio();resetTune();state.score=0;buildLevel(1);overla
 function animate(ms){
   requestAnimationFrame(animate);
   const now=ms*.001,rawDt=state.last?now-state.last:1/60;state.last=now;
-  const safeRaw=rawDt>0&&rawDt<.12?Math.min(.05,rawDt):1/60,alpha=1-Math.exp(-safeRaw*14);
+  const safeRaw=rawDt>0&&rawDt<.12?Math.min(.05,rawDt):1/60,alpha=1-Math.exp(-safeRaw*7);
   motionClock.raw=safeRaw;motionClock.dt+=(safeRaw-motionClock.dt)*alpha;motionClock.dt=clamp(motionClock.dt,1/120,.05);motionClock.jitter=motionClock.jitter*.92+Math.abs(safeRaw-motionClock.dt)*.08;
   const dt=motionClock.dt;updateRenderQuality(safeRaw);
   if(state.playing){
