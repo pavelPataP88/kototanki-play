@@ -112,7 +112,18 @@ const {resolve}=require('node:path');
     assert.equal(places.size,30);
     const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
-    assert.ok(sweep1.geometries<sweep0.geometries*1.7+220);assert.ok(sweep1.textures<sweep0.textures+100);
+    assert.ok(sweep1.geometries<2500);assert.ok(sweep1.textures<150);
+
+    // Leak check uses repeated rebuilds of the same level so GPU lazy-allocation/culling
+    // cannot make two different maps look like a memory regression.
+    await page.evaluate(()=>window.__kototanki3d.start());await page.waitForTimeout(220);
+    const same0=await page.evaluate(()=>window.__kototanki3d.diagnostics);
+    for(let i=0;i<8;i++){await page.evaluate(()=>window.__kototanki3d.start());await page.waitForTimeout(120)}
+    const same1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
+    console.log('SAME_LEVEL_LEAK_PROFILE',JSON.stringify({before:same0,after:same1}));
+    assert.ok(same1.geometries<same0.geometries+320);assert.ok(same1.textures<same0.textures+8);
+
+    for(let i=2;i<=30;i++){await page.evaluate(()=>window.__kototanki3d.next());await page.waitForTimeout(35)}
     await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-portrait.png')});
     await page.setViewportSize({width:844,height:390});await page.waitForTimeout(250);
     assert.equal(await page.locator('#moveStick').isVisible(),true);assert.equal(await page.locator('#aimStick').isVisible(),true);
