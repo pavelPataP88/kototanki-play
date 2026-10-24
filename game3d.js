@@ -447,11 +447,10 @@ function makeBone(){
 }
 function fireBone(dog,target=player){
   if(!dog?.parent||!target)return;
-  const aim=target.position.clone().add(new THREE.Vector3(0,target===player?1.2:1.0,0));
+  const aim=target.position.clone();aim.y+=target===player?1.2:1.0;
   const origin=dog.userData.shotOrigin||(dog.userData.shotOrigin=new THREE.Vector3());dog.localToWorld(origin.set(0,1.70,-1.80));
-  const dir=aim.sub(origin).normalize();
-  const b=makeBone();b.position.copy(origin).add(dir.clone().multiplyScalar(.9));b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
-  boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});sfx.bone();
+  const dir=aim.sub(origin).normalize(),b=makeBone();b.position.copy(origin).addScaledVector(dir,.9);b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
+  boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});sfx.bone()
 }
 
 
@@ -486,10 +485,14 @@ function makePoopBall(mat=M.trash){
   const g=new THREE.Group(),a=mesh(poopGeoA,mat,0,0,0),b=mesh(poopGeoB,mat,.02,.15,0);a.scale.set(1.15,.8,1);b.scale.set(1,.7,1);g.add(a,b);noShadow(g);return g
 }
 function fireMousePoop(target){
-  if(!mouseCompanion||!target)return;const origin=mouseCompanion.position.clone().add(new THREE.Vector3(0,.7,0)),aim=target.position.clone().add(new THREE.Vector3(0,1,0)),dir=aim.sub(origin).normalize(),m=makePoopBall(mousePoopMat);m.position.copy(origin);scene.add(m);mousePoops.push({mesh:m,v:dir.multiplyScalar(15),life:2.2,spin:rand(-12,12)});sfx.poop()
+  if(!mouseCompanion||!target)return;
+  const origin=mouseCompanion.userData.shotOrigin||(mouseCompanion.userData.shotOrigin=new THREE.Vector3());origin.copy(mouseCompanion.position);origin.y+=.7;
+  const dir=target.position.clone();dir.y+=1;dir.sub(origin).normalize();const m=makePoopBall(mousePoopMat);m.position.copy(origin);scene.add(m);mousePoops.push({mesh:m,v:dir.multiplyScalar(15),life:2.2,spin:rand(-12,12)});sfx.poop()
 }
 function fireRaccoonPoop(r,target){
-  if(!r?.parent||!target)return;const origin=r.position.clone().add(new THREE.Vector3(0,1.25,0)),aim=target.position.clone().add(new THREE.Vector3(0,1,0)),dir=aim.sub(origin).normalize(),m=makePoopBall(M.trash);m.position.copy(origin);scene.add(m);enemyPoops.push({mesh:m,v:dir.multiplyScalar(11.5),life:2.8,spin:rand(-10,10),owner:r});sfx.poop()
+  if(!r?.parent||!target)return;
+  const origin=r.userData.shotOrigin||(r.userData.shotOrigin=new THREE.Vector3());origin.copy(r.position);origin.y+=1.25;
+  const dir=target.position.clone();dir.y+=1;dir.sub(origin).normalize();const m=makePoopBall(M.trash);m.position.copy(origin);scene.add(m);enemyPoops.push({mesh:m,v:dir.multiplyScalar(11.5),life:2.8,spin:rand(-10,10),owner:r});sfx.poop()
 }
 function spawnRaccoon(escort=null){
   const r=makeRaccoon();r.userData.escort=escort||nearestEnemy(home.position,999);
@@ -519,8 +522,7 @@ function spawnCatSquad(){
   for(let i=0;i<count;i++){const a=makeAllyCat(i),s=slots[i],p=findClearSpawn(s[0],s[1],.7,10);a.scale.setScalar(.72);a.position.set(p[0],0,p[1]);scene.add(a);allies.push(a)}
 }
 function fireAlly(a,target){
-  const dir=target.position.clone().sub(a.position).setY(.2).normalize();
-  const m=mesh(allyShotGeo,M.glow);m.castShadow=false;m.position.copy(a.position).add(new THREE.Vector3(0,1.35,0)).add(dir.clone().multiplyScalar(.8));scene.add(m);
+  const dir=target.position.clone().sub(a.position).setY(.2).normalize(),m=mesh(allyShotGeo,M.glow);m.castShadow=false;m.position.copy(a.position);m.position.y+=1.35;m.position.addScaledVector(dir,.8);scene.add(m);
   feathers.push({mesh:m,v:dir.multiplyScalar(16),life:1.7,ally:true})
 }
 function updateAllies(dt,now){
@@ -566,8 +568,8 @@ function makeBase(){
 function updateHomeOcclusion(dt){
   if(!home)return;
   const ax=camera.position.x,az=camera.position.z,bx=player.position.x,bz=player.position.z,px=home.position.x,pz=home.position.z;
-  const vx=bx-ax,vz=bz-az,len2=vx*vx+vz*vz||1,t=clamp(((px-ax)*vx+(pz-az)*vz)/len2,0,1),cx=ax+vx*t,cz=az+vz*t,dist=Math.hypot(px-cx,pz-cz);
-  const occluded=t>.08&&t<.92&&dist<6.4;
+  const vx=bx-ax,vz=bz-az,len2=vx*vx+vz*vz||1,t=clamp(((px-ax)*vx+(pz-az)*vz)/len2,0,1),cx=ax+vx*t,cz=az+vz*t,dx=px-cx,dz=pz-cz;
+  const occluded=t>.08&&t<.92&&dx*dx+dz*dz<40.96;
   if(occluded){home.userData.fade=0;for(const o of home.userData.fadeMeshes||[]){o.visible=false;o.material.opacity=0;o.material.depthWrite=false}return}
   const fade=home.userData.fade+(1-home.userData.fade)*(1-Math.exp(-dt*12));home.userData.fade=fade;
   for(const o of home.userData.fadeMeshes||[]){o.visible=fade>.18;o.material.opacity=fade;o.material.depthWrite=fade>.72}
@@ -624,8 +626,8 @@ function spawnYarnPickup(pos){const m=makeYarnPickup();m.position.copy(pos);scen
 function launchYarn(){
   const m=new THREE.Group(),pink=std(0xe45f9d,.74);sph(m,.72,pink,0,0,0,[1,1,1],14);
   for(let i=0;i<6;i++){const ring=mesh(new THREE.TorusGeometry(.73,.035,6,24),std(i%2?0xffd3e7:0xa84278,.7));ring.rotation.set(i*.51,i*.33,i*.77);m.add(ring)}
-  m.position.copy(player.position).add(new THREE.Vector3(0,1.0,0)).add(aimFacing.clone().multiplyScalar(1.5));scene.add(m);
-  const dir=aimFacing.clone().normalize();yarnBalls.push({mesh:m,v:dir.multiplyScalar(12),life:6,hits:new Set()});sfx.pickup();showToast('🧶 БЕШЕНЫЙ КЛУБОК!')
+  const dir=aimFacing.clone().normalize();m.position.copy(player.position);m.position.y+=1.0;m.position.addScaledVector(dir,1.5);scene.add(m);
+  yarnBalls.push({mesh:m,v:dir.multiplyScalar(12),life:6,hits:new Set()});sfx.pickup();showToast('🧶 БЕШЕНЫЙ КЛУБОК!')
 }
 
 function makePoop(){
@@ -636,18 +638,17 @@ function spawnPoopField(n,rng){
   for(let i=0;i<count;i++){let x=(rng()<.5?-1:1)*(4+rng()*16),z=-23+rng()*44;if(Math.hypot(x,z-18)<6)z-=8;const m=makePoop();m.position.set(x,0,z);scene.add(m);hazards.push({mesh:m,type:'poop',armed:true})}
 }
 function updateChaosItems(dt,now){
-  for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;p.mesh.rotation.y+=dt*1.8;p.mesh.position.y=.14+Math.sin(now*4+p.bob)*.12;if(player.position.distanceTo(p.mesh.position)<1.45){applyPickup(p);continue}if(p.life<=0){retire(p.mesh);pickups.splice(i,1)}}
+  for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;p.mesh.rotation.y+=dt*1.8;p.mesh.position.y=.14+Math.sin(now*4+p.bob)*.12;if(player.position.distanceToSquared(p.mesh.position)<2.1025){applyPickup(p);continue}if(p.life<=0){retire(p.mesh);pickups.splice(i,1)}}
   for(let i=hazards.length-1;i>=0;i--){const h=hazards[i];if(!h.armed)continue;h.mesh.rotation.y+=dt*.35;
-    const pd=player.position.distanceTo(h.mesh.position);
-    if(pd<1.35&&state.invuln<=0){h.armed=false;state.lives--;state.invuln=1.0;state.poopSlow=2.8;sfx.poop();burst(h.mesh.position,0x79502b,24);shake=.8;showToast('💩 БА-БАХ! ВЛИП!');retire(h.mesh);hazards.splice(i,1);updateUI();if(state.lives<=0)lose('Кот героически подорвался на какашке');continue}
-    for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(e.position.distanceTo(h.mesh.position)<1.05){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);retire(h.mesh);hazards.splice(i,1);break}}
-    if(h.armed)for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(r.position.distanceTo(h.mesh.position)<.95){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageRaccoon(r,2);retire(h.mesh);hazards.splice(i,1);break}}
+    if(player.position.distanceToSquared(h.mesh.position)<1.8225&&state.invuln<=0){h.armed=false;state.lives--;state.invuln=1.0;state.poopSlow=2.8;sfx.poop();burst(h.mesh.position,0x79502b,24);shake=.8;showToast('💩 БА-БАХ! ВЛИП!');retire(h.mesh);hazards.splice(i,1);updateUI();if(state.lives<=0)lose('Кот героически подорвался на какашке');continue}
+    for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(e.position.distanceToSquared(h.mesh.position)<1.1025){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageEnemy(e,2);retire(h.mesh);hazards.splice(i,1);break}}
+    if(h.armed)for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(r.position.distanceToSquared(h.mesh.position)<.9025){h.armed=false;sfx.poop();burst(h.mesh.position,0x79502b,18);damageRaccoon(r,2);retire(h.mesh);hazards.splice(i,1);break}}
   }
   for(let i=yarnBalls.length-1;i>=0;i--){const y=yarnBalls[i];y.life-=dt;y.mesh.position.addScaledVector(y.v,dt);y.mesh.rotation.x+=dt*5;y.mesh.rotation.y+=dt*7;
     if(Math.abs(y.mesh.position.x)>23){y.v.x*=-1;y.mesh.position.x=clamp(y.mesh.position.x,-23,23);sfx.hit()}
     if(y.mesh.position.z<-29||y.mesh.position.z>29){y.v.z*=-1;y.mesh.position.z=clamp(y.mesh.position.z,-29,29);sfx.hit()}
-    for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(!y.hits.has(e)&&e.position.distanceTo(y.mesh.position)<1.5){y.hits.add(e);damageEnemy(e,2);burst(e.position,0xe45f9d,9)}}
-    for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(!y.hits.has(r)&&r.position.distanceTo(y.mesh.position)<1.25){y.hits.add(r);damageRaccoon(r,2);burst(r.position,0xe45f9d,9)}}
+    for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(!y.hits.has(e)&&e.position.distanceToSquared(y.mesh.position)<2.25){y.hits.add(e);damageEnemy(e,2);burst(e.position,0xe45f9d,9)}}
+    for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(!y.hits.has(r)&&r.position.distanceToSquared(y.mesh.position)<1.5625){y.hits.add(r);damageRaccoon(r,2);burst(r.position,0xe45f9d,9)}}
     if(y.life<=0){retire(y.mesh);yarnBalls.splice(i,1)}
   }
 }
@@ -719,21 +720,27 @@ function makeCharacters(){player=makeCatTank();player.scale.setScalar(1.10);scen
 function updateUI(){ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;ui.boost.textContent=state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'—'}
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
 function pulseFlash(){flash.style.background='rgba(255,214,115,.28)';setTimeout(()=>flash.style.background='rgba(255,255,255,0)',90)}
+function distSqXZ(a,b){const dx=a.x-b.x,dz=a.z-b.z;return dx*dx+dz*dz}
 function blocked(x,z,radius=1.05){
   if(Math.abs(x)>24-radius||z<-31+radius||z>30-radius)return true;
   for(const o of obstacles){
+    const limit=o.r+radius,limit2=limit*limit;
     if(o.kind==='segment'){
-      const cs=Math.cos(o.angle),sn=Math.sin(o.angle),dx=x-o.x,dz=z-o.z,along=dx*cs+dz*sn,side=-dx*sn+dz*cs,q=clamp(along,-o.half,o.half);
-      if(Math.hypot(along-q,side)<o.r+radius)return true
-    }else if(Math.hypot(x-o.x,z-o.z)<o.r+radius)return true
+      const cs=Math.cos(o.angle),sn=Math.sin(o.angle),dx=x-o.x,dz=z-o.z,along=dx*cs+dz*sn,side=-dx*sn+dz*cs,q=clamp(along,-o.half,o.half),da=along-q;
+      if(da*da+side*side<limit2)return true
+    }else{const dx=x-o.x,dz=z-o.z;if(dx*dx+dz*dz<limit2)return true}
   }
   return false
 }
-function nearestEnemy(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}return best}
-function nearestHostile(from,max=999){let best=null,d=max;for(const e of enemies){const q=from.distanceTo(e.position);if(q<d){d=q;best=e}}for(const r of raccoons){const q=from.distanceTo(r.position);if(q<d){d=q;best=r}}return best}
+function nearestEnemy(from,max=999){
+  let best=null,d2=max*max;for(const e of enemies){const q=from.distanceToSquared(e.position);if(q<d2){d2=q;best=e}}return best
+}
+function nearestHostile(from,max=999){
+  let best=null,d2=max*max;for(const e of enemies){const q=from.distanceToSquared(e.position);if(q<d2){d2=q;best=e}}for(const r of raccoons){const q=from.distanceToSquared(r.position);if(q<d2){d2=q;best=r}}return best
+}
 function findClearSpawn(x,z,radius=1.2,tries=14){
   let sx=x,sz=z;
-  const clear=(px,pz)=>!blocked(px,pz,radius)&&Math.hypot(px-player.position.x,pz-player.position.z)>8;
+  const clear=(px,pz)=>{const dx=px-player.position.x,dz=pz-player.position.z;return !blocked(px,pz,radius)&&dx*dx+dz*dz>64};
   for(let i=0;i<tries;i++){if(clear(sx,sz))return [sx,sz];sx=clamp(x+rand(-5,5),-22,22);sz=clamp(z+rand(-4,5),-28,25)}
   for(let ring=2;ring<=12;ring+=2)for(let i=0;i<16;i++){const a=i*Math.PI/8,px=clamp(x+Math.cos(a)*ring,-22,22),pz=clamp(z+Math.sin(a)*ring,-28,25);if(clear(px,pz))return [px,pz]}
   return [clamp(x,-21,21),clamp(z,-28,25)]
@@ -743,22 +750,29 @@ function spawnDog(){
   let x,z;if(side<.68){x=rand(-18,18);z=-23}else{x=side<.84?-22:22;z=rand(-20,4)}
   const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
-function burst(pos,color=0xffaa55,count=12){const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(new THREE.Vector3(pos.x,pos.y+1.1,pos.z),.07+Math.random()*.10,mat);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}}
-function damageEnemy(e,dmg){e.userData.hp-=dmg;const bs=e.userData.baseScale||new THREE.Vector3(1,1,1);e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;const deathPos=e.position.clone();burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(deathPos);else if(roll<.28)spawnYarnPickup(deathPos);updateUI();if(state.playing&&state.kills>=state.targetKills)winLevel()}}
+function burst(pos,color=0xffaa55,count=12){
+  const mat=effectMat(color);for(let i=0;i<count;i++){const m=fxSphere(pos,.07+Math.random()*.10,mat);m.position.y+=1.1;scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5)),life:.4+Math.random()*.55})}
+}
+function damageEnemy(e,dmg){
+  e.userData.hp-=dmg;const bs=e.userData.baseScale;e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);
+  if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12)*state.combo;state.kills++;burst(e.position,e.userData.type>=2?0xff6548:0xffb85b,16);sfx.hit();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(roll<.20)spawnValerian(e.position);else if(roll<.28)spawnYarnPickup(e.position);updateUI();if(state.playing&&state.kills>=state.targetKills)winLevel()}
+}
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();retire(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
 function fireSausage(){
   if(!state.playing||state.fireCooldown>0)return;
-  const berserk=state.valerian>0 ? .52 : 1;state.fireCooldown=.12*tune.fire*berserk;
+  const berserk=state.valerian>0?.52:1;state.fireCooldown=.12*tune.fire*berserk;
   let dir=aimFacing.clone();
   if(!aimInput.active){const target=nearestHostile(player.position,22);if(target){dir.copy(target.position).sub(player.position).setY(0).normalize();aimFacing.copy(dir)}}
   if(dir.lengthSq()<.01)dir.copy(playerFacing);dir.normalize();
-  const g=new THREE.Group(),body=mesh(sausageBodyGeo,sausageMat),tip=mesh(sausageTipGeo,M.glow,0,0,-.42);body.castShadow=tip.castShadow=false;body.rotation.x=Math.PI/2;g.add(body,tip);const origin=player.userData.shotOrigin||(player.userData.shotOrigin=new THREE.Vector3());if(player.userData.muzzle)player.userData.muzzle.getWorldPosition(origin);else origin.copy(player.position).add(new THREE.Vector3(0,1.55,0));g.position.copy(origin).addScaledVector(dir,.38);g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
+  const g=new THREE.Group(),body=mesh(sausageBodyGeo,sausageMat),tip=mesh(sausageTipGeo,M.glow,0,0,-.42);body.castShadow=tip.castShadow=false;body.rotation.x=Math.PI/2;g.add(body,tip);
+  const origin=player.userData.shotOrigin||(player.userData.shotOrigin=new THREE.Vector3());if(player.userData.muzzle)player.userData.muzzle.getWorldPosition(origin);else{origin.copy(player.position);origin.y+=1.55}
+  g.position.copy(origin).addScaledVector(dir,.38);g.rotation.y=Math.atan2(dir.x,dir.z);scene.add(g);shots.push({mesh:g,v:dir.multiplyScalar(state.valerian>0?23:19),life:1.8,damage:tune.damage});
   player.userData.recoil=Math.min(1,(player.userData.recoil||0)+.72);burst(g.position,0xffc15a,5);shake=Math.max(shake,.16);sfx.shoot()
 }
 function bomb(){
-  if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;sfx.bomb();burst(player.position,0xff7646,36);const radius=9.5*tune.bombRadius;
-  for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(e.position.distanceTo(player.position)<radius)damageEnemy(e,5)}
-  for(let i=raccoons.length-1;i>=0;i--){const r=raccoons[i];if(r.position.distanceTo(player.position)<radius)damageRaccoon(r,5)}
+  if(!state.playing||state.bombs<=0)return;state.bombs--;updateUI();pulseFlash();shake=1.1;sfx.bomb();burst(player.position,0xff7646,36);const radius=9.5*tune.bombRadius,r2=radius*radius;
+  for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(e.position.distanceToSquared(player.position)<r2)damageEnemy(e,5)}
+  for(let i=raccoons.length-1;i>=0;i--){const r=raccoons[i];if(r.position.distanceToSquared(player.position)<r2)damageRaccoon(r,5)}
 }
 function updateProjectiles(dt){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.v.y-=10*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){retire(p.mesh);particles.splice(i,1)}}
@@ -792,22 +806,19 @@ function updateProjectiles(dt){
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(featherGeo,featherMat);m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
 function updateHelper(dt,now){const anchor=helper.userData.anchor||(helper.userData.anchor=new THREE.Vector3());anchor.set(player.position.x+Math.cos(now*1.55)*4.1,5.15+Math.sin(now*4.2)*.42,player.position.z+Math.sin(now*1.55)*2.7);helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){const flap=Math.sin(now*10+w.phase)*.72;w.leftWing.rotation.z=.30+flap;w.rightWing.rotation.z=-.30-flap;w.leftWing.rotation.x=.18+Math.sin(now*5)*.08;w.rightWing.rotation.x=.18-Math.sin(now*5)*.08;if(w.tail)w.tail.rotation.y=Math.sin(now*3.2)*.12}helperCooldown-=dt;const target=nearestHostile(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
 function chooseDogTarget(e){
-  let best=player,bestScore=e.position.distanceTo(player.position);
-  for(const a of allies){const d=e.position.distanceTo(a.position)*.92;if(d<bestScore){best=a;bestScore=d}}
-  const homeScore=e.position.distanceTo(home.position)*1.12;
-  if(homeScore<bestScore)best=home;
-  return best
+  let best=player,bestScore=e.position.distanceToSquared(player.position);
+  for(const a of allies){const d=e.position.distanceToSquared(a.position)*.8464;if(d<bestScore){best=a;bestScore=d}}
+  const homeScore=e.position.distanceToSquared(home.position)*1.2544;if(homeScore<bestScore)best=home;return best
 }
 function dogSteer(e,target,now){
   const u=e.userData,pos=e.position;
   let fx=target.position.x-pos.x,fz=target.position.z-pos.z,dist=Math.max(.001,Math.hypot(fx,fz));fx/=dist;fz/=dist;
   let vx=0,vz=0;
-  if(dist>u.preferredRange+1.6){vx+=fx;vz+=fz}
-  else if(dist<u.preferredRange-1.5){vx-=fx*.42;vz-=fz*.42}
+  if(dist>u.preferredRange+1.6){vx+=fx;vz+=fz}else if(dist<u.preferredRange-1.5){vx-=fx*.42;vz-=fz*.42}
   const sideW=(.52+Math.sin(now*2.4+u.dodgeSeed)*.18)*u.flankSign;vx+=-fz*sideW;vz+=fx*sideW;
-  for(const other of enemies){if(other===e)continue;let ox=pos.x-other.position.x,oz=pos.z-other.position.z,d=Math.hypot(ox,oz);if(d>0&&d<3.4){const k=(3.4-d)/(d*3.4)*1.35;vx+=ox*k;vz+=oz*k}}
-  for(const o of obstacles){let ox=pos.x-o.x,oz=pos.z-o.z,d=Math.hypot(ox,oz),limit=o.r+2.2;if(d>0&&d<limit){const k=(limit-d)/(d*limit)*1.8;vx+=ox*k;vz+=oz*k}}
-  for(const s of shots){let ox=pos.x-s.mesh.position.x,oz=pos.z-s.mesh.position.z,d=Math.hypot(ox,oz);if(d<5&&d>.01){let svx=s.v.x,svz=s.v.z,sl=Math.hypot(svx,svz)||1;svx/=sl;svz/=sl;const cross=svx*oz-svz*ox,k=cross>0?1.2:-1.2;vx+=-svz*k;vz+=svx*k}}
+  for(const other of enemies){if(other===e)continue;const ox=pos.x-other.position.x,oz=pos.z-other.position.z,d2=ox*ox+oz*oz;if(d2>0&&d2<11.56){const d=Math.sqrt(d2),k=(3.4-d)/(d*3.4)*1.35;vx+=ox*k;vz+=oz*k}}
+  for(const o of obstacles){const ox=pos.x-o.x,oz=pos.z-o.z,limit=o.r+2.2,d2=ox*ox+oz*oz;if(d2>0&&d2<limit*limit){const d=Math.sqrt(d2),k=(limit-d)/(d*limit)*1.8;vx+=ox*k;vz+=oz*k}}
+  for(const shot of shots){const ox=pos.x-shot.mesh.position.x,oz=pos.z-shot.mesh.position.z,d2=ox*ox+oz*oz;if(d2<25&&d2>.0001){let svx=shot.v.x,svz=shot.v.z,sl=Math.sqrt(svx*svx+svz*svz)||1;svx/=sl;svz/=sl;const cross=svx*oz-svz*ox,k=cross>0?1.2:-1.2;vx+=-svz*k;vz+=svx*k}}
   let len=Math.hypot(vx,vz);if(len<.01){vx=fx;vz=fz;len=1}
   const out=u.steerVec||(u.steerVec=new THREE.Vector3());return out.set(vx/len,0,vz/len)
 }
@@ -826,8 +837,8 @@ function updateEnemies(dt,now){
     if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=(i%2?Math.PI:0)+(i>1?Math.PI:0);u.legs[i].rotation.x=Math.sin(u.gait+phase)*.44*(moved>.001?1:.08)}
     if(u.dogTail)u.dogTail.rotation.z=Math.sin(now*5.5+u.dodgeSeed)*.32;
     if(u.dogEarL&&u.dogEarR){const et=Math.sin(now*4+u.dodgeSeed)*.07,k=1-Math.exp(-dt*8);u.dogEarL.rotation.z+=(u.dogEarL.userData.restZ-et-u.dogEarL.rotation.z)*k;u.dogEarR.rotation.z+=(u.dogEarR.userData.restZ+et-u.dogEarR.rotation.z)*k}
-    const bs=u.baseScale||new THREE.Vector3(1,1,1);if(!u.hitFlash){const bob=1+(moved>.001?Math.abs(Math.sin(u.gait))*.012:0);e.scale.set(bs.x,bs.y*bob,bs.z)}
-    const distPlayer=Math.hypot(e.position.x-player.position.x,e.position.z-player.position.z);if(distPlayer<2.0&&state.invuln<=0){state.lives--;state.invuln=1.3;state.kills++;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);if(player.userData.velocity)player.userData.velocity.set(0,0,0);retire(e);enemies.splice(ei,1);if(state.lives<=0)lose('Кота победили');else if(state.kills>=state.targetKills)winLevel()}
+    const bs=u.baseScale;if(!u.hitFlash){const bob=1+(moved>.001?Math.abs(Math.sin(u.gait))*.012:0);e.scale.set(bs.x,bs.y*bob,bs.z)}
+    const pdx=e.position.x-player.position.x,pdz=e.position.z-player.position.z;if(pdx*pdx+pdz*pdz<4&&state.invuln<=0){state.lives--;state.invuln=1.3;state.kills++;updateUI();pulseFlash();shake=.65;burst(player.position,0xffd36d,18);player.position.set(0,0,18);if(player.userData.velocity)player.userData.velocity.set(0,0,0);retire(e);enemies.splice(ei,1);if(state.lives<=0)lose('Кота победили');else if(state.kills>=state.targetKills)winLevel()}
   }
 }
 function applyPickup(p){
@@ -837,31 +848,23 @@ function applyPickup(p){
 }
 function updateMouse(dt,now){
   if(!mouseCompanion)return;
-  const u=mouseCompanion.userData;
-  let best=null,bestD=11;
-  for(const p of pickups){const d=player.position.distanceTo(p.mesh.position);if(d<bestD){best=p;bestD=d}}
-  if(best&&!u.fetch&&u.mode==='ride'){u.fetch=best;u.mode='fetch'}
-  if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
-  const cs=Math.cos(player.rotation.y),sn=Math.sin(player.rotation.y),seatX=player.position.x+1.18*cs-.18*sn,seatZ=player.position.z-1.18*sn-.18*cs,seatY=player.position.y+1.88;
-  let moving=false;
+  const u=mouseCompanion.userData;let best=null,bestD2=121;
+  for(const p of pickups){const d2=player.position.distanceToSquared(p.mesh.position);if(d2<bestD2){best=p;bestD2=d2}}
+  if(best&&!u.fetch&&u.mode==='ride'){u.fetch=best;u.mode='fetch'}if(u.fetch&&!pickups.includes(u.fetch)){u.fetch=null;u.mode='return'}
+  const cs=Math.cos(player.rotation.y),sn=Math.sin(player.rotation.y),seatX=player.position.x+1.18*cs-.18*sn,seatZ=player.position.z-1.18*sn-.18*cs,seatY=player.position.y+1.88;let moving=false;
   if(u.mode==='fetch'&&u.fetch){
     let dx=u.fetch.mesh.position.x-mouseCompanion.position.x,dz=u.fetch.mesh.position.z-mouseCompanion.position.z,d=Math.hypot(dx,dz);
-    if(d<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return'}
-    else{dx/=d;dz/=d;mouseCompanion.position.x+=dx*dt*10.4;mouseCompanion.position.z+=dz*dt*10.4;mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(dx,dz)-mouseCompanion.rotation.y)*Math.min(1,dt*14);moving=true}
+    if(d<.62){applyPickup(u.fetch);u.fetch=null;u.mode='return'}else{dx/=d;dz/=d;mouseCompanion.position.x+=dx*dt*10.4;mouseCompanion.position.z+=dz*dt*10.4;mouseCompanion.rotation.y+=normalizeAngle(Math.atan2(dx,dz)-mouseCompanion.rotation.y)*Math.min(1,dt*14);moving=true}
   }else{
-    const dx=seatX-mouseCompanion.position.x,dz=seatZ-mouseCompanion.position.z,d=Math.hypot(dx,dz);
-    if(u.mode==='ride'){mouseCompanion.position.x=seatX;mouseCompanion.position.z=seatZ}
-    else{const k=1-Math.exp(-dt*9);mouseCompanion.position.x+=dx*k;mouseCompanion.position.z+=dz*k;moving=d>.12;if(d<.18)u.mode='ride'}
-    mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+Math.PI)-mouseCompanion.rotation.y)*Math.min(1,dt*10);
+    const dx=seatX-mouseCompanion.position.x,dz=seatZ-mouseCompanion.position.z,d2=dx*dx+dz*dz;
+    if(u.mode==='ride'){mouseCompanion.position.x=seatX;mouseCompanion.position.z=seatZ}else{const k=1-Math.exp(-dt*9);mouseCompanion.position.x+=dx*k;mouseCompanion.position.z+=dz*k;moving=d2>.0144;if(d2<.0324)u.mode='ride'}
+    mouseCompanion.rotation.y+=normalizeAngle((player.rotation.y+Math.PI)-mouseCompanion.rotation.y)*Math.min(1,dt*10)
   }
-  u.gait=(u.gait||0)+(moving?dt*18:dt*2.2);
-  const targetY=u.mode==='ride'?seatY+Math.sin(now*5.5+u.phase)*.018:(.16+Math.abs(Math.sin(u.gait+u.phase))*.065);
+  u.gait=(u.gait||0)+(moving?dt*18:dt*2.2);const targetY=u.mode==='ride'?seatY+Math.sin(now*5.5+u.phase)*.018:(.16+Math.abs(Math.sin(u.gait+u.phase))*.065);
   mouseCompanion.position.y+=(targetY-mouseCompanion.position.y)*Math.min(1,dt*12);
   if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=i?Math.PI:0,target=moving?Math.sin(u.gait+phase)*.50:-.18;u.legs[i].rotation.x+=(target-u.legs[i].rotation.x)*(1-Math.exp(-dt*13))}
-  if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.22;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.03}
-  mouseCompanion.rotation.z=moving?Math.sin(u.gait+u.phase)*.045:Math.sin(now*4+u.phase)*.015;
-  u.fireCooldown-=dt;const target=nearestHostile(mouseCompanion.position,18);
-  if(target&&u.fireCooldown<=0&&u.mode!=='fetch'){fireMousePoop(target);u.fireCooldown=.48+Math.random()*.35}
+  if(u.head){u.head.rotation.y=Math.sin(now*2.8+u.phase)*.22;u.head.rotation.z=Math.sin(now*4.6+u.phase)*.03}mouseCompanion.rotation.z=moving?Math.sin(u.gait+u.phase)*.045:Math.sin(now*4+u.phase)*.015;
+  u.fireCooldown-=dt;const target=nearestHostile(mouseCompanion.position,18);if(target&&u.fireCooldown<=0&&u.mode!=='fetch'){fireMousePoop(target);u.fireCooldown=.48+Math.random()*.35}
 }
 function updateRaccoons(dt,now){
   for(let ri=raccoons.length-1;ri>=0;ri--){const r=raccoons[ri],u=r.userData,escort=u.escort&&u.escort.parent?u.escort:nearestEnemy(r.position,999);u.escort=escort;
@@ -869,7 +872,7 @@ function updateRaccoons(dt,now){
     let dx=ax-r.position.x,dz=az-r.position.z,d=Math.hypot(dx,dz);if(d>.8){dx/=d;dz/=d;const nx=r.position.x+dx*u.speed*dt,nz=r.position.z+dz*u.speed*dt;if(!blocked(nx,r.position.z,1.05))r.position.x=nx;if(!blocked(r.position.x,nz,1.05))r.position.z=nz}
     const moved=Math.hypot(r.position.x-oldX,r.position.z-oldZ);u.gait=(u.gait||0)+moved*9;if(moved>.002){const yaw=Math.atan2(r.position.x-oldX,r.position.z-oldZ)+Math.PI;r.rotation.y+=normalizeAngle(yaw-r.rotation.y)*(1-Math.exp(-dt*8))}
     const px=player.position.x-r.position.x,pz=player.position.z-r.position.z;if(u.head){const targetYaw=Math.atan2(px,pz)+Math.PI,local=clamp(normalizeAngle(targetYaw-r.rotation.y),-.85,.85);u.head.rotation.y+=normalizeAngle(local-u.head.rotation.y)*(1-Math.exp(-dt*8))}
-    u.fireCooldown-=dt;if(Math.hypot(px,pz)<16&&u.fireCooldown<=0){fireRaccoonPoop(r,player);u.fireCooldown=.75+Math.random()*.55}
+    u.fireCooldown-=dt;if(px*px+pz*pz<256&&u.fireCooldown<=0){fireRaccoonPoop(r,player);u.fireCooldown=.75+Math.random()*.55}
     if(u.legs)for(let i=0;i<u.legs.length;i++){const phase=(i===0||i===3)?0:Math.PI;u.legs[i].rotation.x=Math.sin(u.gait+phase)*.38*(moved>.001?1:.08)}
     if(moved>.001&&u.cartWheels){u.wheelSpin=(u.wheelSpin||0)+moved/.42;for(const w of u.cartWheels)w.rotation.x=-u.wheelSpin}
     r.position.y=.02+(moved>.001?Math.abs(Math.sin(u.gait))*.035:0);r.rotation.z=(moved>.001?Math.sin(u.gait)*.010:0);
@@ -878,8 +881,8 @@ function updateRaccoons(dt,now){
 }
 function litterDust(now,dt=.016){
   player.userData.dustTimer=(player.userData.dustTimer||0)-dt;if(player.userData.dustTimer>0)return;player.userData.dustTimer=.075;
-  const back=new THREE.Vector3(-playerFacing.x,0,-playerFacing.z).multiplyScalar(1.8).add(player.position);
-  for(let i=0;i<2;i++){const p=new THREE.Vector3(back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7)),m=fxSphere(p,.07+Math.random()*.08,i%2?dustMatA:dustMatB);scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
+  const back=player.userData.dustBack||(player.userData.dustBack=new THREE.Vector3());back.set(-playerFacing.x*1.8,0,-playerFacing.z*1.8).add(player.position);
+  for(let i=0;i<2;i++){const m=fxSphere(back,.07+Math.random()*.08,i%2?dustMatA:dustMatB);m.position.set(back.x+rand(-.9,.9),.28,back.z+rand(-.7,.7));scene.add(m);particles.push({mesh:m,v:new THREE.Vector3(rand(-.8,.8),rand(.7,1.8),rand(-.8,.8)),life:.25+Math.random()*.2})}
 }
 function updatePlayer(dt,now){
   const prevX=player.position.x,prevZ=player.position.z;
