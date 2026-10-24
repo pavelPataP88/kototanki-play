@@ -557,7 +557,9 @@ function updateHomeOcclusion(dt){
   if(!home)return;
   const ax=camera.position.x,az=camera.position.z,bx=player.position.x,bz=player.position.z,px=home.position.x,pz=home.position.z;
   const vx=bx-ax,vz=bz-az,len2=vx*vx+vz*vz||1,t=clamp(((px-ax)*vx+(pz-az)*vz)/len2,0,1),cx=ax+vx*t,cz=az+vz*t,dist=Math.hypot(px-cx,pz-cz);
-  const target=t>.08&&t<.92&&dist<6.4?0:1,fade=home.userData.fade+(target-home.userData.fade)*(1-Math.exp(-dt*12));home.userData.fade=fade;
+  const occluded=t>.08&&t<.92&&dist<6.4;
+  if(occluded){home.userData.fade=0;for(const o of home.userData.fadeMeshes||[]){o.visible=false;o.material.opacity=0;o.material.depthWrite=false}return}
+  const fade=home.userData.fade+(1-home.userData.fade)*(1-Math.exp(-dt*12));home.userData.fade=fade;
   for(const o of home.userData.fadeMeshes||[]){o.visible=fade>.18;o.material.opacity=fade;o.material.depthWrite=fade>.72}
 }
 
