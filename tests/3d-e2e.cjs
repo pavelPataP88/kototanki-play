@@ -88,6 +88,36 @@ const {resolve}=require('node:path');
     const mem1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('MEMORY_SOAK',JSON.stringify({before:mem0,after:mem1}));console.log('RENDER_PROFILE',JSON.stringify(mem1));
     assert.ok(mem1.geometries<mem0.geometries*1.8+120);assert.ok(mem1.textures<mem0.textures+30);
+
+    // Final production sweep: rebuild every level, cover all 30 location/layout combinations,
+    // and verify that repeated teardown/rebuild does not strand NPCs inside colliders or leak badly.
+    const sweep0=await page.evaluate(()=>window.__kototanki3d.diagnostics);
+    await page.evaluate(()=>window.__kototanki3d.start());
+    const places=new Set();
+    for(let level=1;level<=30;level++){
+      if(level>1)await page.evaluate(()=>window.__kototanki3d.next());
+      await page.waitForTimeout(70);
+      const snap=await page.evaluate(()=>({
+        state:window.__kototanki3d.state,
+        diag:window.__kototanki3d.diagnostics,
+        player:window.__kototanki3d.player,
+        place:document.querySelector('#place').textContent
+      }));
+      assert.equal(snap.state.level,level);
+      assert.equal(snap.diag.blockedDogs,0);
+      assert.equal(snap.diag.blockedAllies,0);
+      assert.ok(Number.isFinite(snap.player.x)&&Number.isFinite(snap.player.z));
+      places.add(snap.place);
+    }
+    assert.equal(places.size,30);
+    const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
+    console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
+    assert.ok(sweep1.geometries<sweep0.geometries*1.7+220);assert.ok(sweep1.textures<sweep0.textures+100);
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-portrait.png')});
+    await page.setViewportSize({width:844,height:390});await page.waitForTimeout(250);
+    assert.equal(await page.locator('#moveStick').isVisible(),true);assert.equal(await page.locator('#aimStick').isVisible(),true);
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-landscape.png')});
+
     assert.deepEqual(errors,[]);
     console.log('KOTOTANKI_TWIN_STICK_CHAOS_E2E_PASS');
     await ctx.close();
