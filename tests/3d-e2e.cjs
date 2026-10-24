@@ -51,7 +51,7 @@ const {resolve}=require('node:path');
       return {samples:useful.length,mean,std:Math.sqrt(variance),cv:mean?Math.sqrt(variance)/mean:99,camera:window.__kototanki3d.camera};
     });
     console.log('SMOOTH_MOTION_PROFILE',JSON.stringify(smoothProfile));
-    assert.ok(smoothProfile.samples>=20);assert.ok(smoothProfile.cv<.35);assert.equal(smoothProfile.camera.shadowStride,1);
+    assert.ok(smoothProfile.samples>=20);assert.ok(smoothProfile.cv<.22);assert.equal(smoothProfile.camera.shadowStride,1);
     assert.ok(Number.isFinite(smoothProfile.camera.jitterMs));assert.ok(Number.isFinite(smoothProfile.camera.motionFrameMs));
     assert.equal(await page.evaluate(()=>window.__kototanki3d.camera.quality),qualityBeforeSmooth);
     assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);assert.ok(mouseRide&&Math.hypot(mouseRide.x-p1.x,mouseRide.z-p1.z)<2.5);await page.waitForFunction(t=>Math.abs(window.__kototanki3d.vehicle.tailPose-t)>.01,tail0,{timeout:3000});
