@@ -15,6 +15,9 @@ const {resolve}=require('node:path');
     await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
+    const mobileRender=await page.evaluate(()=>window.__kototanki3d.camera);
+    assert.equal(mobileRender.mobilePerf,true);assert.ok(mobileRender.quality<=1.0);assert.ok(mobileRender.qualityMin<=.70);
+    console.log('MOBILE_RENDER_BOOT',JSON.stringify(mobileRender));
     assert.equal(await page.locator('canvas').count(),1);
     assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'true-3d-r8');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'studio-r8');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-Math.PI)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.wheelCount),4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'mouse-reference-r6');
     assert.equal(await page.locator('#aimStick').count(),1);
