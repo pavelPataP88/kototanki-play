@@ -795,7 +795,7 @@ function bomb(){
 }
 function updateProjectiles(dt){
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.vy-=10*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.mesh.position.z+=p.vz*dt;p.mesh.scale.multiplyScalar(.965);p.life-=dt;if(p.life<=0){particles.splice(i,1);releaseParticle(p)}}
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65)spawnParticle(s.mesh.position,.045,trailMat,rand(-.3,.3),rand(.2,.8),rand(-.3,.3),.18)let hit=false;
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.mesh.position.addScaledVector(s.v,dt);s.life-=dt;if(Math.random()<.65)spawnParticle(s.mesh.position,.045,trailMat,rand(-.3,.3),rand(.2,.8),rand(-.3,.3),.18);let hit=false;
     for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(distSqOffset(s.mesh.position,e.position,1.2)<1.5625){damageEnemy(e,s.damage||1);hit=true;break}}
     if(!hit)for(let j=raccoons.length-1;j>=0;j--){const r=raccoons[j];if(distSqOffset(s.mesh.position,r.position,1.1)<1.1025){damageRaccoon(r,s.damage||1);hit=true;break}}
     if(hit||s.life<0){retire(s.mesh);shots.splice(i,1)}
