@@ -16,7 +16,7 @@ const locations = [
 
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,valerian:0,poopSlow:0,last:0,uiTimer:0};
 const keys=new Set(), obstacles=[], enemies=[], raccoons=[], shots=[], feathers=[], boneShots=[], mousePoops=[], enemyPoops=[], particles=[], allies=[], pickups=[], hazards=[], yarnBalls=[];
-let player, helper, mouseCompanion, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), aimFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, cameraYaw=0, cameraYawVelocity=0;
+let player, helper, mouseCompanion, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), aimFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, shakePhase=0, cameraYaw=0, cameraYawVelocity=0;
 const cameraDrag={active:false,id:null,lastX:0};
 const moveInput={x:0,y:0,active:false},aimInput={x:0,y:-1,active:false};
 const tune={speed:1,fire:1,damage:1,valerian:1,bombRadius:1,extraBombs:0};
@@ -24,7 +24,7 @@ const tune={speed:1,fire:1,damage:1,valerian:1,bombRadius:1,extraBombs:0};
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87cfff);
 scene.fog=new THREE.Fog(0xcfeeff,40,115);
-const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);const camFocus=new THREE.Vector3(),camDesired=new THREE.Vector3();
+const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,250);const camFocus=new THREE.Vector3(),camFocusTarget=new THREE.Vector3(),camDesired=new THREE.Vector3();
 camera.position.set(0,13.5,22);
 const mobilePerf=matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const qualityMax=Math.min(devicePixelRatio,mobilePerf?1.0:1.4),qualityMin=mobilePerf?.68:.90,qualityStart=mobilePerf?Math.min(qualityMax,.90):qualityMax;
@@ -33,22 +33,25 @@ renderer.setPixelRatio(qualityStart);
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=mobilePerf?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
-renderer.shadowMap.autoUpdate=!mobilePerf;renderer.shadowMap.needsUpdate=true;
+renderer.shadowMap.autoUpdate=true;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.24;
 root.appendChild(renderer.domElement);
-const renderQuality={ratio:qualityStart,ema:1/60,timer:0,good:0,min:qualityMin,max:qualityMax,mobile:mobilePerf,shadowStride:1};let shadowFrame=0;
+const renderQuality={ratio:qualityStart,recommended:qualityStart,ema:1/60,timer:0,min:qualityMin,max:qualityMax,mobile:mobilePerf,shadowStride:1};
+const motionClock={dt:1/60,raw:1/60,jitter:0};
+function applyRenderQuality(){
+  const next=clamp(renderQuality.recommended,renderQuality.min,renderQuality.max);
+  if(Math.abs(next-renderQuality.ratio)<.015)return;
+  renderQuality.ratio=next;renderer.setPixelRatio(renderQuality.ratio)
+}
 function updateRenderQuality(rawDt){
-  renderQuality.ema=renderQuality.ema*.92+rawDt*.08;renderQuality.timer+=rawDt;
-  const cadence=mobilePerf?.75:1.6;if(renderQuality.timer<cadence)return;renderQuality.timer=0;
-  const slow=renderQuality.ema>(mobilePerf?.022:.025),verySlow=renderQuality.ema>.032;
-  if(slow&&renderQuality.ratio>renderQuality.min){
-    const step=verySlow?(mobilePerf?.16:.12):(mobilePerf?.10:.08);
-    renderQuality.ratio=Math.max(renderQuality.min,renderQuality.ratio-step);renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0
-  }else if(renderQuality.ema<(mobilePerf?.0175:.0185)&&renderQuality.ratio<renderQuality.max){
-    renderQuality.good++;const need=mobilePerf?6:3;if(renderQuality.good>=need){renderQuality.ratio=Math.min(renderQuality.max,renderQuality.ratio+(mobilePerf?.035:.05));renderer.setPixelRatio(renderQuality.ratio);renderQuality.good=0}
-  }else renderQuality.good=0
+  renderQuality.ema=renderQuality.ema*.94+rawDt*.06;renderQuality.timer+=rawDt;
+  if(renderQuality.timer<1.25)return;renderQuality.timer=0;
+  if(renderQuality.ema>(mobilePerf?.036:.032))renderQuality.recommended=Math.max(renderQuality.min,renderQuality.ratio-.12);
+  else if(renderQuality.ema>(mobilePerf?.027:.026))renderQuality.recommended=Math.max(renderQuality.min,renderQuality.ratio-.06);
+  else renderQuality.recommended=renderQuality.ratio;
+  if(!state.playing)applyRenderQuality()
 }
 
 const audio={ctx:null,master:null};
@@ -713,6 +716,7 @@ function buildLevel(n){
   for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*20),-27+rng()*50,i);addGardenProps(rng,n);spawnPoopField(n,rng);
   home=makeBase();home.position.set(0,0,27);home.scale.setScalar(.88);world.add(home);
   player.position.set(0,0,18);player.rotation.set(0,0,0);playerFacing.set(0,0,-1);if(player.userData.velocity)player.userData.velocity.set(0,0,0);if(player.userData.moveTarget)player.userData.moveTarget.set(0,0,0);helper.position.set(2,5.15,16);helperCooldown=0;mouseCompanion.position.set(1.18,1.88,17.82);mouseCompanion.rotation.set(0,Math.PI,0);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
+  camFocus.set(player.position.x,1.6,player.position.z);camFocusTarget.copy(camFocus);state.last=0;motionClock.dt=1/60;applyRenderQuality();
   state.level=n;cameraYaw=0;cameraYawVelocity=0;moveInput.x=moveInput.y=0;aimInput.active=false;aimFacing.set(.28,0,-.96).normalize();spawnCatSquad();state.kills=0;state.spawned=0;state.targetKills=14+Math.floor(n*1.65);state.spawnTimer=.12;state.home=5;state.lives=5;state.bombs=3+tune.extraBombs;state.combo=1;state.comboTimer=0;state.fireCooldown=0;state.invuln=0;state.valerian=0;state.poopSlow=0;state.playing=true;for(let i=0;i<Math.min(4,state.targetKills);i++)spawnDog();state.spawnTimer=.28;if(n%4===0){spawnValerian(new THREE.Vector3(-3,0,12));spawnValerian(new THREE.Vector3(4,0,5))}updateUI();sfx.wave();showToast('ВОЛНА '+n+' · '+layoutName)
 }
 
@@ -962,13 +966,18 @@ function bindStick(id,target){
 }
 bindStick('moveStick',moveInput);bindStick('aimStick',aimInput);
 document.addEventListener('pointerup',e=>{if(!e.target.closest?.('.joy')){moveInput.active=false;moveInput.x=moveInput.y=0}},{passive:true});
-window.addEventListener('blur',clearMovement);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMovement()});
+window.addEventListener('blur',()=>{clearMovement();state.last=0;motionClock.dt=1/60});document.addEventListener('visibilitychange',()=>{if(document.hidden){clearMovement();state.last=0;motionClock.dt=1/60}});
 for(const evt of ['contextmenu','selectstart','dragstart'])document.addEventListener(evt,e=>{if(e.target.closest('#controls'))e.preventDefault()});
 document.addEventListener('keydown',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.add(m[e.code]);if(e.code==='Space')fireSausage();if(e.code==='KeyB')bomb()});
 document.addEventListener('keyup',e=>{const m={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};if(m[e.code])keys.delete(m[e.code])});
 $('bomb').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();initAudio();bomb()});
 startBtn.onclick=()=>{initAudio();resetTune();state.score=0;buildLevel(1);overlay.style.display='none'};
-function animate(ms){requestAnimationFrame(animate);const now=ms*.001,rawDt=state.last?now-state.last:.016,dt=Math.min(.033,rawDt);state.last=now;updateRenderQuality(Math.min(.10,rawDt));
+function animate(ms){
+  requestAnimationFrame(animate);
+  const now=ms*.001,rawDt=state.last?now-state.last:1/60;state.last=now;
+  const safeRaw=rawDt>0&&rawDt<.12?Math.min(.05,rawDt):1/60,alpha=1-Math.exp(-safeRaw*14);
+  motionClock.raw=safeRaw;motionClock.dt+=(safeRaw-motionClock.dt)*alpha;motionClock.dt=clamp(motionClock.dt,1/120,.05);motionClock.jitter=motionClock.jitter*.92+Math.abs(safeRaw-motionClock.dt)*.08;
+  const dt=motionClock.dt;updateRenderQuality(safeRaw);
   if(state.playing){
     state.fireCooldown=Math.max(0,state.fireCooldown-dt);state.invuln=Math.max(0,state.invuln-dt);state.comboTimer=Math.max(0,state.comboTimer-dt);state.valerian=Math.max(0,state.valerian-dt);state.poopSlow=Math.max(0,state.poopSlow-dt);
     if(state.comboTimer===0&&state.combo!==1){state.combo=1;updateUI()}
@@ -980,11 +989,12 @@ function animate(ms){requestAnimationFrame(animate);const now=ms*.001,rawDt=stat
     if(state.playing){state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}
   }
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
-  const portrait=camera.aspect<.75, radius=portrait?24.2:21, camH=portrait?14.8:13.2;camFocus.set(player.position.x,1.6,player.position.z);camDesired.set(camFocus.x+Math.sin(cameraYaw)*radius,camH,camFocus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(camDesired,1-Math.exp(-dt*7));camera.lookAt(camFocus);updateHomeOcclusion(dt);
-  if(shake>0){camera.position.x+=rand(-shake,shake)*.14;camera.position.y+=rand(-shake,shake)*.10;shake=Math.max(0,shake-dt*4.3)}
-  if(mobilePerf){const stride=renderQuality.ema>.034?3:renderQuality.ema>.026?2:1;renderQuality.shadowStride=stride;shadowFrame=(shadowFrame+1)%stride;renderer.shadowMap.needsUpdate=shadowFrame===0}
-  renderer.render(scene,camera)
+  const portrait=camera.aspect<.75,radius=portrait?24.2:21,camH=portrait?14.8:13.2;
+  camFocusTarget.set(player.position.x,1.6,player.position.z);camFocus.lerp(camFocusTarget,1-Math.exp(-dt*13));
+  camDesired.set(camFocus.x+Math.sin(cameraYaw)*radius,camH,camFocus.z+Math.cos(cameraYaw)*radius);camera.position.lerp(camDesired,1-Math.exp(-dt*8));camera.lookAt(camFocus);updateHomeOcclusion(dt);
+  if(shake>0){shakePhase+=dt*46;camera.position.x+=Math.sin(shakePhase)*shake*.10;camera.position.y+=Math.sin(shakePhase*1.31+.8)*shake*.055;shake=Math.max(0,shake-dt*4.8)}
+  renderQuality.shadowStride=1;renderer.render(scene,camera)
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,renderQuality.max);renderer.setPixelRatio(renderQuality.ratio)});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,homeFade:home?.userData?.fade??1}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
