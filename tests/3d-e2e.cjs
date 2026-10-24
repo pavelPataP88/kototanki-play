@@ -38,6 +38,22 @@ const {resolve}=require('node:path');
     await page.waitForFunction(({x,z,w})=>{const p=window.__kototanki3d.player,v=window.__kototanki3d.vehicle;return Math.hypot(p.x-x,p.z-z)>.20&&Math.abs(v.wheelSpin-w)>.15},{x:p0.x,z:p0.z,w:wheel0},{timeout:5000});
     await page.evaluate(()=>window.__kototanki3d.setMove(0,0));
     const p1=await page.evaluate(()=>window.__kototanki3d.player);const wheel1=await page.evaluate(()=>window.__kototanki3d.vehicle.wheelSpin);const mouseRide=await page.evaluate(()=>window.__kototanki3d.mouse);
+    const qualityBeforeSmooth=await page.evaluate(()=>window.__kototanki3d.camera.quality);
+    const smoothProfile=await page.evaluate(async()=>{
+      window.__kototanki3d.setCameraYaw(0);window.__kototanki3d.setMove(.55,0);
+      await new Promise(r=>setTimeout(r,420));
+      const steps=[];let prev=window.__kototanki3d.player;
+      for(let i=0;i<30;i++)await new Promise(resolve=>requestAnimationFrame(()=>{
+        const cur=window.__kototanki3d.player;steps.push(Math.hypot(cur.x-prev.x,cur.z-prev.z));prev=cur;resolve();
+      }));
+      window.__kototanki3d.setMove(0,0);
+      const useful=steps.filter(v=>v>.001),mean=useful.reduce((a,b)=>a+b,0)/Math.max(1,useful.length),variance=useful.reduce((a,b)=>a+(b-mean)*(b-mean),0)/Math.max(1,useful.length);
+      return {samples:useful.length,mean,std:Math.sqrt(variance),cv:mean?Math.sqrt(variance)/mean:99,camera:window.__kototanki3d.camera};
+    });
+    console.log('SMOOTH_MOTION_PROFILE',JSON.stringify(smoothProfile));
+    assert.ok(smoothProfile.samples>=20);assert.ok(smoothProfile.cv<.35);assert.equal(smoothProfile.camera.shadowStride,1);
+    assert.ok(Number.isFinite(smoothProfile.camera.jitterMs));assert.ok(Number.isFinite(smoothProfile.camera.motionFrameMs));
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.camera.quality),qualityBeforeSmooth);
     assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);assert.ok(mouseRide&&Math.hypot(mouseRide.x-p1.x,mouseRide.z-p1.z)<2.5);await page.waitForFunction(t=>Math.abs(window.__kototanki3d.vehicle.tailPose-t)>.01,tail0,{timeout:3000});
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
