@@ -916,7 +916,7 @@ function spawnDog(){
   else if(state.spawned%7===3)variant='charger';else if(state.spawned%7===5)variant='armored';
   u.role=role;u.variant=variant;u.stuckTime=0;u.stuckCount=0;u.unstuck=0;u.lastSteer=new THREE.Vector3(0,0,-1);
   if(role==='rusher'){u.preferredRange=4.4;u.speed*=1.12}else if(role==='flanker'){u.preferredRange=8.2;u.speed*=1.06}else if(role==='marksman'){u.preferredRange=12.8;u.speed*=.94}else{u.preferredRange=6.3;u.speed*=1.08}
-  if(variant==='charger'){u.speed*=1.26;u.preferredRange=3.6;u.role='rusher';const horn=cone(d,.28,.85,std(0xd9c28f,.65),0,2.5,-2.0,Math.PI/2,0);horn.castShadow=false}
+  if(variant==='charger'){u.speed*=1.26;u.preferredRange=Math.min(u.preferredRange,5.2);const horn=cone(d,.28,.85,std(0xd9c28f,.65),0,2.5,-2.0,Math.PI/2,0);horn.castShadow=false}
   else if(variant==='armored'){u.hp+=3;u.speed*=.90;const plate=roundedSlab(d,1.65,.18,.92,M.steel,0,1.45,.50,.15,.025);plate.rotation.x=-.18}
   else if(variant==='alpha'){u.hp+=6+Math.floor(state.level/5);u.speed*=.92;u.preferredRange=13.5;d.scale.multiplyScalar(1.34);u.baseScale=d.scale.clone();const crown=cone(d,.62,1.0,std(0xd7a832,.48,.45),0,3.15,-.35);crown.castShadow=false}
   const flank=arena.halfW-3,front=arena.minZ+9;let x,z;if(side<.56){x=rand(-arena.halfW+8,arena.halfW-8);z=front}else{x=side<.78?-flank:flank;z=rand(arena.minZ+12,arena.maxZ*.12)}
