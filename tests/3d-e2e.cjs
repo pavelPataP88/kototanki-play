@@ -190,6 +190,7 @@ const {resolve}=require('node:path');
     while((await page.evaluate(()=>window.__kototanki3d.state.level))<31)await page.evaluate(()=>window.__kototanki3d.next());
     const halloweenWorld=await page.evaluate(()=>window.__kototanki3d.world);assert.equal(halloweenWorld.kind,'halloween');
     const goreCount=await page.evaluate(()=>window.__kototanki3d.spawnGore());assert.ok(goreCount>0&&goreCount<=44);
+    await page.waitForTimeout(120);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-halloween-gore-landscape.png')});
     await page.waitForTimeout(2400);assert.equal(await page.evaluate(()=>window.__kototanki3d.action.goreDebris),0);
     console.log('HALLOWEEN_PROFILE',JSON.stringify({world:halloweenWorld,goreCount}));
     assert.ok(sweep1.geometries<2500);assert.ok(sweep1.textures<150);
@@ -204,10 +205,10 @@ const {resolve}=require('node:path');
     assert.ok(same1.geometries<same0.geometries+320);assert.ok(same1.textures<same0.textures+8);
 
     for(let i=2;i<=35;i++){await page.evaluate(()=>window.__kototanki3d.next());await page.waitForTimeout(35)}
-    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-portrait.png')});
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level35-portrait.png')});
     await page.setViewportSize({width:844,height:390});await page.waitForTimeout(250);
     assert.equal(await page.locator('#moveStick').isVisible(),true);assert.equal(await page.locator('#aimStick').isVisible(),true);
-    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-landscape.png')});
+    await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level35-landscape.png')});
 
     assert.deepEqual(errors,[]);
     console.log('KOTOTANKI_TWIN_STICK_CHAOS_E2E_PASS');
