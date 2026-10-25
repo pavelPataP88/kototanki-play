@@ -11,7 +11,8 @@ const locations = [
   {name:'АЛЬПИЙСКАЯ ДОЛИНА',sky:0x9edcff,fog:0xeaf7ff,ground:0xb7d6a1,road:0xd9c9a8,roof:0x3c7faf,leaf:0x4f9d58,kind:'alpine'},
   {name:'КОРОЛЕВСКИЕ САДЫ',sky:0x8ed5ff,fog:0xe7f6ff,ground:0x79af55,road:0xd8b681,roof:0x9b5bd6,leaf:0x4aa957,kind:'garden'},
   {name:'ЗОЛОТАЯ ОСЕНЬ',sky:0x8fcfff,fog:0xffead1,ground:0x9ea24b,road:0xc99b65,roof:0xbf4e35,leaf:0xd48132,kind:'autumn'},
-  {name:'СОЛНЕЧНАЯ ЦИТАДЕЛЬ',sky:0x7fc6ff,fog:0xffe3ba,ground:0x8da04c,road:0xd2a265,roof:0xc44835,leaf:0x63933b,kind:'citadel'}
+  {name:'СОЛНЕЧНАЯ ЦИТАДЕЛЬ',sky:0x7fc6ff,fog:0xffe3ba,ground:0x8da04c,road:0xd2a265,roof:0xc44835,leaf:0x63933b,kind:'citadel'},
+  {name:'ТУМАННЫЙ ХЭЛЛОУИН',sky:0x111318,fog:0x34373b,ground:0x30352d,road:0x514b45,roof:0x34282d,leaf:0x252821,kind:'halloween'}
 ];
 const zoneSpecs=[
   {chapter:'ДЕРЕВЕНСКИЙ ДВОР',landmark:'АМБАР И СИЛОС',halfW:50,minZ:-50,maxZ:50},
@@ -19,7 +20,8 @@ const zoneSpecs=[
   {chapter:'ГОРНЫЙ ПОСЁЛОК',landmark:'АЛЬПИЙСКОЕ ШАЛЕ',halfW:50,minZ:-50,maxZ:50},
   {chapter:'ДВОРЦОВЫЙ ПАРК',landmark:'ПАВИЛЬОН И ОРАНЖЕРЕЯ',halfW:50,minZ:-50,maxZ:50},
   {chapter:'ОСЕННЯЯ ЯРМАРКА',landmark:'РЫНОЧНЫЙ ДВОР',halfW:50,minZ:-50,maxZ:50},
-  {chapter:'КРЕПОСТНОЙ ДВОР',landmark:'ЦИТАДЕЛЬНЫЕ ВОРОТА',halfW:50,minZ:-50,maxZ:50}
+  {chapter:'КРЕПОСТНОЙ ДВОР',landmark:'ЦИТАДЕЛЬНЫЕ ВОРОТА',halfW:50,minZ:-50,maxZ:50},
+  {chapter:'ТУМАННЫЙ ХЭЛЛОУИН',landmark:'КЛАДБИЩЕНСКАЯ ЧАСОВНЯ',halfW:50,minZ:-50,maxZ:50}
 ];
 let arena=zoneSpecs[0],worldMeta={zone:0,chapter:zoneSpecs[0].chapter,landmark:zoneSpecs[0].landmark,halfW:50,minZ:-50,maxZ:50};
 
@@ -37,8 +39,9 @@ function awardProgress(xp=0,parts=0){
   while(garage.parts>=4){garage.parts-=4;const keys=['engine','cannon','power','armor','squad','bomb'],min=Math.min(...keys.map(k=>garage.upgrades[k]||0)),pool=keys.filter(k=>(garage.upgrades[k]||0)===min);garage.upgrades[pool[(garage.wavesWon+garage.rank)%pool.length]]++;ranked++}
   saveGarage();syncTuneFromGarage();if(ranked)showToast('🔧 ГАРАЖ УЛУЧШЕН · РАНГ '+garage.rank);return ranked
 }
+const MAX_LEVEL=35;
 const state={playing:false,level:1,score:0,home:5,lives:5,kills:0,targetKills:8,spawned:0,spawnTimer:0,bombs:3,combo:1,comboTimer:0,fireCooldown:0,invuln:0,valerian:0,poopSlow:0,nitro:0,overdrive:0,shield:0,coilCooldown:0,last:0,uiTimer:0};
-const keys=new Set(), obstacles=[], enemies=[], raccoons=[], shots=[], feathers=[], boneShots=[], mousePoops=[], enemyPoops=[], particles=[], allies=[], pickups=[], hazards=[], yarnBalls=[];
+const keys=new Set(), obstacles=[], enemies=[], raccoons=[], shots=[], feathers=[], boneShots=[], mousePoops=[], enemyPoops=[], particles=[], allies=[], pickups=[], hazards=[], yarnBalls=[], goreDebris=[];
 let player, helper, mouseCompanion, home, ground, world, playerFacing=new THREE.Vector3(0,0,-1), aimFacing=new THREE.Vector3(0,0,-1), helperCooldown=0, shake=0, shakePhase=0, cameraYaw=0, cameraYawVelocity=0;
 const cameraDrag={active:false,id:null,lastX:0};
 const moveInput={x:0,y:0,active:false},aimInput={x:0,y:-1,active:false};
@@ -182,6 +185,9 @@ const poopGeoA=sharedGeo(new THREE.SphereGeometry(.19,9,7));
 const poopGeoB=sharedGeo(new THREE.SphereGeometry(.13,8,6));
 const mousePoopMat=std(0x5a351f,.9);mousePoopMat.userData.shared=true;
 const hazardPoopMat=std(0x6a3c1f,.92);hazardPoopMat.userData.shared=true;
+const goreBoneGeo=sharedGeo(new THREE.CylinderGeometry(.055,.075,.55,7)),goreToothGeo=sharedGeo(new THREE.ConeGeometry(.075,.28,6)),goreSkullGeo=sharedGeo(new THREE.SphereGeometry(.22,8,6));
+const goreBoneMat=std(0xe7dfc8,.82),goreToothMat=std(0xf4eddb,.72),goreSkullMat=std(0xd7d0bd,.88),bloodMat=effectMat(0x8b1018);
+for(const m of [goreBoneMat,goreToothMat,goreSkullMat])m.userData.shared=true;
 function decor(g){g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});return g}
 function shadowBudget(g,budget){if(!mobilePerf)return g;let used=0;g.traverse(o=>{if(o.isMesh)o.castShadow=used++<budget});return g}
 function noShadow(g){g.traverse(o=>{if(o.isMesh)o.castShadow=false});return g}
@@ -651,6 +657,50 @@ function makeGatehouseLandmark(){
   box(g,5.4,4.6,.5,dark,0,2.3,.2);box(g,2.8,4.0,.7,stone,-4.6,2.0,2.4);box(g,2.8,4.0,.7,stone,4.6,2.0,2.4);
   return g
 }
+function makeHalloweenChapel(){
+  const g=new THREE.Group(),stone=std(0x45464a,.94),dark=std(0x25262a,.88),wood=std(0x352725,.88),glass=new THREE.MeshStandardMaterial({color:0x7d1020,emissive:0x5d0712,emissiveIntensity:2.2,roughness:.35});
+  box(g,8.8,6.2,10.5,stone,0,3.1,0);box(g,3.4,9.5,3.5,dark,0,4.75,-4.0);cone(g,3.0,5.3,dark,0,11.8,-4.0);box(g,2.2,4.8,.35,wood,0,2.45,-5.45);
+  for(const x of [-2.6,2.6]){const w=mesh(new THREE.CircleGeometry(.92,16),glass,x,4.3,-5.28);g.add(w)}
+  const cross=new THREE.Group();box(cross,.22,3.1,.22,goreBoneMat,0,12.8,-4.0);box(cross,1.7,.22,.22,goreBoneMat,0,13.4,-4.0);g.add(cross);return g
+}
+function makeGravestone(){
+  const g=new THREE.Group(),m=std(0x55565a,.96);box(g,1.2,1.7,.34,m,0,.85,0);sph(g,.60,m,0,1.65,0,[1,.75,.30],12);box(g,.18,.8,.12,std(0x333438,.95),0,1.05,-.20);box(g,.62,.16,.12,std(0x333438,.95),0,1.20,-.20);return g
+}
+function makeSkullProp(scale=1){
+  const g=new THREE.Group();sph(g,.38*scale,goreSkullMat,0,.42*scale,0,[1,.95,.90],10);box(g,.46*scale,.24*scale,.32*scale,goreSkullMat,0,.15*scale,-.04*scale);
+  for(const x of [-.14,.14])sph(g,.09*scale,M.black,x,.46*scale,-.31*scale,[1,1,.45],7);
+  for(const x of [-.12,0,.12])cone(g,.045*scale,.16*scale,goreToothMat,x,.05*scale,-.18*scale,Math.PI,0);return g
+}
+function makePumpkinLamp(){
+  const g=new THREE.Group(),pm=std(0xa95218,.72),stem=std(0x3b4a24,.88),glow=new THREE.MeshStandardMaterial({color:0xff8a24,emissive:0xff4d00,emissiveIntensity:3.2,roughness:.42});
+  sph(g,.62,pm,0,.62,0,[1.10,.90,1],12);cyl(g,.08,.11,.35,stem,0,1.25,0);for(const x of [-.20,.20])cone(g,.11,.30,glow,x,.75,-.54,0,0);cone(g,.12,.34,glow,0,.46,-.56,Math.PI,0);return g
+}
+function addHalloweenProps(rng){
+  const graveMat=std(0x4b4c50,.96),bloodGround=std(0x5e0b12,.58,.05);
+  for(let i=0;i<20;i++){let x=(rng()<.5?-1:1)*(9+rng()*35),z=-38+rng()*72;if(Math.hypot(x,z-38)<10)continue;const g=makeGravestone();g.position.set(x,0,z);g.rotation.y=rand(-.3,.3);g.scale.setScalar(.72+rng()*.45);world.add(decor(g));if(i%3===0)collider(x,z,.55)}
+  for(let i=0;i<14;i++){const x=(rng()<.5?-1:1)*(6+rng()*39),z=-40+rng()*76,p=mesh(new THREE.CylinderGeometry(.75+rng()*1.25,1.15+rng()*1.55,.025,18),bloodGround,x,.018,z);p.scale.z=.45+rng()*.8;world.add(decor(p))}
+  for(let i=0;i<10;i++){const x=(rng()<.5?-1:1)*(7+rng()*38),z=-38+rng()*72,sk=makeSkullProp(.55+rng()*.45);sk.position.set(x,0,z);sk.rotation.y=rand(0,6.28);world.add(decor(sk));const b=makeBone();b.scale.setScalar(.45+rng()*.35);b.position.set(x+rand(-.7,.7),.08,z+rand(-.7,.7));b.rotation.z=rand(0,6.28);world.add(decor(b))}
+  for(let i=0;i<7;i++){const p=makePumpkinLamp();p.position.set((i%2?-1:1)*(15+rng()*24),0,-36+i*11+rng()*3);p.scale.setScalar(.70+rng()*.35);world.add(decor(p))}
+  for(const x of [-22,22])for(const z of [-24,8,32]){const post=new THREE.Group();cyl(post,.08,.11,4.5,M.darkSteel,0,2.25,0);box(post,.9,.12,.12,M.darkSteel,0,4.25,0);const lamp=sph(post,.22,new THREE.MeshStandardMaterial({color:0xff6b35,emissive:0xff2a00,emissiveIntensity:2.4,roughness:.5}),.34,3.92,0);post.position.set(x,0,z);post.rotation.z=(x<0?1:-1)*.10;world.add(decor(post))}
+}
+function spawnHalloweenGore(pos,intensity=1){
+  if(worldMeta.zone!==6)return;
+  const bloodCount=mobilePerf?8*intensity:13*intensity;burst(pos,0x8b1018,bloodCount);
+  const count=Math.min(mobilePerf?6:10,3+intensity*3);
+  for(let i=0;i<count;i++){
+    let m,kind=i%4;if(kind===0){m=mesh(goreBoneGeo,goreBoneMat);m.rotation.z=Math.PI/2}
+    else if(kind===1||kind===2)m=mesh(goreToothGeo,goreToothMat);
+    else m=mesh(goreSkullGeo,goreSkullMat);
+    m.position.copy(pos);m.position.y+=1.0+Math.random()*.8;m.scale.setScalar(kind===3?.75:.85+Math.random()*.45);m.castShadow=false;scene.add(m);
+    goreDebris.push({mesh:m,vx:rand(-4.6,4.6),vy:rand(3.6,8.0),vz:rand(-4.6,4.6),spin:rand(-10,10),life:1.2+Math.random()*1.0})
+  }
+  while(goreDebris.length>(mobilePerf?28:44)){const d=goreDebris.shift();retire(d.mesh)}
+}
+function updateHalloweenDebris(dt){
+  for(let i=goreDebris.length-1;i>=0;i--){const d=goreDebris[i],m=d.mesh;d.vy-=11.5*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.spin*dt;m.rotation.z+=d.spin*.73*dt;
+    if(m.position.y<.05){m.position.y=.05;d.vy*=-.24;d.vx*=.74;d.vz*=.74}d.life-=dt;if(d.life<=0){retire(m);goreDebris.splice(i,1)}}
+}
+
 function addZoneLandmark(zone,loc){
   let g,label=arena.landmark,x=0,z=arena.minZ+(arena.maxZ-arena.minZ)*.34,r=4.2;
   if(zone===0){g=makeBarnLandmark();x=-(arena.halfW-7);r=4.6}
@@ -658,7 +708,8 @@ function addZoneLandmark(zone,loc){
   else if(zone===2){g=makeAlpineLandmark(loc);x=-(arena.halfW-7);r=4.8}
   else if(zone===3){g=makeGardenLandmark();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.30;r=4.0}
   else if(zone===4){g=makeMarketLandmark();x=arena.halfW-8;r=5.4}
-  else{g=makeGatehouseLandmark();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.35;r=0}
+  else if(zone===5){g=makeGatehouseLandmark();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.35;r=0}
+  else{g=makeHalloweenChapel();x=0;z=arena.minZ+(arena.maxZ-arena.minZ)*.30;r=5.6}
   g.position.set(x,0,z);world.add(decor(g));
   if(zone===5){collider(-4.6,z,2.3);collider(4.6,z,2.3)}else collider(x,z,r);
   return label
@@ -686,7 +737,7 @@ function seedRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.i
 function centerZForArena(){return (arena.minZ+arena.maxZ)*.5}
 function clearWorld(){
   if(world)retire(world);obstacles.length=0;
-  enemies.splice(0).forEach(retire);shots.splice(0).forEach(e=>retire(e.mesh));feathers.splice(0).forEach(e=>retire(e.mesh));boneShots.splice(0).forEach(e=>retire(e.mesh));mousePoops.splice(0).forEach(e=>retire(e.mesh));enemyPoops.splice(0).forEach(e=>retire(e.mesh));raccoons.splice(0).forEach(retire);clearParticles();allies.splice(0).forEach(retire);pickups.splice(0).forEach(p=>retire(p.mesh));hazards.splice(0).forEach(h=>retire(h.mesh));yarnBalls.splice(0).forEach(y=>retire(y.mesh));world=new THREE.Group();scene.add(world)
+  enemies.splice(0).forEach(retire);shots.splice(0).forEach(e=>retire(e.mesh));feathers.splice(0).forEach(e=>retire(e.mesh));boneShots.splice(0).forEach(e=>retire(e.mesh));mousePoops.splice(0).forEach(e=>retire(e.mesh));enemyPoops.splice(0).forEach(e=>retire(e.mesh));raccoons.splice(0).forEach(retire);clearParticles();allies.splice(0).forEach(retire);pickups.splice(0).forEach(p=>retire(p.mesh));hazards.splice(0).forEach(h=>retire(h.mesh));yarnBalls.splice(0).forEach(y=>retire(y.mesh));goreDebris.splice(0).forEach(d=>retire(d.mesh));world=new THREE.Group();scene.add(world)
 }
 function collider(x,z,r){obstacles.push({kind:'circle',x,z,r})}
 function colliderSegment(x,z,half,r=.16,angle=0){obstacles.push({kind:'segment',x,z,half,r,angle})}
@@ -839,19 +890,21 @@ function addGardenProps(rng,n){
   for(let i=0;i<26;i++)flowerPatch(world,(rng()<.5?-1:1)*(7+rng()*Math.max(8,arena.halfW-13)),arena.minZ+7+rng()*(span-16),50+i)
 }
 function buildLevel(n){
-  clearWorld();const zone=Math.min(5,Math.floor((n-1)/5)),loc=locations[zone],rng=seedRng(1207+n*9137);arena=zoneSpecs[zone];
+  clearWorld();const zone=Math.min(6,Math.floor((n-1)/5)),loc=locations[zone],rng=seedRng(1207+n*9137);arena=zoneSpecs[zone];
   worldMeta={zone,chapter:arena.chapter,landmark:arena.landmark,halfW:arena.halfW,minZ:arena.minZ,maxZ:arena.maxZ};
-  scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);
-  hemi.color.setHex(0xe9f9ff);hemi.groundColor.setHex(loc.ground);sun.color.setHex(0xfff0c2);
+  scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);scene.fog.near=zone===6?12:40;scene.fog.far=zone===6?72:115;
+  hemi.color.setHex(zone===6?0x8992a0:0xe9f9ff);hemi.groundColor.setHex(loc.ground);hemi.intensity=zone===6?.72:1.35;
+  sun.color.setHex(zone===6?0xc5c9d6:0xfff0c2);sun.intensity=zone===6?1.05:3.9;fill.color.setHex(zone===6?0x6f7fa8:0xa7d8ff);fill.intensity=zone===6?.34:.72;renderer.toneMappingExposure=zone===6?.86:1.24;
   const span=arena.maxZ-arena.minZ,centerZ=(arena.minZ+arena.maxZ)/2,groundW=arena.halfW*2+22,groundD=span+22;
   ground=mesh(new THREE.PlaneGeometry(groundW,groundD),texStd(loc.ground,shade(loc.ground,.70),.98,0,14,'noise'),0,0,centerZ);ground.rotation.x=-Math.PI/2;world.add(ground);
   const road=mesh(new THREE.PlaneGeometry(10,span+16),texStd(loc.road,shade(loc.road,.72),.96,0,10,'noise'),0,.025,centerZ);road.rotation.x=-Math.PI/2;world.add(road);
-  const castle=makeCastle();castle.position.set(0,0,arena.minZ-12);castle.scale.setScalar(zone===5?1.05:.72);world.add(decor(castle));
+  const castle=makeCastle();castle.position.set(0,0,arena.minZ-12);castle.scale.setScalar(zone===5?1.05:zone===6?.58:.72);world.add(decor(castle));
   for(const x of [-(arena.halfW+2),arena.halfW+2]){const hill=mesh(new THREE.SphereGeometry(13,20,12),std(0x75a760,.98),x,-4,arena.minZ-14);hill.scale.set(1.5,.42,1.1);hill.castShadow=false;world.add(hill)}
   addVillageSet(loc,rng);const landmarkName=addZoneLandmark(zone,loc),layoutName=addLevelLayout(n,loc,rng);ui.place.textContent=loc.name+' · '+layoutName;
   for(let i=0;i<18+zone;i++){let x=(rng()<.5?-1:1)*(8+rng()*Math.max(10,arena.halfW-8)),z=arena.minZ+4+rng()*(span-9);if(Math.hypot(x,z-(arena.maxZ-7))<8)continue;const t=makeTree(loc.leaf,.55+rng()*.58);t.position.set(x,0,z);world.add(t);if(Math.abs(x)<arena.halfW-6)collider(x,z,.75)}
   for(let i=0;i<8+Math.floor(zone/2);i++){const r=makeRock(.5+rng()*.7);r.position.set((rng()<.5?-1:1)*(7+rng()*Math.max(8,arena.halfW-9)),0,arena.minZ+7+rng()*(span-14));world.add(r)}
-  for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*Math.max(9,arena.halfW-11)),arena.minZ+7+rng()*(span-14),i);addGardenProps(rng,n);spawnPoopField(n,rng);spawnUpgradeModules(n,rng);
+  if(zone!==6)for(let i=0;i<10;i++)flowerPatch(world,(rng()<.5?-1:1)*(6+rng()*Math.max(9,arena.halfW-11)),arena.minZ+7+rng()*(span-14),i);
+  if(zone===6)addHalloweenProps(rng);else addGardenProps(rng,n);spawnPoopField(n,rng);spawnUpgradeModules(n,rng);
   home=makeBase();home.position.set(0,0,arena.maxZ-3);home.scale.setScalar(.88);world.add(home);
   const startZ=arena.maxZ-12;player.position.set(0,0,startZ);player.rotation.set(0,0,0);playerFacing.set(0,0,-1);if(player.userData.velocity)player.userData.velocity.set(0,0,0);if(player.userData.moveTarget)player.userData.moveTarget.set(0,0,0);
   helper.position.set(2,5.15,startZ-2);helperCooldown=0;mouseCompanion.position.set(1.18,1.88,startZ-.18);mouseCompanion.rotation.set(0,Math.PI,0);mouseCompanion.userData.fetch=null;mouseCompanion.userData.mode='ride';
@@ -871,7 +924,7 @@ function mountProgressEquipment(){
 function refreshEquipmentVisuals(){if(!player)return;if(player.userData.coilRig)player.userData.coilRig.visible=tune.coil>0;if(player.userData.twinRig)player.userData.twinRig.visible=tune.twin}
 makeCharacters();mountProgressEquipment();
 function updateUI(){
-  ui.level.textContent=state.level+' / 30';ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;
+  ui.level.textContent=state.level+' / '+MAX_LEVEL;ui.home.textContent='❤'.repeat(Math.max(0,state.home));ui.lives.textContent='❤'.repeat(Math.max(0,state.lives));ui.enemies.textContent=Math.max(0,state.targetKills-state.kills);ui.score.textContent=state.score;ui.combo.textContent='×'+state.combo;ui.bombs.textContent=state.bombs;
   ui.boost.textContent=state.shield>0?'🛡 ×'+state.shield:state.nitro>0?'⚡ '+state.nitro.toFixed(1)+'с':state.overdrive>0?'🔥 '+state.overdrive.toFixed(1)+'с':state.valerian>0?'🌿 '+state.valerian.toFixed(1)+'с':state.poopSlow>0?'💩 ТОРМОЗ':'🔧 R'+garage.rank+' · 🔩'+garage.parts
 }
 function showToast(t){toast.textContent=t;toast.style.opacity='1';clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.style.opacity='0',1450)}
@@ -932,13 +985,15 @@ function findClearSpawn(x,z,radius=1.2,tries=14){
 function spawnDog(){
   const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random(),u=d.userData;
   const roleCycle=['rusher','flanker','marksman','raider'];let role=roleCycle[state.spawned%roleCycle.length],variant='normal';
-  if(state.level%5===0&&state.spawned===0){variant='alpha';role='marksman'}
+  if(state.level===35&&state.spawned===0){variant='nightmare';role='marksman'}
+  else if(state.level%5===0&&state.spawned===0){variant='alpha';role='marksman'}
   else if(state.spawned%7===3)variant='charger';else if(state.spawned%7===5)variant='armored';
   u.role=role;u.variant=variant;u.stuckTime=0;u.stuckCount=0;u.unstuck=0;u.lastSteer=new THREE.Vector3(0,0,-1);
   if(role==='rusher'){u.preferredRange=4.4;u.speed*=1.12}else if(role==='flanker'){u.preferredRange=8.2;u.speed*=1.06}else if(role==='marksman'){u.preferredRange=12.8;u.speed*=.94}else{u.preferredRange=6.3;u.speed*=1.08}
   if(variant==='charger'){u.speed*=1.26;u.preferredRange=Math.min(u.preferredRange,5.2);const horn=cone(d,.28,.85,std(0xd9c28f,.65),0,2.5,-2.0,Math.PI/2,0);horn.castShadow=false}
   else if(variant==='armored'){u.hp+=3;u.speed*=.90;const plate=roundedSlab(d,1.65,.18,.92,M.steel,0,1.45,.50,.15,.025);plate.rotation.x=-.18}
   else if(variant==='alpha'){u.hp+=6+Math.floor(state.level/5);u.speed*=.92;u.preferredRange=13.5;d.scale.multiplyScalar(1.34);u.baseScale=d.scale.clone();const crown=cone(d,.62,1.0,std(0xd7a832,.48,.45),0,3.15,-.35);crown.castShadow=false}
+  else if(variant==='nightmare'){u.hp+=18;u.speed*=.88;u.preferredRange=15;d.scale.multiplyScalar(1.62);u.baseScale=d.scale.clone();const skull=makeSkullProp(.90);skull.position.set(0,2.85,-.10);d.add(skull);const eyeMat=new THREE.MeshStandardMaterial({color:0xff2c22,emissive:0xff0000,emissiveIntensity:4,roughness:.35});sph(d,.12,eyeMat,-.28,2.38,-2.10,[1,1,.55],8);sph(d,.12,eyeMat,.28,2.38,-2.10,[1,1,.55],8)}
   const flank=arena.halfW-3,front=arena.minZ+9;let x,z;if(side<.56){x=rand(-arena.halfW+8,arena.halfW-8);z=front}else{x=side<.78?-flank:flank;z=rand(arena.minZ+12,arena.maxZ*.12)}
   const p=findClearSpawn(x,z,1.25,22);d.position.set(p[0],0,p[1]);u.lastX=p[0];u.lastZ=p[1];u.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
@@ -946,8 +1001,17 @@ function burst(pos,color=0xffaa55,count=12){
   const mat=effectMat(color);for(let i=0;i<count;i++)spawnParticle(pos,.07+Math.random()*.10,mat,rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5),.4+Math.random()*.55)
 }
 function damageEnemy(e,dmg){
-  e.userData.hp-=dmg;const bs=e.userData.baseScale;e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);
-  if(e.userData.hp<=0){state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;state.score+=(18+e.userData.type*12+(e.userData.variant==='alpha'?150:0))*state.combo;state.kills++;burst(e.position,e.userData.variant==='alpha'?0xffd54c:e.userData.type>=2?0xff6548:0xffb85b,e.userData.variant==='alpha'?30:16);sfx.hit();const dropPos=e.position.clone(),variant=e.userData.variant;retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();if(variant==='alpha'||variant==='armored')spawnModulePickup('parts',dropPos);else if(roll<.20)spawnValerian(dropPos);else if(roll<.28)spawnYarnPickup(dropPos);updateUI();if(state.playing&&state.kills>=state.targetKills)winLevel()}
+  e.userData.hp-=dmg;const bs=e.userData.baseScale;e.userData.hitFlash=true;e.scale.copy(bs).multiplyScalar(.92);
+  if(worldMeta.zone===6)burst(e.position,0x8b1018,mobilePerf?3:5);
+  setTimeout(()=>{if(e.parent)e.scale.copy(bs);e.userData.hitFlash=false},55);
+  if(e.userData.hp<=0){
+    state.combo=state.comboTimer>0?Math.min(8,state.combo+1):1;state.comboTimer=2.7;
+    const variant=e.userData.variant,stateBonus=variant==='nightmare'?420:variant==='alpha'?150:0;state.score+=(18+e.userData.type*12+stateBonus)*state.combo;state.kills++;
+    if(worldMeta.zone===6)spawnHalloweenGore(e.position,variant==='nightmare'?3:variant==='alpha'?2:1);else burst(e.position,variant==='alpha'?0xffd54c:e.userData.type>=2?0xff6548:0xffb85b,variant==='alpha'?30:16);
+    sfx.hit();const dropPos=e.position.clone();retire(e);enemies.splice(enemies.indexOf(e),1);const roll=Math.random();
+    if(variant==='nightmare'||variant==='alpha'||variant==='armored')spawnModulePickup('parts',dropPos);else if(roll<.20)spawnValerian(dropPos);else if(roll<.28)spawnYarnPickup(dropPos);
+    updateUI();if(state.playing&&state.kills>=state.targetKills)winLevel()
+  }
 }
 function damageRaccoon(r,dmg){r.userData.hp-=dmg;r.scale.setScalar(.9);setTimeout(()=>{if(r.parent)r.scale.setScalar(1)},55);if(r.userData.hp<=0){burst(r.position,0x6e7278,14);sfx.hit();retire(r);raccoons.splice(raccoons.indexOf(r),1);state.score+=35;updateUI()}}
 function fireSausage(){
@@ -1054,7 +1118,7 @@ function updateEnemies(dt,now){
     u.steerTimer=(u.steerTimer||0)-dt;let steer=u.steerVec;const steerCadence=mobilePerf?(renderQuality.ema>.028?.10:.075):.05;
     if(!steer||u.steerTimer<=0){steer=dogSteer(e,target,now);u.lastSteer.copy(steer);u.steerTimer=steerCadence}
     const role=u.role||'rusher',fireRange=u.variant==='alpha'?26:role==='marksman'?22:u.preferredRange+5.5,hasLos=dist<fireRange&&lineClearXZ(e.position,target.position,.68),canShoot=u.variant!=='charger'||dist<6.5;
-    if(hasLos&&canShoot&&u.fireCooldown<=0){const shotTarget=target===home?home:target;if(u.variant==='alpha'){fireBone(e,shotTarget,-.10);fireBone(e,shotTarget,0);fireBone(e,shotTarget,.10)}else fireBone(e,shotTarget);const base=u.variant==='alpha'?.92:role==='marksman'?.68:role==='rusher'?.84:.76;u.fireCooldown=Math.max(.38,base-state.level*.006)+Math.random()*.30}
+    if(hasLos&&canShoot&&u.fireCooldown<=0){const shotTarget=target===home?home:target;if(u.variant==='alpha'||u.variant==='nightmare'){fireBone(e,shotTarget,-.12);fireBone(e,shotTarget,0);fireBone(e,shotTarget,.12)}else fireBone(e,shotTarget);const base=u.variant==='nightmare'?.70:u.variant==='alpha'?.92:role==='marksman'?.68:role==='rusher'?.84:.76;u.fireCooldown=Math.max(.38,base-state.level*.006)+Math.random()*.30}
     const hold=role==='marksman'&&Math.abs(dist-u.preferredRange)<2.4,rush=dist>20?1.22:1,moveScale=(hold?.68:hasLos?.82:1)*u.speed*rush*dt,oldX=e.position.x,oldZ=e.position.z;
     let nx=e.position.x+steer.x*moveScale,nz=e.position.z+steer.z*moveScale;
     if(blocked(nx,nz,1.25)){u.unstuck=Math.max(u.unstuck,.55);u.flankSign*=-1;u.steerTimer=0;nx=e.position.x-steer.z*u.flankSign*u.speed*dt;nz=e.position.z+steer.x*u.flankSign*u.speed*dt}
@@ -1166,7 +1230,7 @@ function showTuning(nextLevel){
 }
 function winLevel(){
   state.playing=false;state.score+=state.level*120;garage.wavesWon++;awardProgress(45+state.level*7,state.level%5===0?1:0);updateUI();
-  if(state.level>=30){showOverlay('ПОБЕДА!','30 волн отбиты. Гараж сохранён: ранг '+garage.rank+', детали '+garage.parts+'. Новый поход начинается уже с этой техникой.','НОВЫЙ ПОХОД',()=>{state.score=0;syncTuneFromGarage();buildLevel(1);overlay.style.display='none'});return}
+  if(state.level>=MAX_LEVEL){showOverlay('ПОБЕДА!','35 волн отбиты, включая Туманный Хэллоуин. Гараж сохранён: ранг '+garage.rank+', детали '+garage.parts+'. Новый поход начинается уже с этой техникой.','НОВЫЙ ПОХОД',()=>{state.score=0;syncTuneFromGarage();buildLevel(1);overlay.style.display='none'});return}
   showTuning(state.level+1)
 }
 function lose(t){state.playing=false;showOverlay('ПОРАЖЕНИЕ',t+'. Перегруппируйся и дави их снова.','ПОВТОРИТЬ',()=>{buildLevel(state.level);overlay.style.display='none'})}
@@ -1224,7 +1288,7 @@ function animate(ms){
     player.visible=state.invuln<=0||Math.floor(now*12)%2===0;
     updatePlayer(dt,now);updateAim(dt);if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.24)fireSausage();
     updateHelper(dt,now);updateMouse(dt,now);updateAllies(dt,now);updateRaccoons(dt,now);updateProjectiles(dt);
-    if(state.playing)updateEnemies(dt,now);if(state.playing)updateChaosItems(dt,now);if(state.playing)updateCoil(dt);
+    if(state.playing)updateEnemies(dt,now);if(state.playing)updateChaosItems(dt,now);if(state.playing)updateCoil(dt);updateHalloweenDebris(dt);
     state.uiTimer-=dt;if(state.uiTimer<=0){updateUI();state.uiTimer=.10}
     if(state.playing){state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}
   }
@@ -1237,4 +1301,4 @@ function animate(ms){
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,renderQuality.max);renderer.setPixelRatio(renderQuality.ratio)});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,rotation:player.rotation.y,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,turretContinuous:player.userData.turret?.userData?.continuousYaw??0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,hp:a.userData.hp,scale:a.scale.x,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,hp:e.userData.hp,role:e.userData.role||'rusher',variant:e.userData.variant||'normal',stuckCount:e.userData.stuckCount||0,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get shots(){return shots.map(s=>({x:s.mesh.position.x,z:s.mesh.position.z,vx:s.v.x,vz:s.v.z,assisted:!!s.target,assistLife:s.assistLife||0}))},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'garage-r14',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0,coilVisible:!!player.userData.coilRig?.visible,twinVisible:!!player.userData.twinRig?.visible}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get garage(){return JSON.parse(JSON.stringify(garage))},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get world(){return {...worldMeta,width:arena.halfW*2,depth:arena.maxZ-arena.minZ}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},aimTurret(x,y,steps=24){aimInput.x=x;aimInput.y=y;aimInput.active=true;for(let i=0;i<steps;i++)updateAim(1/60);aimInput.active=false;return player.userData.turret?.userData?.continuousYaw??0},spawnDog(){spawnDog()},spawnDogNear(dx=0,dz=-9){spawnDog();const e=enemies[enemies.length-1],x=clamp(player.position.x+dx,-arena.halfW+3,arena.halfW-3),z=clamp(player.position.z+dz,arena.minZ+3,arena.maxZ-3);if(!blocked(x,z,1.25))e.position.set(x,0,z);else{const p=findClearSpawn(x,z,1.25,24);e.position.set(p[0],0,p[1])}return true},triggerCoil(){state.coilCooldown=0;updateCoil(0);return state.coilCooldown},completeLevel(){winLevel()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnModule(type='parts'){spawnModulePickup(type,player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},upgrade(key){applyGarageUpgrade(key);updateUI()},resetProgress(){garage=garageDefaults();saveGarage();syncTuneFromGarage();updateUI()},start(){initAudio();syncTuneFromGarage();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,rotation:player.rotation.y,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,turretContinuous:player.userData.turret?.userData?.continuousYaw??0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,hp:a.userData.hp,scale:a.scale.x,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,hp:e.userData.hp,role:e.userData.role||'rusher',variant:e.userData.variant||'normal',stuckCount:e.userData.stuckCount||0,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length,goreDebris:goreDebris.length}},get shots(){return shots.map(s=>({x:s.mesh.position.x,z:s.mesh.position.z,vx:s.v.x,vz:s.v.z,assisted:!!s.target,assistLife:s.assistLife||0}))},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'garage-r14',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0,coilVisible:!!player.userData.coilRig?.visible,twinVisible:!!player.userData.twinRig?.visible}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get garage(){return JSON.parse(JSON.stringify(garage))},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get world(){return {...worldMeta,width:arena.halfW*2,depth:arena.maxZ-arena.minZ}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},aimTurret(x,y,steps=24){aimInput.x=x;aimInput.y=y;aimInput.active=true;for(let i=0;i<steps;i++)updateAim(1/60);aimInput.active=false;return player.userData.turret?.userData?.continuousYaw??0},spawnDog(){spawnDog()},spawnDogNear(dx=0,dz=-9){spawnDog();const e=enemies[enemies.length-1],x=clamp(player.position.x+dx,-arena.halfW+3,arena.halfW-3),z=clamp(player.position.z+dz,arena.minZ+3,arena.maxZ-3);if(!blocked(x,z,1.25))e.position.set(x,0,z);else{const p=findClearSpawn(x,z,1.25,24);e.position.set(p[0],0,p[1])}return true},triggerCoil(){state.coilCooldown=0;updateCoil(0);return state.coilCooldown},spawnGore(){spawnHalloweenGore(player.position.clone(),2);return goreDebris.length},completeLevel(){winLevel()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnModule(type='parts'){spawnModulePickup(type,player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},upgrade(key){applyGarageUpgrade(key);updateUI()},resetProgress(){garage=garageDefaults();saveGarage();syncTuneFromGarage();updateUI()},start(){initAudio();syncTuneFromGarage();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(MAX_LEVEL,state.level+1))},fire:fireSausage,bomb};
