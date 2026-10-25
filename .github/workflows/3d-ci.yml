@@ -25,6 +25,7 @@ on:
       - feature/world-progression-r12-20261024
       - feature/large-map-smart-ai-r13-20261025
       - feature/progression-garage-r14-20261025
+      - feature/aim-assist-360-r15-20261025
   workflow_dispatch:
 permissions:
   contents: read
