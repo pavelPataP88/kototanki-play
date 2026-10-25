@@ -189,7 +189,7 @@ const {resolve}=require('node:path');
     // Return directly to Halloween through public next() chain if needed.
     while((await page.evaluate(()=>window.__kototanki3d.state.level))<31)await page.evaluate(()=>window.__kototanki3d.next());
     const halloweenWorld=await page.evaluate(()=>window.__kototanki3d.world);assert.equal(halloweenWorld.kind,'halloween');
-    await page.evaluate(()=>window.__kototanki3d.completeLevel());
+    await page.evaluate(()=>window.__kototanki3d.pauseCombat());
     const goreCount=await page.evaluate(()=>window.__kototanki3d.spawnGore());assert.ok(goreCount>0&&goreCount<=44);
     await page.waitForTimeout(120);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-halloween-gore-landscape.png')});
     await page.waitForTimeout(2400);assert.equal(await page.evaluate(()=>window.__kototanki3d.action.goreDebris),0);
