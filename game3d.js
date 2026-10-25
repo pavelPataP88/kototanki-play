@@ -545,9 +545,8 @@ function makeAllyCat(i=0){
 }
 function spawnCatSquad(){
   for(const a of allies)retire(a);allies.length=0;
-  const count=Math.min(6,4+Math.floor((state.level-1)/8));
-  const slots=[[-6,10],[6,10],[-8,5],[8,5],[-10,0],[10,0]];
-  for(let i=0;i<count;i++){const a=makeAllyCat(i),s=slots[i],p=findClearSpawn(s[0],s[1],.7,10);a.scale.setScalar(.72);a.position.set(p[0],0,p[1]);scene.add(a);allies.push(a)}
+  const count=Math.min(6,4+Math.floor((state.level-1)/8)),slots=[[-6,-2],[6,-2],[-8,-7],[8,-7],[-10,-12],[10,-12]];
+  for(let i=0;i<count;i++){const a=makeAllyCat(i),off=slots[i],sx=clamp(player.position.x+off[0],-arena.halfW+4,arena.halfW-4),sz=clamp(player.position.z+off[1],arena.minZ+5,arena.maxZ-5),p=findClearSpawn(sx,sz,.7,16);a.scale.setScalar(.72);a.position.set(p[0],0,p[1]);scene.add(a);allies.push(a)}
 }
 function fireAlly(a,target){
   const dir=target.position.clone().sub(a.position).setY(.2).normalize(),m=mesh(allyShotGeo,M.glow);m.castShadow=false;m.position.copy(a.position);m.position.y+=1.35;m.position.addScaledVector(dir,.8);scene.add(m);
