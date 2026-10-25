@@ -851,7 +851,7 @@ function findClearSpawn(x,z,radius=1.2,tries=14){
 }
 function spawnDog(){
   const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random(),u=d.userData;
-  const roleCycle=['rusher','flanker','marksman','raider'],role=roleCycle[(state.spawned+type)%roleCycle.length];u.role=role;u.stuckTime=0;u.stuckCount=0;u.unstuck=0;u.lastSteer=new THREE.Vector3(0,0,-1);
+  const roleCycle=['rusher','flanker','marksman','raider'],role=roleCycle[state.spawned%roleCycle.length];u.role=role;u.stuckTime=0;u.stuckCount=0;u.unstuck=0;u.lastSteer=new THREE.Vector3(0,0,-1);
   if(role==='rusher'){u.preferredRange=4.4;u.speed*=1.12}
   else if(role==='flanker'){u.preferredRange=8.2;u.speed*=1.06}
   else if(role==='marksman'){u.preferredRange=12.8;u.speed*=.94}
