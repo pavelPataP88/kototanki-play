@@ -1288,10 +1288,11 @@ function animate(ms){
     player.visible=state.invuln<=0||Math.floor(now*12)%2===0;
     updatePlayer(dt,now);updateAim(dt);if(aimInput.active&&Math.hypot(aimInput.x,aimInput.y)>.24)fireSausage();
     updateHelper(dt,now);updateMouse(dt,now);updateAllies(dt,now);updateRaccoons(dt,now);updateProjectiles(dt);
-    if(state.playing)updateEnemies(dt,now);if(state.playing)updateChaosItems(dt,now);if(state.playing)updateCoil(dt);updateHalloweenDebris(dt);
+    if(state.playing)updateEnemies(dt,now);if(state.playing)updateChaosItems(dt,now);if(state.playing)updateCoil(dt);
     state.uiTimer-=dt;if(state.uiTimer<=0){updateUI();state.uiTimer=.10}
     if(state.playing){state.spawnTimer-=dt;if(state.spawned<state.targetKills&&state.spawnTimer<=0&&enemies.length<10){const batch=(state.spawned+1<state.targetKills&&enemies.length<8&&Math.random()<.45)?2:1;for(let i=0;i<batch;i++)spawnDog();state.spawnTimer=Math.max(.20,.56-state.level*.006)}}
   }
+  updateHalloweenDebris(dt);
   if(!cameraDrag.active&&Math.abs(cameraYawVelocity)>.0001){cameraYaw+=cameraYawVelocity*dt;cameraYawVelocity*=Math.pow(.035,dt)}
   const portrait=camera.aspect<.75,radius=portrait?24.2:21,camH=portrait?14.8:13.2;
   camFocusTarget.set(player.position.x,1.6,player.position.z);camFocus.lerp(camFocusTarget,1-Math.exp(-dt*13));
