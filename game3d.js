@@ -685,16 +685,18 @@ function addHalloweenProps(rng){
 }
 function spawnHalloweenGore(pos,intensity=1){
   if(worldMeta.zone!==6)return;
-  const bloodCount=mobilePerf?8*intensity:13*intensity;burst(pos,0x8b1018,bloodCount);
-  const count=Math.min(mobilePerf?6:10,3+intensity*3);
+  const bloodCount=(mobilePerf?12:18)*intensity;
+  for(let i=0;i<bloodCount;i++)spawnParticle(pos,.11+Math.random()*.17,bloodMat,rand(-6.2,6.2),rand(2.5,9.5),rand(-6.2,6.2),.55+Math.random()*.65);
+  const count=Math.min(mobilePerf?8:12,4+intensity*3);
   for(let i=0;i<count;i++){
-    let m,kind=i%4;if(kind===0){m=mesh(goreBoneGeo,goreBoneMat);m.rotation.z=Math.PI/2}
-    else if(kind===1||kind===2)m=mesh(goreToothGeo,goreToothMat);
-    else m=mesh(goreSkullGeo,goreSkullMat);
-    m.position.copy(pos);m.position.y+=1.0+Math.random()*.8;m.scale.setScalar(kind===3?.75:.85+Math.random()*.45);m.castShadow=false;scene.add(m);
-    const life=1.2+Math.random()*1.0;goreDebris.push({mesh:m,vx:rand(-4.6,4.6),vy:rand(3.6,8.0),vz:rand(-4.6,4.6),spin:rand(-10,10),life,expires:performance.now()+life*1000})
+    let m,kind=i%4;
+    if(kind===0){m=makeBone();m.scale.setScalar(.48+Math.random()*.34)}
+    else if(kind===1||kind===2){m=mesh(goreToothGeo,goreToothMat);m.scale.setScalar(1.20+Math.random()*.75)}
+    else{m=makeSkullProp(.62);m.scale.setScalar(.75+Math.random()*.28)}
+    m.position.copy(pos);m.position.y+=1.0+Math.random()*1.0;m.castShadow=false;noShadow(m);scene.add(m);
+    const life=1.45+Math.random()*1.0;goreDebris.push({mesh:m,vx:rand(-5.6,5.6),vy:rand(4.4,9.4),vz:rand(-5.6,5.6),spin:rand(-11,11),life,expires:performance.now()+life*1000})
   }
-  while(goreDebris.length>(mobilePerf?28:44)){const d=goreDebris.shift();retire(d.mesh)}
+  while(goreDebris.length>(mobilePerf?32:48)){const d=goreDebris.shift();retire(d.mesh)}
 }
 function updateHalloweenDebris(dt){
   for(let i=goreDebris.length-1;i>=0;i--){const d=goreDebris[i],m=d.mesh;d.vy-=11.5*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.spin*dt;m.rotation.z+=d.spin*.73*dt;
