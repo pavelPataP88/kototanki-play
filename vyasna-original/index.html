@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><title>ВЯСНА — игра по песне</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a;font-family:Inter,system-ui,Arial,sans-serif;color:#fff;touch-action:none}canvas{width:100vw;height:100vh;display:block;background:#000}.ui{position:fixed;inset:0;pointer-events:none}.top{position:absolute;left:max(14px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;gap:12px;align-items:flex-start}.mission{max-width:min(560px,70vw);background:#10151dcc;border:1px solid #ffffff20;border-radius:12px;padding:12px 15px;box-shadow:0 8px 30px #0008;backdrop-filter:blur(8px)}.mission b{display:block;color:#ffd34e;font-size:13px;margin-bottom:4px}.mission span{font-size:16px}.hud{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));background:#10151dcc;border:1px solid #ffffff20;border-radius:12px;padding:10px 12px;min-width:160px}.bar{height:9px;background:#252b33;border-radius:99px;overflow:hidden;margin-top:5px}.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ffb000,#ffe370)}.prompt{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);padding:10px 14px;background:#0b0f15e8;border:1px solid #ffffff2a;border-radius:10px;font-weight:700;opacity:0;transition:.15s;white-space:nowrap}.prompt.show{opacity:1}.controls{position:absolute;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;padding:0 18px;pointer-events:auto}.pad,.actions{display:flex;gap:12px;align-items:flex-end}.btn{width:68px;height:68px;border-radius:50%;border:1px solid #ffffff35;background:#111722b8;color:white;display:grid;place-items:center;font-size:28px;font-weight:800;user-select:none;-webkit-user-select:none;backdrop-filter:blur(7px);box-shadow:0 8px 20px #0006}.btn:active,.btn.on{transform:scale(.94);background:#ffc400cc;color:#111}.action{width:82px;height:82px;background:#ffc400cc;color:#111;font-size:17px}.music{width:52px;height:52px;font-size:20px}.screen{position:fixed;inset:0;background:radial-gradient(circle at 50% 35%,#202b3b,#06080c 70%);display:flex;align-items:center;justify-content:center;z-index:5;padding:24px}.card{width:min(650px,92vw);text-align:center}.title{font-size:clamp(42px,10vw,90px);font-weight:1000;letter-spacing:.06em;margin:0;text-shadow:0 5px 30px #000}.sub{font-size:18px;opacity:.78;margin:10px auto 28px;max-width:560px;line-height:1.5}.start{border:0;border-radius:15px;background:#ffc400;color:#111;font-size:20px;font-weight:900;padding:16px 28px;box-shadow:0 8px 32px #ffc40044}.help{font-size:13px;opacity:.58;margin-top:18px}.end .title{font-size:clamp(38px,8vw,70px)}.end{display:none}.flash{position:fixed;inset:0;background:white;opacity:0;pointer-events:none;z-index:4}.rotate{display:none;position:fixed;inset:0;background:#080a0f;z-index:20;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:20px}@media(orientation:portrait) and (max-width:900px){.rotate{display:flex}}@media(min-width:1000px){.controls{opacity:.55}.btn{width:60px;height:60px}.action{width:70px;height:70px}.controls:hover{opacity:1}}
+</style><script>window.__VYASNA_AUDIO=[];</script><script src="assets/audio_chunk_01.js"></script><script src="assets/audio_chunk_02.js"></script><script src="assets/audio_chunk_03.js"></script><script src="assets/audio_chunk_04.js"></script><script src="assets/audio_chunk_05.js"></script><script src="assets/audio_chunk_06.js"></script><script src="assets/audio_chunk_07.js"></script><script src="assets/audio_chunk_08.js"></script><script src="assets/audio_chunk_09.js"></script><script src="assets/audio_chunk_10.js"></script><script src="assets/audio_chunk_11.js"></script></head><body>
+<canvas id="game" width="1280" height="720"></canvas>
+<div class="ui"><div class="top"><div class="mission"><b id="loc">ГЛАВА 1</b><span id="mission">...</span></div></div><div class="hud">⚡ <span id="energy">100</span><div class="bar"><i id="energybar"></i></div></div><div id="prompt" class="prompt">E — действие</div><div class="controls"><div class="pad"><div class="btn" data-key="left">◀</div><div class="btn" data-key="right">▶</div></div><div class="actions"><div class="btn music" data-key="music">♫</div><div class="btn action" data-key="action">ДЕЙСТВИЕ</div></div></div></div>
+<div id="start" class="screen"><div class="card"><h1 class="title">ВЯСНА</h1><div class="sub">Игровая история по твоей песне. Ты — главный герой. Натаха становится спутником по ходу сюжета. Дойди от школы и старого Запорожца до Катовице и рассвета.</div><button id="startBtn" class="start">НАЧАТЬ ИГРУ</button><div class="help">ПК: A/D или ←/→, E — действие, M — музыка. Планшет: кнопки на экране.</div></div></div>
+<div id="end" class="screen end"><div class="card"><h1 class="title">И БУДЕМ ВЕСНОЙ</h1><div class="sub">История пройдена. Можно нажать ещё раз и пройти её как видеосцену заново.</div><button id="again" class="start">СЫГРАТЬ ЕЩЁ</button></div></div><div id="flash" class="flash"></div><div class="rotate">Поверни устройство горизонтально — игра сделана под широкий экран.</div>
+<script>
+const A={"m0": "assets/img_01.png", "m1": "assets/img_02.png", "m2": "assets/img_03.png", "m3": "assets/img_04.png", "m4": "assets/img_05.png", "m5": "assets/img_06.png", "f0": "assets/img_07.png", "f1": "assets/img_08.png", "f2": "assets/img_09.png", "f3": "assets/img_10.png", "f4": "assets/img_11.png", "f5": "assets/img_12.png", "school": "assets/img_13.jpg", "city": "assets/img_14.jpg", "rain": "assets/img_15.jpg", "winter": "assets/img_16.jpg", "prison": "assets/img_17.jpg", "home": "assets/img_18.jpg", "stage": "assets/img_19.jpg", "dawn": "assets/img_20.jpg", "song": "data:audio/mpeg;base64,"+window.__VYASNA_AUDIO.join("")};
+
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const images={}; let loaded=0;
+for(const k of Object.keys(A)){if(k==='song')continue;const im=new Image();im.src=A[k];images[k]=im;im.onload=()=>loaded++;}
+const audio=new Audio(A.song); audio.loop=true; audio.volume=.48;
+const missionEl=document.getElementById('mission'), locEl=document.getElementById('loc'), promptEl=document.getElementById('prompt');
+const flash=document.getElementById('flash');
+const energyEl=document.getElementById('energy'), energyBar=document.getElementById('energybar');
+
+const scenes=[
+ {name:'ШКОЛА НА МИНСКОЙ',bg:'school',mission:'Дойди до ворот школы. Отсюда всё началось.',rain:true,exit:1110,start:120,kind:'exit'},
+ {name:'ВСТРЕЧА С НАТАХОЙ',bg:'city',mission:'Найди Натаху.',rain:true,natasha:700,car:1055,start:110,kind:'city'},
+ {name:'АРМИЯ — ХОЛОД И СТАЛЬ',bg:'winter',mission:'Иди через плац с автоматом и дойди до поста.',snow:true,exit:1110,start:100,kind:'army'},
+ {name:'БЕТОННЫЙ ПЛЕН',bg:'prison',mission:'Доберись до выхода из бетонного плена.',exit:1120,start:100,kind:'exit'},
+ {name:'ЦВЕТЫ ДЛЯ НАТАХИ',bg:'home',mission:'Подойди к Натахе и подари ей цветы.',natasha:780,start:120,kind:'flowers'},
+ {name:'МЕДЛЕННЫЙ ТАНЕЦ',bg:'home',mission:'Пригласи Натаху на танец.',natasha:690,start:140,kind:'dance'},
+ {name:'ОТКРЫТЫЙ МИКРОФОН',bg:'stage',mission:'Подойди к микрофону и нажми действие.',mic:1060,start:110,kind:'stage'},
+ {name:'БОННИ И КЛАЙД',bg:'rain',mission:'Идите вместе через ночной город — держась за руки.',rain:true,exit:1125,start:110,kind:'walk'},
+ {name:'ФИНАЛ — РАССВЕТ',bg:'dawn',mission:'Идите вместе к рассвету.',petals:true,exit:1130,start:120,kind:'final'}
+];
+
+let scene=0;
+let player={x:110,y:555,vx:0,dir:1,anim:0};
+let nat={x:720,y:565,follow:false,visible:false,dir:-1};
+let started=false,last=0,transition=0,carX=1030,shake=0,cameraX=0;
+let state={met:false,handHold:false,kissed:false,flowers:false,danced:false,inCar:false,stage:false,kissTimer:0,danceTimer:0,hearts:[],petals:[],spark:[],energy:100};
+const input={left:false,right:false,action:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function dist(a,b){return Math.abs(a-b)}
+function emitHearts(x,y,count=10,kind='heart'){
+  for(let i=0;i<count;i++) state.hearts.push({x,y,vx:(Math.random()*2-1)*50,vy:-40-Math.random()*80,life:1+Math.random()*.9,size:8+Math.random()*12,kind});
+}
+function emitSpark(x,y,count=16){
+  for(let i=0;i<count;i++) state.spark.push({x,y,vx:(Math.random()*2-1)*140,vy:(Math.random()*2-1)*140,life:.4+Math.random()*.6,size:2+Math.random()*4});
+}
+function setMission(t){missionEl.textContent=t;}
+function updateHud(){energyEl.textContent=Math.round(state.energy);energyBar.style.width=`${clamp(state.energy,0,100)}%`;}
+function resetScene(){
+  const s=scenes[scene];
+  player.x=s.start; player.y=555; player.vx=0; player.dir=1; player.anim=0;
+  nat.visible=!!s.natasha||['walk','final','dance','flowers'].includes(s.kind); nat.follow=false; nat.x=s.natasha||260; nat.y=565; nat.dir=-1;
+  state.met=['walk','final'].includes(s.kind); state.handHold=['walk','final'].includes(s.kind); state.kissed=false; state.inCar=false; state.stage=false; state.flowers=false; state.danced=false; state.kissTimer=0; state.danceTimer=0;
+  state.hearts=[]; state.petals=[]; state.spark=[]; state.energy=100; cameraX=0; carX=1030; transition=0;
+  setMission(s.mission); locEl.textContent=`ГЛАВА ${scene+1} — ${s.name}`; updateHud();
+  if(s.kind==='walk'||s.kind==='final'){nat.follow=true; nat.visible=true; nat.x=player.x+74;}
+}
+function startGame(){scene=0;resetScene();started=true;document.getElementById('start').style.display='none';document.getElementById('end').style.display='none';audio.currentTime=0;audio.play().catch(()=>{});last=performance.now();requestAnimationFrame(loop)}
+function nextScene(){scene++; if(scene>=scenes.length){started=false;document.getElementById('end').style.display='flex';audio.volume=.35;return;} resetScene(); flash.style.opacity='1'; setTimeout(()=>flash.style.opacity='0',160);}
+
+function action(){
+  if(!started) return;
+  const s=scenes[scene];
+  if(s.kind==='city'){
+    if(!state.met && dist(player.x,s.natasha)<120){state.met=true; nat.visible=true; nat.follow=false; setMission('Возьми Натаху за руку.'); emitHearts(s.natasha,460,8); return;}
+    if(state.met && !state.handHold && dist(player.x,nat.x)<125){state.handHold=true; nat.follow=true; setMission('Поцелуй Натаху.'); emitHearts((player.x+nat.x)/2,450,10); return;}
+    if(state.handHold && !state.kissed && dist(player.x,nat.x)<105){state.kissed=true; state.kissTimer=2.2; nat.follow=false; setMission('Теперь вместе идите к Запорожцу.'); emitHearts((player.x+nat.x)/2,420,14); return;}
+    if(state.kissed && dist(player.x,s.car)<150){state.inCar=true; transition=3.2; setMission('Поехали вместе.'); emitSpark(s.car,585,18); return;}
+  }
+  if(s.kind==='flowers' && dist(player.x,s.natasha)<120){
+    if(!state.flowers){state.flowers=true; state.met=true; emitHearts((player.x+s.natasha)/2,420,14); setMission('Цветы подарены. Теперь обними Натаху.'); return;}
+    if(state.flowers && !state.handHold){state.handHold=true; state.kissTimer=1.8; nat.follow=true; setMission('Вы вместе. Идите дальше.'); return;}
+    if(state.flowers && state.handHold){transition=1.6; return;}
+  }
+  if(s.kind==='dance' && dist(player.x,s.natasha)<130){
+    if(!state.danced){state.danced=true; state.handHold=true; state.danceTimer=5.2; emitHearts((player.x+nat.x)/2,430,12); setMission('Танцуйте вместе...'); return;}
+  }
+  if(s.kind==='stage' && dist(player.x,s.mic)<130){state.stage=true; transition=5; audio.volume=.72; setMission('Пой свою историю в микрофон.'); return;}
+  if((s.kind==='walk'||s.kind==='final') && dist(player.x,s.exit)<145){transition=1.3; return;}
+  if(s.kind==='army' && dist(player.x,s.exit)<145){emitSpark(s.exit,500,18); transition=1.2; return;}
+  if(['exit','prison'].includes(s.kind) && dist(player.x,s.exit)<145){transition=1.2; return;}
+  if(s.exit && dist(player.x,s.exit)<145){transition=1.2; return;}
+}
+
+function updateParticles(dt){
+  state.hearts = state.hearts.filter(p=>{p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy-=20*dt; return p.life>0;});
+  state.spark = state.spark.filter(p=>{p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.97; p.vy*=0.97; return p.life>0;});
+}
+function updatePrompt(){
+  const s=scenes[scene]; let show=false,txt='';
+  if(s.kind==='city'){
+    if(!state.met&&dist(player.x,s.natasha)<130){show=true;txt='E — встретить Натаху';}
+    else if(state.met&&!state.handHold&&dist(player.x,nat.x)<130){show=true;txt='E — взять за руку';}
+    else if(state.handHold&&!state.kissed&&dist(player.x,nat.x)<110){show=true;txt='E — поцеловать';}
+    else if(state.kissed&&dist(player.x,s.car)<150){show=true;txt='E — сесть в Запорожец';}
+  } else if(s.kind==='flowers'&&dist(player.x,s.natasha)<130){
+    if(!state.flowers) {show=true;txt='E — подарить цветы';}
+    else if(!state.handHold){show=true;txt='E — обнять Натаху';}
+    else {show=true;txt='E — идти дальше';}
+  } else if(s.kind==='dance'&&dist(player.x,s.natasha)<130&&!state.danced){show=true;txt='E — танцевать';}
+  else if(s.kind==='stage'&&dist(player.x,s.mic)<140){show=true;txt='E — к микрофону';}
+  else if(s.exit&&dist(player.x,s.exit)<145){show=true;txt='E — продолжить';}
+  promptEl.textContent=txt; promptEl.classList.toggle('show',show);
+}
+function update(dt){
+  const s=scenes[scene];
+  updateParticles(dt);
+  if(state.kissTimer>0){
+    state.kissTimer-=dt; player.vx=0; player.anim=0; const center=(player.x+nat.x)/2; player.x += (center-42-player.x)*Math.min(1,dt*6); nat.x += (center+42-nat.x)*Math.min(1,dt*6); player.dir=1; nat.dir=-1;
+    if(Math.random()<0.18) emitHearts(center,425,1);
+  } else if(state.danceTimer>0){
+    state.danceTimer-=dt; player.vx=0; player.anim+=dt*6; const center=640; player.x += (center-55-player.x)*Math.min(1,dt*3.2); nat.x += (center+55-nat.x)*Math.min(1,dt*3.2); player.dir=1; nat.dir=-1; if(Math.random()<0.16) emitHearts(center,410,1); if(state.danceTimer<=0){setMission('Танец окончен. Можно идти дальше.'); transition=1.4;}
+  } else if(transition>0){
+    transition-=dt; if(state.inCar){carX+=340*dt; player.x=carX-50; if(nat.visible)nat.x=carX+40;} if(transition<=0) nextScene();
+  } else {
+    let dir=(input.right?1:0)-(input.left?1:0);
+    player.vx=dir*280; player.x+=player.vx*dt; player.x=clamp(player.x,40,1190);
+    if(dir){player.dir=dir; player.anim+=dt*7;} else player.anim=0;
+  }
+  if(nat.visible){
+    if(nat.follow){
+      const handGap=state.handHold?68:108;
+      const target=player.x+(player.dir>0?handGap:-handGap); nat.x += (target-nat.x)*Math.min(1,dt*(state.handHold?6:4.5)); nat.dir=player.dir<0?1:-1;
+    }
+  }
+  if(s.kind==='walk'||s.kind==='final'){state.handHold=true; nat.follow=true; nat.visible=true;}
+  state.energy += (Math.abs(player.vx)>0? -3.5: 5)*dt; state.energy=clamp(state.energy,25,100); updateHud();
+  cameraX += (((player.x-640)*0.06)-cameraX)*Math.min(1,dt*3.2);
+  shake*=0.86; updatePrompt();
+  if(input.action){input.action=false; action();}
+}
+
+function drawBG(s,t){
+  const im=images[s.bg]; if(im&&im.complete) ctx.drawImage(im,0,0,1280,720); else {ctx.fillStyle='#1b2028';ctx.fillRect(0,0,1280,720);} 
+  if(s.rain){ctx.strokeStyle='rgba(190,215,255,.34)';ctx.lineWidth=1;for(let i=0;i<115;i++){const x=(i*83+t*260)%1320-20,y=(i*47+t*510)%760-20;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-8,y+24);ctx.stroke();}}
+  if(s.snow){ctx.fillStyle='rgba(255,255,255,.78)';for(let i=0;i<90;i++){const x=(i*97+t*31)%1280,y=(i*59+t*(18+i%3*9))%720;ctx.beginPath();ctx.arc(x,y,1+(i%3),0,Math.PI*2);ctx.fill();}}
+  if(s.petals){ctx.fillStyle='rgba(255,175,205,.72)';for(let i=0;i<45;i++){const x=(i*71+t*18)%1280,y=(i*47+t*10)%720;ctx.fillRect(x,y,5,3);}}
+  const grad=ctx.createLinearGradient(0,0,0,720); grad.addColorStop(0,'rgba(10,14,20,.08)'); grad.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=grad; ctx.fillRect(0,0,1280,720);
+}
+function drawSprite(key,x,y,h,flip=false,alpha=1,wobble=0){const im=images[key];if(!im||!im.complete)return;const scale=h/im.height,w=im.width*scale;ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y+wobble);if(flip){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h);} else ctx.drawImage(im,-w/2,-h,w,h);ctx.restore();}
+function drawCar(x,y){ctx.save();ctx.translate(x,y);ctx.fillStyle='#214f32';ctx.strokeStyle='#0d1b11';ctx.lineWidth=5;ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(-125,-66,250,86,22); else ctx.rect(-125,-66,250,86); ctx.fill();ctx.stroke();ctx.fillStyle='#1f2f35';ctx.fillRect(-70,-108,145,50);ctx.strokeRect(-70,-108,145,50);ctx.fillStyle='#f8e38b';ctx.beginPath();ctx.arc(-80,22,29,0,Math.PI*2);ctx.arc(80,22,29,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-80,22,18,0,Math.PI*2);ctx.arc(80,22,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(-68,-106,142,48);ctx.restore();}
+function drawRifle(x,y,flip=false){ctx.save();ctx.translate(x,y); if(flip) ctx.scale(-1,1); ctx.rotate(-0.12); ctx.fillStyle='#2c2c2c'; ctx.fillRect(-8,-10,110,12); ctx.fillStyle='#5a4325'; ctx.fillRect(52,-2,34,12); ctx.fillStyle='#1a1a1a'; ctx.fillRect(84,-20,9,35); ctx.fillRect(14,-20,28,8); ctx.restore();}
+function drawBouquet(x,y,scale=1){ctx.save();ctx.translate(x,y); ctx.scale(scale,scale); ctx.fillStyle='#2f7d3d'; ctx.fillRect(-4,0,8,34); const cols=['#ff7099','#ffd34e','#e3a8ff','#ff8b6e']; for(let i=0;i<8;i++){const ang=i/8*Math.PI*2; ctx.beginPath(); ctx.fillStyle=cols[i%cols.length]; ctx.arc(Math.cos(ang)*12,Math.sin(ang)*10,7,0,Math.PI*2); ctx.fill();} ctx.beginPath(); ctx.fillStyle='#fff0d2'; ctx.moveTo(-9,13); ctx.lineTo(9,13); ctx.lineTo(0,28); ctx.closePath(); ctx.fill(); ctx.restore();}
+function drawLinkedHands(px,py,nx,ny){ctx.save();ctx.strokeStyle='rgba(255,230,190,.7)'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(nx,ny); ctx.stroke(); ctx.restore();}
+function drawHeartShape(x,y,size,alpha=1){ctx.save();ctx.translate(x,y);ctx.scale(size/16,size/16);ctx.globalAlpha=alpha;ctx.fillStyle='#ff6297';ctx.beginPath();ctx.moveTo(0,6);ctx.bezierCurveTo(0,-2,-12,-2,-12,6);ctx.bezierCurveTo(-12,13,-4,16,0,21);ctx.bezierCurveTo(4,16,12,13,12,6);ctx.bezierCurveTo(12,-2,0,-2,0,6);ctx.fill();ctx.restore();}
+function drawParticles(){for(const p of state.spark){ctx.fillStyle=`rgba(255,220,120,${clamp(p.life,0,1)})`;ctx.fillRect(p.x,p.y,p.size,p.size);} for(const p of state.hearts){drawHeartShape(p.x,p.y,p.size,clamp(p.life,0,1));}}
+
+function drawWorld(t){
+  const s=scenes[scene];
+  ctx.save(); ctx.translate(-cameraX+shake,0);
+  drawBG(s,t);
+  const ground=620; ctx.fillStyle='rgba(0,0,0,.15)'; ctx.fillRect(-100,ground,1480,110);
+
+  // scene props
+  if(s.kind==='city'){ drawCar(carX,600); }
+  if(s.kind==='flowers'){ drawBouquet(470,600,1.15); }
+  if(s.kind==='stage'){ ctx.fillStyle='#222';ctx.fillRect(s.mic-3,410,6,180);ctx.beginPath();ctx.arc(s.mic,402,14,0,Math.PI*2);ctx.fillStyle='#555';ctx.fill(); }
+  if(s.exit){ ctx.save();ctx.translate(s.exit,510);ctx.rotate(Math.PI/4);ctx.fillStyle='#ffc400';ctx.fillRect(-10,-10,20,20);ctx.restore(); }
+
+  // special cutscene positions
+  if(state.inCar){
+    drawCar(carX,600);
+    drawSprite('m4',carX-45,548,190,false,1,Math.sin(t*8)*1.5);
+    drawSprite('f4',carX+40,555,165,true,1,Math.sin(t*8+1)*1.5);
+  } else {
+    let pKey='m0', fKey='f0';
+    const moving=Math.abs(player.vx)>2;
+    if(state.stage) pKey='m5';
+    else if(state.danceTimer>0) {pKey='m5'; fKey='f5';}
+    else if(state.kissTimer>0) {pKey='m3'; fKey='f3';}
+    else pKey=moving?('m'+(1+(Math.floor(player.anim)%2))):'m0';
+    if(!state.kissTimer && !state.danceTimer && nat.follow) fKey=state.handHold?('f'+(1+(Math.floor(player.anim+.7)%2))):'f0';
+
+    // Natasha static before interactions
+    if(s.kind==='city' && !state.met){ drawSprite('f0',s.natasha,595,260,false,1,Math.sin(t*2)*2); }
+    else if((s.kind==='flowers'||s.kind==='dance') && !state.handHold){ drawSprite(state.danceTimer>0?'f5':'f0',s.natasha,595,260,false,1,Math.sin(t*2)*2); }
+    else if(nat.visible){ drawSprite(fKey,nat.x,610,(state.danceTimer>0?280:270), nat.dir<0,1,Math.sin(t*6)*1.5); }
+
+    drawSprite(pKey,player.x,605,(state.stage?310:(state.danceTimer>0?315:300)),player.dir<0,1,Math.sin(t*6+1)*1.5);
+
+    if(s.kind==='army'){ drawRifle(player.x+(player.dir<0?-40:35),530,player.dir<0); }
+    if(s.kind==='walk'){ drawRifle(player.x+(player.dir<0?-40:35),530,player.dir<0); }
+    if(state.flowers && (s.kind==='flowers' || s.kind==='dance')) drawBouquet(player.x+(player.dir<0?-22:22),545,.85);
+    if(state.handHold && nat.visible && !state.kissTimer && !state.danceTimer && !state.inCar){ drawLinkedHands(player.x+(player.dir<0?-36:36),510,nat.x+(player.dir<0?34:-34),510); }
+  }
+
+  // scene overlays
+  if(s.kind==='city' && state.met && !state.kissed && !state.inCar){ ctx.fillStyle='rgba(255,120,170,.1)'; ctx.fillRect(0,0,1280,720); }
+  if(state.kissTimer>0){ ctx.fillStyle='rgba(255,120,170,.08)'; ctx.fillRect(0,0,1280,720); }
+  if(state.danceTimer>0){ ctx.fillStyle=`rgba(255,210,110,${0.06+0.04*Math.sin(t*6)})`; ctx.fillRect(0,0,1280,720); }
+  if(state.stage){ ctx.fillStyle=`rgba(255,200,80,${.09+.08*Math.sin(t*6)})`; ctx.fillRect(0,0,1280,720); }
+  drawParticles();
+  ctx.restore();
+}
+
+function loop(now){
+  if(!started) return; const dt=Math.min(.035,(now-last)/1000||0); last=now; update(dt); ctx.clearRect(0,0,1280,720); drawWorld(now/1000); requestAnimationFrame(loop);
+}
+window.addEventListener('keydown',e=>{if(['ArrowLeft','a','A'].includes(e.key))input.left=true;if(['ArrowRight','d','D'].includes(e.key))input.right=true;if(['e','E',' '].includes(e.key)){input.action=true;e.preventDefault()}if(['m','M'].includes(e.key)){audio.paused?audio.play():audio.pause()}});
+window.addEventListener('keyup',e=>{if(['ArrowLeft','a','A'].includes(e.key))input.left=false;if(['ArrowRight','d','D'].includes(e.key))input.right=false});
+document.querySelectorAll('.btn').forEach(b=>{const k=b.dataset.key;const down=e=>{e.preventDefault();b.classList.add('on');if(k==='left'||k==='right')input[k]=true;else if(k==='action')input.action=true;else if(k==='music'){audio.paused?audio.play():audio.pause()}};const up=e=>{e.preventDefault();b.classList.remove('on');if(k==='left'||k==='right')input[k]=false};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up)});
+document.getElementById('startBtn').onclick=startGame; document.getElementById('again').onclick=()=>{document.getElementById('end').style.display='none'; startGame();};
+const preview=()=>{if(images.school?.complete){ctx.drawImage(images.school,0,0,1280,720)}else requestAnimationFrame(preview)}; preview();
+</script></body></html>
