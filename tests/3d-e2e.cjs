@@ -153,12 +153,12 @@ const {resolve}=require('node:path');
     console.log('MEMORY_SOAK',JSON.stringify({before:mem0,after:mem1}));console.log('RENDER_PROFILE',JSON.stringify(mem1));
     assert.ok(mem1.geometries<mem0.geometries*1.8+120);assert.ok(mem1.textures<mem0.textures+30);
 
-    // Final production sweep: rebuild every level, cover all 30 location/layout combinations,
+    // Final production sweep: rebuild every level, cover all 35 location/layout combinations,
     // and verify that repeated teardown/rebuild does not strand NPCs inside colliders or leak badly.
     const sweep0=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     await page.evaluate(()=>window.__kototanki3d.start());
     const places=new Set(),chapters=new Set(),landmarks=new Set(),worlds=[];
-    for(let level=1;level<=30;level++){
+    for(let level=1;level<=35;level++){
       if(level>1)await page.evaluate(()=>window.__kototanki3d.next());
       await page.waitForTimeout(70);
       const snap=await page.evaluate(()=>({
@@ -174,14 +174,24 @@ const {resolve}=require('node:path');
       assert.equal(snap.diag.blockedAllies,0);
       assert.ok(Number.isFinite(snap.player.x)&&Number.isFinite(snap.player.z));
       assert.ok(Math.abs(snap.player.x)<snap.world.halfW&&snap.player.z>snap.world.minZ&&snap.player.z<snap.world.maxZ);
-      if(level%5===0)assert.ok(snap.variants.includes('alpha'));
+      if(level%5===0&&level<35)assert.ok(snap.variants.includes('alpha'));
+      if(level===35)assert.ok(snap.variants.includes('nightmare'));
       places.add(snap.place);chapters.add(snap.world.chapter);landmarks.add(snap.world.landmark);worlds.push(snap.world);
     }
-    assert.equal(places.size,30);assert.equal(chapters.size,6);assert.equal(landmarks.size,6);
+    assert.equal(places.size,35);assert.equal(chapters.size,7);assert.equal(landmarks.size,7);
     assert.ok(worlds.every(w=>w.width===100&&w.depth===100));
-    console.log('WORLD_PROGRESSION',JSON.stringify({chapters:[...chapters],landmarks:[...landmarks],first:worlds[0],last:worlds[29]}));
+    assert.equal(worlds[30].kind,'halloween');assert.equal(worlds[34].chapter,'ТУМАННЫЙ ХЭЛЛОУИН');
+    await page.evaluate(()=>window.__kototanki3d.buildLevel?.(31));
+    console.log('WORLD_PROGRESSION',JSON.stringify({chapters:[...chapters],landmarks:[...landmarks],first:worlds[0],last:worlds[34]}));
     const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
+    await page.evaluate(()=>window.__kototanki3d.next());
+    // Return directly to Halloween through public next() chain if needed.
+    while((await page.evaluate(()=>window.__kototanki3d.state.level))<31)await page.evaluate(()=>window.__kototanki3d.next());
+    const halloweenWorld=await page.evaluate(()=>window.__kototanki3d.world);assert.equal(halloweenWorld.kind,'halloween');
+    const goreCount=await page.evaluate(()=>window.__kototanki3d.spawnGore());assert.ok(goreCount>0&&goreCount<=44);
+    await page.waitForTimeout(2400);assert.equal(await page.evaluate(()=>window.__kototanki3d.action.goreDebris),0);
+    console.log('HALLOWEEN_PROFILE',JSON.stringify({world:halloweenWorld,goreCount}));
     assert.ok(sweep1.geometries<2500);assert.ok(sweep1.textures<150);
 
     // Leak check uses repeated rebuilds of the same level so GPU lazy-allocation/culling
@@ -193,7 +203,7 @@ const {resolve}=require('node:path');
     console.log('SAME_LEVEL_LEAK_PROFILE',JSON.stringify({before:same0,after:same1}));
     assert.ok(same1.geometries<same0.geometries+320);assert.ok(same1.textures<same0.textures+8);
 
-    for(let i=2;i<=30;i++){await page.evaluate(()=>window.__kototanki3d.next());await page.waitForTimeout(35)}
+    for(let i=2;i<=35;i++){await page.evaluate(()=>window.__kototanki3d.next());await page.waitForTimeout(35)}
     await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-level30-portrait.png')});
     await page.setViewportSize({width:844,height:390});await page.waitForTimeout(250);
     assert.equal(await page.locator('#moveStick').isVisible(),true);assert.equal(await page.locator('#aimStick').isVisible(),true);
