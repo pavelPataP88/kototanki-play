@@ -891,7 +891,7 @@ function addGardenProps(rng,n){
 }
 function buildLevel(n){
   clearWorld();const zone=Math.min(6,Math.floor((n-1)/5)),loc=locations[zone],rng=seedRng(1207+n*9137);arena=zoneSpecs[zone];
-  worldMeta={zone,chapter:arena.chapter,landmark:arena.landmark,halfW:arena.halfW,minZ:arena.minZ,maxZ:arena.maxZ};
+  worldMeta={zone,chapter:arena.chapter,landmark:arena.landmark,kind:loc.kind,halfW:arena.halfW,minZ:arena.minZ,maxZ:arena.maxZ};
   scene.background.setHex(loc.sky);scene.fog.color.setHex(loc.fog);scene.fog.near=zone===6?12:40;scene.fog.far=zone===6?72:115;
   hemi.color.setHex(zone===6?0x8992a0:0xe9f9ff);hemi.groundColor.setHex(loc.ground);hemi.intensity=zone===6?.72:1.35;
   sun.color.setHex(zone===6?0xc5c9d6:0xfff0c2);sun.intensity=zone===6?1.05:3.9;fill.color.setHex(zone===6?0x6f7fa8:0xa7d8ff);fill.intensity=zone===6?.34:.72;renderer.toneMappingExposure=zone===6?.86:1.24;
