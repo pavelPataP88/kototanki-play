@@ -694,7 +694,7 @@ function spawnHalloweenGore(pos,intensity=1){
     else if(kind===1||kind===2){m=mesh(goreToothGeo,goreToothMat);m.scale.setScalar(1.20+Math.random()*.75)}
     else{m=makeSkullProp(.62);m.scale.setScalar(.75+Math.random()*.28)}
     m.position.copy(pos);m.position.y+=1.0+Math.random()*1.0;m.castShadow=false;noShadow(m);scene.add(m);
-    const life=1.45+Math.random()*1.0;goreDebris.push({mesh:m,vx:rand(-5.6,5.6),vy:rand(4.4,9.4),vz:rand(-5.6,5.6),spin:rand(-11,11),life,expires:performance.now()+life*1000})
+    const life=1.15+Math.random()*.55;goreDebris.push({mesh:m,vx:rand(-5.6,5.6),vy:rand(4.4,9.4),vz:rand(-5.6,5.6),spin:rand(-11,11),life,expires:performance.now()+life*1000})
   }
   while(goreDebris.length>(mobilePerf?32:48)){const d=goreDebris.shift();retire(d.mesh)}
 }
