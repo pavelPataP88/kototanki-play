@@ -115,6 +115,16 @@ const {resolve}=require('node:path');
     await page.evaluate(()=>window.__kototanki3d.bomb());
     assert.equal(await page.evaluate(()=>window.__kototanki3d.state.bombs),bombsBefore-1);
 
+    const garageBeforeTune=await page.evaluate(()=>window.__kototanki3d.garage),upgradeSumBefore=Object.values(garageBeforeTune.upgrades).reduce((a,b)=>a+b,0);
+    await page.evaluate(()=>window.__kototanki3d.completeLevel());
+    await page.waitForFunction(()=>document.querySelectorAll('#upgrades button').length===3&&document.querySelector('#overlay').style.display==='flex',{timeout:4000});
+    assert.ok((await page.locator('#subtitle').textContent()).includes('Постоянная модернизация'));
+    await page.locator('#upgrades button').first().click();
+    await page.waitForFunction(()=>window.__kototanki3d.state.playing&&window.__kototanki3d.state.level===2,{timeout:5000});
+    const garageAfterTune=await page.evaluate(()=>window.__kototanki3d.garage),upgradeSumAfter=Object.values(garageAfterTune.upgrades).reduce((a,b)=>a+b,0);
+    assert.equal(garageAfterTune.wavesWon,garageBeforeTune.wavesWon+1);assert.ok(garageAfterTune.xp>garageBeforeTune.xp);assert.equal(upgradeSumAfter,upgradeSumBefore+1);
+    console.log('GARAGE_LEVEL_FLOW',JSON.stringify({before:garageBeforeTune,after:garageAfterTune}));
+
     const place1=await page.locator('#place').textContent();
     await page.evaluate(()=>window.__kototanki3d.next());
     const place2=await page.locator('#place').textContent();
