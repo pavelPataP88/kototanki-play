@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ВЯСНА — игра</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07090d;color:#fff;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block;width:100vw;height:100vh;background:#10151d}
+#hud{position:fixed;left:14px;right:14px;top:12px;display:flex;justify-content:space-between;pointer-events:none}
+.box{background:#0a0e15cc;border:1px solid #ffffff2b;border-radius:12px;padding:10px 13px;backdrop-filter:blur(6px);box-shadow:0 6px 20px #0008}
+#chapter{color:#ffd34e;font-weight:900;font-size:13px}#mission{font-weight:700;margin-top:3px}
+#prompt{position:fixed;left:50%;bottom:112px;transform:translateX(-50%);background:#090d14e8;border:1px solid #ffffff35;border-radius:10px;padding:10px 14px;font-weight:900;opacity:0;transition:.12s;pointer-events:none}
+#prompt.show{opacity:1}
+#ctrl{position:fixed;left:16px;right:16px;bottom:14px;display:flex;justify-content:space-between;align-items:end}
+.grp{display:flex;gap:10px}.btn{width:66px;height:66px;border-radius:50%;border:1px solid #ffffff3a;background:#111722c9;color:#fff;font-size:26px;font-weight:900;display:grid;place-items:center;user-select:none;-webkit-user-select:none;box-shadow:0 8px 20px #0008}
+.btn:active{transform:scale(.93);background:#ffc400;color:#111}.act{width:86px;height:86px;font-size:15px;background:#ffc400;color:#111}.shoot{font-size:22px}
+.screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at 50% 35%,#263448,#07090d 70%);padding:24px}
+.card{max-width:660px}.title{font-size:clamp(50px,11vw,100px);margin:0;font-weight:1000;letter-spacing:.08em}.sub{font-size:17px;opacity:.78;line-height:1.45;margin:12px 0 24px}
+.start{border:0;border-radius:14px;background:#ffc400;color:#111;font-size:21px;font-weight:1000;padding:16px 28px}
+#end{display:none}.rotate{display:none;position:fixed;inset:0;z-index:30;background:#06080c;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:21px}
+@media(orientation:portrait) and (max-width:900px){.rotate{display:flex}}
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<div id="hud"><div class="box"><div id="chapter">ГЛАВА 1</div><div id="mission">...</div></div><div class="box">❤ <span id="hearts">0</span></div></div>
+<div id="prompt">ДЕЙСТВИЕ</div>
+<div id="ctrl">
+  <div class="grp"><div class="btn" id="L">◀</div><div class="btn" id="R">▶</div></div>
+  <div class="grp"><div class="btn shoot" id="S">✦</div><div class="btn act" id="A">ДЕЙСТВИЕ</div></div>
+</div>
+<div id="start" class="screen"><div class="card"><h1 class="title">ВЯСНА</h1><div class="sub">Ты и Натаха. История как игра: встреча, Запорожец, армия, возвращение, цветы, поцелуй, танец и ночной город.</div><button class="start" id="go">НАЧАТЬ ИГРУ</button></div></div>
+<div id="end" class="screen"><div class="card"><h1 class="title">И БУДЕМ ВЕСНОЙ</h1><div class="sub">Вы прошли историю вместе.</div><button class="start" id="again">ЕЩЁ РАЗ</button></div></div>
+<div class="rotate">Поверни планшет горизонтально.</div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d'),ch=document.getElementById('chapter'),mi=document.getElementById('mission'),pr=document.getElementById('prompt'),hs=document.getElementById('hearts');
+const W=1280,H=720,G=600;
+let keys={l:false,r:false},running=false,last=0,scene=0,score=0,particles=[],shots=[];
+let p={x:120,v:0,dir:1,a:0},n={x:720,follow:false,visible:false};
+let st={met:false,hand:false,kiss:false,flowers:false,dance:false,armed:false,car:false,timer:0};
+const SC=[
+ {name:'ШКОЛА НА МИНСКОЙ',mission:'Дойди до выхода из школьного двора.',kind:'exit',target:1120,sky:'#263746',ground:'#273039',rain:1},
+ {name:'ВСТРЕЧА',mission:'Найди Натаху.',kind:'meet',nat:720,car:1080,sky:'#253342',ground:'#24292f',rain:1},
+ {name:'ЗАПОРОЖЕЦ',mission:'Садитесь вместе и уезжайте.',kind:'car',car:760,sky:'#192938',ground:'#20262c',rain:1},
+ {name:'АРМИЯ — ЗИМА',mission:'Иди через плац. Автомат уже с тобой.',kind:'army',target:1120,sky:'#aeb9c4',ground:'#d7dee4',snow:1},
+ {name:'БЕТОННЫЙ ПЛЕН',mission:'Доберись до выхода.',kind:'exit',target:1120,sky:'#272b31',ground:'#191c20'},
+ {name:'ВОЗВРАЩЕНИЕ',mission:'Подойди к Натахе и подари цветы.',kind:'flowers',nat:770,sky:'#403329',ground:'#2a2522'},
+ {name:'ТАНЕЦ',mission:'Пригласи Натаху на танец.',kind:'dance',nat:700,sky:'#35253f',ground:'#251d2a'},
+ {name:'ОТКРЫТЫЙ МИКРОФОН',mission:'Подойди к микрофону.',kind:'stage',target:1080,sky:'#151928',ground:'#161820'},
+ {name:'БОННИ И КЛАЙД',mission:'Идите вместе через ночной город.',kind:'walk',target:1130,sky:'#151e2a',ground:'#1c2027',rain:1},
+ {name:'РАССВЕТ',mission:'Дойдите вместе до рассвета.',kind:'final',target:1130,sky:'#b76f59',ground:'#45392f',petals:1}
+];
+function reset(){
+ const s=SC[scene];p.x=120;p.v=0;p.dir=1;p.a=0;n.x=s.nat||260;n.visible=!!s.nat||['walk','final','car'].includes(s.kind);n.follow=['walk','final'].includes(s.kind);
+ st={met:['walk','final','car'].includes(s.kind),hand:['walk','final','car'].includes(s.kind),kiss:false,flowers:false,dance:false,armed:s.kind==='army'||s.kind==='walk',car:false,timer:0};
+ ch.textContent='ГЛАВА '+(scene+1)+' — '+s.name;mi.textContent=s.mission;pr.classList.remove('show');
+}
+function next(){scene++;if(scene>=SC.length){running=false;document.getElementById('end').style.display='flex';return}reset()}
+function heart(X,Y){for(let i=0;i<10;i++)particles.push({x:X,y:Y,vx:(Math.random()-.5)*90,vy:-80-Math.random()*90,t:1+Math.random(),z:5+Math.random()*8});score+=10;hs.textContent=score}
+function near(a,b,d=120){return Math.abs(a-b)<d}
+function act(){
+ if(!running||st.timer>0)return;const s=SC[scene];
+ if(s.kind==='exit'&&near(p.x,s.target,145)){next();return}
+ if(s.kind==='meet'){
+   if(!st.met&&near(p.x,s.nat,130)){st.met=true;n.visible=true;n.x=s.nat;mi.textContent='Возьми Натаху за руку.';heart(n.x,470);return}
+   if(st.met&&!st.hand&&near(p.x,n.x,130)){st.hand=true;n.follow=true;mi.textContent='Поцелуй Натаху.';heart((p.x+n.x)/2,455);return}
+   if(st.hand&&!st.kiss&&near(p.x,n.x,105)){st.kiss=true;st.timer=2.0;n.follow=false;mi.textContent='Теперь вместе к Запорожцу.';heart((p.x+n.x)/2,425);return}
+   if(st.kiss&&near(p.x,s.car,160)){next();return}
+ }
+ if(s.kind==='car'&&near(p.x,s.car,180)){st.car=true;st.timer=2.3;return}
+ if(s.kind==='army'&&near(p.x,s.target,150)){next();return}
+ if(s.kind==='flowers'&&near(p.x,s.nat,135)){
+   if(!st.flowers){st.flowers=true;st.met=true;mi.textContent='Обними Натаху.';heart((p.x+s.nat)/2,440);return}
+   st.hand=true;n.follow=true;heart((p.x+s.nat)/2,430);st.timer=1.5;return
+ }
+ if(s.kind==='dance'&&near(p.x,s.nat,140)){st.dance=true;st.timer=5;heart((p.x+s.nat)/2,420);return}
+ if(s.kind==='stage'&&near(p.x,s.target,150)){st.timer=3.4;return}
+ if((s.kind==='walk'||s.kind==='final')&&near(p.x,s.target,150)){next();return}
+}
+function shoot(){
+ if(!running||!st.armed)return;shots.push({x:p.x+(p.dir>0?42:-42),y:505,v:p.dir*700,t:.8});for(let i=0;i<7;i++)particles.push({x:p.x+(p.dir>0?55:-55),y:505,vx:p.dir*(80+Math.random()*100),vy:(Math.random()-.5)*80,t:.35,z:2+Math.random()*4,spark:1})
+}
+function upd(dt){
+ const s=SC[scene];
+ if(st.timer>0){st.timer-=dt;if(st.dance){p.a+=dt*10;n.x=700+Math.sin(performance.now()/230)*70;p.x=580+Math.sin(performance.now()/230+Math.PI)*70}if(st.car)p.x+=240*dt;if(st.timer<=0){if(s.kind==='car'||s.kind==='flowers'||s.kind==='dance'||s.kind==='stage')next()} }
+ else{
+   let d=(keys.r?1:0)-(keys.l?1:0);p.v=d*280;p.x=Math.max(45,Math.min(1190,p.x+p.v*dt));if(d){p.dir=d;p.a+=dt*8}
+ }
+ if(n.follow){let target=p.x+(p.dir>0?72:-72);n.x+=(target-n.x)*Math.min(1,dt*6)}
+ particles=particles.filter(q=>{q.t-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=60*dt;return q.t>0});
+ shots=shots.filter(q=>{q.t-=dt;q.x+=q.v*dt;return q.t>0&&q.x>-50&&q.x<1330});
+ let txt='';
+ if(s.kind==='exit'&&near(p.x,s.target,145))txt='ДЕЙСТВИЕ — продолжить';
+ if(s.kind==='meet'){
+  if(!st.met&&near(p.x,s.nat,130))txt='ДЕЙСТВИЕ — встретить Натаху';
+  else if(st.met&&!st.hand&&near(p.x,n.x,130))txt='ДЕЙСТВИЕ — взять за руку';
+  else if(st.hand&&!st.kiss&&near(p.x,n.x,110))txt='ДЕЙСТВИЕ — поцеловать';
+  else if(st.kiss&&near(p.x,s.car,160))txt='ДЕЙСТВИЕ — к Запорожцу';
+ }
+ if(s.kind==='car'&&near(p.x,s.car,180))txt='ДЕЙСТВИЕ — сесть в машину';
+ if(s.kind==='army'&&near(p.x,s.target,150))txt='ДЕЙСТВИЕ — дальше';
+ if(s.kind==='flowers'&&near(p.x,s.nat,135))txt=!st.flowers?'ДЕЙСТВИЕ — подарить цветы':'ДЕЙСТВИЕ — обнять';
+ if(s.kind==='dance'&&near(p.x,s.nat,140))txt='ДЕЙСТВИЕ — танцевать';
+ if(s.kind==='stage'&&near(p.x,s.target,150))txt='ДЕЙСТВИЕ — к микрофону';
+ if((s.kind==='walk'||s.kind==='final')&&near(p.x,s.target,150))txt='ДЕЙСТВИЕ — продолжить';
+ pr.textContent=txt;pr.classList.toggle('show',!!txt)
+}
+function bg(s,t){
+ let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,s.sky);g.addColorStop(.7,s.ground);g.addColorStop(1,'#0d1015');x.fillStyle=g;x.fillRect(0,0,W,H);
+ // skyline
+ for(let i=0;i<18;i++){let bx=i*85-20,bh=100+(i*37)%180;x.fillStyle=i%2?'#20262d':'#252c34';x.fillRect(bx,G-bh,72,bh);for(let yy=G-bh+20;yy<G-20;yy+=25)for(let xx=bx+12;xx<bx+60;xx+=22){if((i+xx+yy)%3){x.fillStyle='#e7b85c88';x.fillRect(xx,yy,8,11)}}}
+ if(s.kind==='home'||s.kind==='flowers'||s.kind==='dance'){x.fillStyle='#6f4f3a';x.fillRect(130,250,1020,350);x.fillStyle='#a97b55';x.fillRect(170,290,940,270)}
+ if(s.kind==='prison'||s.name.includes('ПЛЕН')){x.strokeStyle='#111';x.lineWidth=12;for(let bx=100;bx<1200;bx+=90){x.beginPath();x.moveTo(bx,260);x.lineTo(bx,610);x.stroke()}}
+ if(s.rain){x.strokeStyle='#bcd8ff55';x.lineWidth=1;for(let i=0;i<100;i++){let xx=(i*83+t*300)%1320-20,yy=(i*47+t*500)%760-20;x.beginPath();x.moveTo(xx,yy);x.lineTo(xx-7,yy+22);x.stroke()}}
+ if(s.snow){x.fillStyle='#fff';for(let i=0;i<80;i++){let xx=(i*91+t*27)%1280,yy=(i*59+t*(16+i%3*8))%720;x.globalAlpha=.65;x.beginPath();x.arc(xx,yy,1+i%3,0,7);x.fill();x.globalAlpha=1}}
+ if(s.petals){x.fillStyle='#ff9fbb';for(let i=0;i<45;i++){let xx=(i*71+t*18)%1280,yy=(i*47+t*10)%720;x.fillRect(xx,yy,5,3)}}
+ x.fillStyle='#171a20';x.fillRect(0,G,1280,120)
+}
+function person(X,Y,dir,woman=false,move=false,pose=''){
+ x.save();x.translate(X,Y);if(dir<0)x.scale(-1,1);
+ let bob=move?Math.sin(performance.now()/90)*4:0;
+ x.translate(0,bob);
+ // legs
+ x.strokeStyle=woman?'#202128':'#161719';x.lineWidth=17;x.lineCap='round';
+ x.beginPath();x.moveTo(-13,-95);x.lineTo(-18+(move?Math.sin(performance.now()/95)*14:0),0);x.moveTo(13,-95);x.lineTo(18-(move?Math.sin(performance.now()/95)*14:0),0);x.stroke();
+ // body
+ x.fillStyle=woman?'#17181c':'#11141a';x.beginPath();x.roundRect(-38,-200,76,112,22);x.fill();
+ // arms
+ x.strokeStyle=woman?'#ddd0c3':'#c8b29c';x.lineWidth=13;
+ x.beginPath();x.moveTo(-30,-175);x.lineTo(-48,-115);x.moveTo(30,-175);x.lineTo(48,-115);x.stroke();
+ // head
+ x.fillStyle=woman?'#ead7c7':'#d1b49b';x.beginPath();x.arc(0,-235,34,0,7);x.fill();
+ if(woman){x.fillStyle='#090a0d';x.beginPath();x.arc(0,-243,39,Math.PI,Math.PI*2);x.fill();x.fillRect(-38,-244,12,78);x.fillRect(27,-244,12,82)}
+ else{x.fillStyle='#17191c';x.beginPath();x.arc(0,-250,34,Math.PI,Math.PI*2);x.fill()}
+ x.fillStyle='#111';x.fillRect(10,-240,4,3);
+ if(pose==='rifle'){x.strokeStyle='#242424';x.lineWidth=9;x.beginPath();x.moveTo(20,-160);x.lineTo(92,-120);x.stroke();x.fillStyle='#563d27';x.fillRect(52,-143,34,8)}
+ x.restore()
+}
+function car(X,Y){
+ x.save();x.translate(X,Y);x.fillStyle='#295b37';x.strokeStyle='#0b160f';x.lineWidth=5;x.beginPath();x.roundRect(-130,-70,260,88,20);x.fill();x.stroke();x.fillStyle='#223039';x.fillRect(-75,-112,152,48);x.strokeRect(-75,-112,152,48);
+ x.fillStyle='#e7d583';for(const q of [-82,82]){x.beginPath();x.arc(q,20,28,0,7);x.fill();x.fillStyle='#111';x.beginPath();x.arc(q,20,17,0,7);x.fill();x.fillStyle='#e7d583'}x.restore()
+}
+function bouquet(X,Y){x.save();x.translate(X,Y);x.fillStyle='#2f7d3d';x.fillRect(-3,0,6,33);for(let i=0;i<8;i++){let a=i*Math.PI/4;x.fillStyle=['#ff7198','#ffd34e','#dca6ff','#ff916f'][i%4];x.beginPath();x.arc(Math.cos(a)*14,Math.sin(a)*11,7,0,7);x.fill()}x.restore()}
+function draw(t){
+ const s=SC[scene];bg(s,t);
+ if(s.kind==='meet')car(s.car,590);
+ if(s.kind==='car')car(s.car,590);
+ if(s.kind==='stage'){x.fillStyle='#777';x.fillRect(s.target-3,410,6,180);x.beginPath();x.arc(s.target,402,14,0,7);x.fill()}
+ if(s.target){x.save();x.translate(s.target,505);x.rotate(Math.PI/4);x.fillStyle='#ffc400';x.fillRect(-10,-10,20,20);x.restore()}
+ if(s.kind==='flowers'&&!st.flowers)bouquet(520,585);
+ if(s.kind==='meet'&&!st.met)person(s.nat,595,-1,true,false);
+ else if((s.kind==='flowers'||s.kind==='dance')&&!n.follow)person(s.nat,595,-1,true,false);
+ if(n.visible&&(n.follow||st.met||['walk','final','car'].includes(s.kind)))person(n.x,600,-p.dir,true,Math.abs(p.v)>5||n.follow,st.dance?'dance':'');
+ person(p.x,600,p.dir,false,Math.abs(p.v)>5,st.armed?'rifle':'');
+ if(st.flowers&&(s.kind==='flowers'||s.kind==='dance'))bouquet(p.x+(p.dir>0?32:-32),510);
+ if(st.hand&&n.visible){x.strokeStyle='#f2d6bd';x.lineWidth=6;x.beginPath();x.moveTo(p.x+(p.dir>0?38:-38),505);x.lineTo(n.x+(p.dir>0?-38:38),505);x.stroke()}
+ for(const q of shots){x.strokeStyle='#ffd76a';x.lineWidth=4;x.beginPath();x.moveTo(q.x,q.y);x.lineTo(q.x-q.v*.025,q.y);x.stroke()}
+ for(const q of particles){if(q.spark){x.fillStyle='#ffd86a';x.fillRect(q.x,q.y,q.z,q.z)}else{x.fillStyle='#ff6699';x.globalAlpha=Math.max(0,q.t);x.beginPath();x.arc(q.x,q.y,q.z,0,7);x.fill();x.globalAlpha=1}}
+ if(st.kiss&&st.timer>0){x.fillStyle='#ff669944';x.fillRect(0,0,W,H)}
+ if(st.dance&&st.timer>0){x.fillStyle='#ffd86a22';x.fillRect(0,0,W,H)}
+}
+function loop(now){if(!running)return;let dt=Math.min(.035,(now-last)/1000||0);last=now;upd(dt);x.clearRect(0,0,W,H);draw(now/1000);requestAnimationFrame(loop)}
+function start(){scene=0;score=0;hs.textContent=0;reset();running=true;document.getElementById('start').style.display='none';document.getElementById('end').style.display='none';last=performance.now();requestAnimationFrame(loop)}
+function bind(id,k){let e=document.getElementById(id);e.onpointerdown=q=>{q.preventDefault();keys[k]=true};e.onpointerup=e.onpointercancel=q=>{q.preventDefault();keys[k]=false}}
+bind('L','l');bind('R','r');document.getElementById('A').onpointerdown=e=>{e.preventDefault();act()};document.getElementById('S').onpointerdown=e=>{e.preventDefault();shoot()};
+addEventListener('keydown',e=>{if(['ArrowLeft','a','A'].includes(e.key))keys.l=true;if(['ArrowRight','d','D'].includes(e.key))keys.r=true;if(['e','E',' '].includes(e.key)){e.preventDefault();act()}if(['f','F'].includes(e.key))shoot()});
+addEventListener('keyup',e=>{if(['ArrowLeft','a','A'].includes(e.key))keys.l=false;if(['ArrowRight','d','D'].includes(e.key))keys.r=false});
+document.getElementById('go').onclick=start;document.getElementById('again').onclick=start;
+reset();draw(0);
+</script>
+</body></html>
