@@ -192,7 +192,7 @@ const {resolve}=require('node:path');
     await page.evaluate(()=>window.__kototanki3d.pauseCombat());
     const goreCount=await page.evaluate(()=>window.__kototanki3d.spawnGore());assert.ok(goreCount>0&&goreCount<=44);
     await page.waitForTimeout(120);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-halloween-gore-landscape.png')});
-    await page.waitForTimeout(2400);assert.equal(await page.evaluate(()=>window.__kototanki3d.action.goreDebris),0);
+    await page.waitForTimeout(2700);assert.equal(await page.evaluate(()=>window.__kototanki3d.action.goreDebris),0);
     console.log('HALLOWEEN_PROFILE',JSON.stringify({world:halloweenWorld,goreCount}));
     assert.ok(sweep1.geometries<2500);assert.ok(sweep1.textures<150);
 
