@@ -692,13 +692,13 @@ function spawnHalloweenGore(pos,intensity=1){
     else if(kind===1||kind===2)m=mesh(goreToothGeo,goreToothMat);
     else m=mesh(goreSkullGeo,goreSkullMat);
     m.position.copy(pos);m.position.y+=1.0+Math.random()*.8;m.scale.setScalar(kind===3?.75:.85+Math.random()*.45);m.castShadow=false;scene.add(m);
-    goreDebris.push({mesh:m,vx:rand(-4.6,4.6),vy:rand(3.6,8.0),vz:rand(-4.6,4.6),spin:rand(-10,10),life:1.2+Math.random()*1.0})
+    const life=1.2+Math.random()*1.0;goreDebris.push({mesh:m,vx:rand(-4.6,4.6),vy:rand(3.6,8.0),vz:rand(-4.6,4.6),spin:rand(-10,10),life,expires:performance.now()+life*1000})
   }
   while(goreDebris.length>(mobilePerf?28:44)){const d=goreDebris.shift();retire(d.mesh)}
 }
 function updateHalloweenDebris(dt){
   for(let i=goreDebris.length-1;i>=0;i--){const d=goreDebris[i],m=d.mesh;d.vy-=11.5*dt;m.position.x+=d.vx*dt;m.position.y+=d.vy*dt;m.position.z+=d.vz*dt;m.rotation.x+=d.spin*dt;m.rotation.z+=d.spin*.73*dt;
-    if(m.position.y<.05){m.position.y=.05;d.vy*=-.24;d.vx*=.74;d.vz*=.74}d.life-=dt;if(d.life<=0){retire(m);goreDebris.splice(i,1)}}
+    if(m.position.y<.05){m.position.y=.05;d.vy*=-.24;d.vx*=.74;d.vz*=.74}d.life-=dt;if(d.life<=0||performance.now()>=d.expires){retire(m);goreDebris.splice(i,1)}}
 }
 
 function addZoneLandmark(zone,loc){
