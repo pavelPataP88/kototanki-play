@@ -475,6 +475,7 @@ function makeBone(){
 function fireBone(dog,target=player){
   if(!dog?.parent||!target)return;
   const aim=target.position.clone();aim.y+=target===player?1.2:1.0;
+  if(target===player&&player.userData.velocity){const d=dog.position.distanceTo(player.position),lead=clamp(d/55,.08,.28);aim.x+=player.userData.velocity.x*lead;aim.z+=player.userData.velocity.z*lead}
   const origin=dog.userData.shotOrigin||(dog.userData.shotOrigin=new THREE.Vector3());dog.localToWorld(origin.set(0,1.70,-1.80));
   const dir=aim.sub(origin).normalize(),b=makeBone();b.position.copy(origin).addScaledVector(dir,.9);b.rotation.y=Math.atan2(dir.x,dir.z);scene.add(b);
   boneShots.push({mesh:b,v:dir.multiplyScalar(14.5+dog.userData.type*1.15),life:2.6,spin:rand(-13,13),owner:dog});sfx.bone()
@@ -554,14 +555,15 @@ function fireAlly(a,target){
 }
 function updateAllies(dt,now){
   for(let i=0;i<allies.length;i++){
-    const a=allies[i],u=a.userData,target=nearestHostile(a.position,18);let gx,gz;if(target){gx=target.position.x+(i%3-1)*1.6;gz=target.position.z+4.2+(i%2)*1.2}else{gx=player.position.x+(i%3-1)*2.2;gz=player.position.z-2-Math.floor(i/3)*2.2}
+    const a=allies[i],u=a.userData,target=nearestHostile(a.position,22);let gx,gz;if(target){gx=target.position.x+(i%3-1)*2.2;gz=target.position.z+5.2+(i%2)*1.5}else{gx=player.position.x+(i%3-1)*3.0;gz=player.position.z-3-Math.floor(i/3)*2.8}
     gx=clamp(gx,-arena.halfW+3,arena.halfW-3);gz=clamp(gz,arena.minZ+3,arena.maxZ-5);let dx=gx-a.position.x,dz=gz-a.position.z,d=Math.hypot(dx,dz),oldX=a.position.x,oldZ=a.position.z;
-    if(d>.55){dx/=d;dz/=d;const nx=a.position.x+dx*4.2*dt,nz=a.position.z+dz*4.2*dt;if(!blocked(nx,a.position.z,.65))a.position.x=nx;if(!blocked(a.position.x,nz,.65))a.position.z=nz}
+    u.navTimer=(u.navTimer||0)-dt;const steer=u.navVec||(u.navVec=new THREE.Vector3(0,0,-1));if(d>.55&&u.navTimer<=0){navDirection(a.position,gx,gz,.68,(i%2?1:-1),steer,allies,a,steer);u.navTimer=mobilePerf?.09:.06}
+    if(d>.55){const nx=a.position.x+steer.x*4.2*dt,nz=a.position.z+steer.z*4.2*dt;if(!blocked(nx,a.position.z,.65))a.position.x=nx;if(!blocked(a.position.x,nz,.65))a.position.z=nz}
     const moved=Math.hypot(a.position.x-oldX,a.position.z-oldZ);u.gait=(u.gait||0)+moved*10;if(moved>.002){const yaw=Math.atan2(a.position.x-oldX,a.position.z-oldZ);a.rotation.y+=normalizeAngle(yaw-a.rotation.y)*(1-Math.exp(-dt*9))}
     for(let k=0;k<u.legs.length;k++){const phase=(k%2?Math.PI:0)+(k>1?Math.PI:0);u.legs[k].rotation.x=Math.sin(u.gait+u.phase+phase)*.42*(moved>.001?1:.08)}
     if(u.tail)u.tail.rotation.z=Math.sin(now*4.5+u.phase)*.26;if(u.head)u.head.rotation.z=Math.sin(now*2.1+u.phase)*.025;
     if(target&&u.gun){const ty=Math.atan2(target.position.x-a.position.x,target.position.z-a.position.z),local=normalizeAngle(ty-a.rotation.y);u.gun.rotation.y+=normalizeAngle(clamp(local,-1.2,1.2)-u.gun.rotation.y)*(1-Math.exp(-dt*10))}
-    a.position.y=.03+(moved>.001?Math.abs(Math.sin(u.gait+u.phase))*.045:0);u.fireCooldown-=dt;if(target&&u.fireCooldown<=0){fireAlly(a,target);u.fireCooldown=.38+Math.random()*.36}
+    a.position.y=.03+(moved>.001?Math.abs(Math.sin(u.gait+u.phase))*.045:0);u.fireCooldown-=dt;if(target&&u.fireCooldown<=0&&lineClearXZ(a.position,target.position,.42)){fireAlly(a,target);u.fireCooldown=.38+Math.random()*.36}
   }
 }
 
@@ -811,6 +813,29 @@ function blocked(x,z,radius=1.05){
   }
   return false
 }
+const navOffsets=[0,.34,-.34,.68,-.68,1.05,-1.05,1.45,-1.45,Math.PI];
+function lineClearXZ(a,b,radius=.72){
+  const dx=b.x-a.x,dz=b.z-a.z,dist=Math.hypot(dx,dz);if(dist<1.2)return true;
+  const steps=Math.ceil(dist/1.15);for(let i=1;i<steps;i++){const t=i/steps;if(blocked(a.x+dx*t,a.z+dz*t,radius))return false}return true
+}
+function navDirection(pos,gx,gz,radius,sign,out,team=null,self=null,prev=null){
+  let dx=gx-pos.x,dz=gz-pos.z,len=Math.hypot(dx,dz);if(len<.001){dx=0;dz=-1;len=1}dx/=len;dz/=len;
+  const base=Math.atan2(dx,dz),px=pos.x,pz=pos.z;let bestScore=-1e9,bx=dx,bz=dz;
+  for(let i=0;i<navOffsets.length;i++){
+    const off=navOffsets[i],ang=base+off,vx=Math.sin(ang),vz=Math.cos(ang);
+    let score=(vx*dx+vz*dz)*3.2;
+    if(prev)score+=(vx*prev.x+vz*prev.z)*.55;
+    if(off!==0)score+=Math.sign(off)*sign*.10;
+    if(blocked(px+vx*1.8,pz+vz*1.8,radius))score-=60;
+    else if(blocked(px+vx*3.6,pz+vz*3.6,radius))score-=16;
+    else if(blocked(px+vx*5.6,pz+vz*5.6,radius))score-=4;
+    const ex=px+vx*2.4,ez=pz+vz*2.4;
+    if(team)for(const other of team){if(other===self)continue;const ox=ex-other.position.x,oz=ez-other.position.z,d2=ox*ox+oz*oz;if(d2<10)score-=(10-d2)*.14}
+    if(score>bestScore){bestScore=score;bx=vx;bz=vz}
+  }
+  return out.set(bx,0,bz)
+}
+
 function nearestEnemy(from,max=999){
   let best=null,d2=max*max;for(const e of enemies){const q=from.distanceToSquared(e.position);if(q<d2){d2=q;best=e}}return best
 }
@@ -825,11 +850,16 @@ function findClearSpawn(x,z,radius=1.2,tries=14){
   return [clamp(x,minX,maxX),clamp(z,minZ,maxZ)]
 }
 function spawnDog(){
-  const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random();
-  const flank=arena.halfW-2,front=arena.minZ+8;let x,z;
-  if(side<.62){x=rand(-arena.halfW+6,arena.halfW-6);z=front}
-  else{x=side<.81?-flank:flank;z=rand(arena.minZ+10,Math.min(5,arena.maxZ-16))}
-  const p=findClearSpawn(x,z,1.25);d.position.set(p[0],0,p[1]);d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
+  const type=Math.min(3,Math.floor((state.level-1)/7)+(Math.random()<.25?1:0)),d=makeDog(type),side=Math.random(),u=d.userData;
+  const roleCycle=['rusher','flanker','marksman','raider'],role=roleCycle[(state.spawned+type)%roleCycle.length];u.role=role;u.stuckTime=0;u.stuckCount=0;u.unstuck=0;u.lastSteer=new THREE.Vector3(0,0,-1);
+  if(role==='rusher'){u.preferredRange=4.4;u.speed*=1.12}
+  else if(role==='flanker'){u.preferredRange=8.2;u.speed*=1.06}
+  else if(role==='marksman'){u.preferredRange=12.8;u.speed*=.94}
+  else{u.preferredRange=6.3;u.speed*=1.08}
+  const flank=arena.halfW-3,front=arena.minZ+9;let x,z;
+  if(side<.56){x=rand(-arena.halfW+8,arena.halfW-8);z=front}
+  else{x=side<.78?-flank:flank;z=rand(arena.minZ+12,arena.maxZ*.12)}
+  const p=findClearSpawn(x,z,1.25,22);d.position.set(p[0],0,p[1]);u.lastX=p[0];u.lastZ=p[1];d.userData.hp+=Math.floor(state.level/10);scene.add(d);enemies.push(d);state.spawned++;if((state.spawned%3===0||Math.random()<.22)&&raccoons.length<4)spawnRaccoon(d)
 }
 function burst(pos,color=0xffaa55,count=12){
   const mat=effectMat(color);for(let i=0;i<count;i++)spawnParticle(pos,.07+Math.random()*.10,mat,rand(-4.5,4.5),rand(2,7.5),rand(-4.5,4.5),.4+Math.random()*.55)
@@ -887,31 +917,51 @@ function updateProjectiles(dt){
 function fireFeather(target){const dir=target.position.clone().sub(helper.position).normalize(),m=mesh(featherGeo,featherMat);m.rotation.x=Math.PI/2;m.position.copy(helper.position);scene.add(m);feathers.push({mesh:m,v:dir.multiplyScalar(15),life:2})}
 function updateHelper(dt,now){const anchor=helper.userData.anchor||(helper.userData.anchor=new THREE.Vector3());anchor.set(player.position.x+Math.cos(now*1.55)*4.1,5.15+Math.sin(now*4.2)*.42,player.position.z+Math.sin(now*1.55)*2.7);helper.position.lerp(anchor,Math.min(1,dt*5));helper.rotation.y=Math.sin(now*.8)*.22;const w=helper.userData;if(w.leftWing){const flap=Math.sin(now*10+w.phase)*.72;w.leftWing.rotation.z=.30+flap;w.rightWing.rotation.z=-.30-flap;w.leftWing.rotation.x=.18+Math.sin(now*5)*.08;w.rightWing.rotation.x=.18-Math.sin(now*5)*.08;if(w.tail)w.tail.rotation.y=Math.sin(now*3.2)*.12}helperCooldown-=dt;const target=nearestHostile(helper.position,20);if(target&&helperCooldown<=0){fireFeather(target);helperCooldown=.78}}
 function chooseDogTarget(e){
-  let best=player,bestScore=e.position.distanceToSquared(player.position);
-  for(const a of allies){const d=e.position.distanceToSquared(a.position)*.8464;if(d<bestScore){best=a;bestScore=d}}
-  const homeScore=e.position.distanceToSquared(home.position)*1.2544;if(homeScore<bestScore)best=home;return best
+  const u=e.userData,role=u.role||'rusher';
+  if(role==='raider'&&home)return home;
+  if(role==='rusher'&&allies.length){
+    let best=player,bestD=e.position.distanceToSquared(player.position);
+    for(const a of allies){const d=e.position.distanceToSquared(a.position)*.90;if(d<bestD){best=a;bestD=d}}return best
+  }
+  if(role==='marksman'&&allies.length&&!lineClearXZ(e.position,player.position,.68)){
+    let best=player,bestD=1e9;for(const a of allies){const d=e.position.distanceToSquared(a.position);if(d<bestD&&lineClearXZ(e.position,a.position,.68)){best=a;bestD=d}}return best
+  }
+  return player
 }
 function dogSteer(e,target,now){
-  const u=e.userData,pos=e.position;
+  const u=e.userData,pos=e.position,role=u.role||'rusher';
   let fx=target.position.x-pos.x,fz=target.position.z-pos.z,dist=Math.max(.001,Math.hypot(fx,fz));fx/=dist;fz/=dist;
-  let vx=0,vz=0;
-  if(dist>u.preferredRange+1.6){vx+=fx;vz+=fz}else if(dist<u.preferredRange-1.5){vx-=fx*.42;vz-=fz*.42}
-  const sideW=(.52+Math.sin(now*2.4+u.dodgeSeed)*.18)*u.flankSign;vx+=-fz*sideW;vz+=fx*sideW;
-  for(const other of enemies){if(other===e)continue;const ox=pos.x-other.position.x,oz=pos.z-other.position.z,d2=ox*ox+oz*oz;if(d2>0&&d2<11.56){const d=Math.sqrt(d2),k=(3.4-d)/(d*3.4)*1.35;vx+=ox*k;vz+=oz*k}}
-  for(const o of obstacles){const ox=pos.x-o.x,oz=pos.z-o.z,limit=o.r+2.2,d2=ox*ox+oz*oz;if(d2>0&&d2<limit*limit){const d=Math.sqrt(d2),k=(limit-d)/(d*limit)*1.8;vx+=ox*k;vz+=oz*k}}
-  for(const shot of shots){const ox=pos.x-shot.mesh.position.x,oz=pos.z-shot.mesh.position.z,d2=ox*ox+oz*oz;if(d2<25&&d2>.0001){let svx=shot.v.x,svz=shot.v.z,sl=Math.sqrt(svx*svx+svz*svz)||1;svx/=sl;svz/=sl;const cross=svx*oz-svz*ox,k=cross>0?1.2:-1.2;vx+=-svz*k;vz+=svx*k}}
-  let len=Math.hypot(vx,vz);if(len<.01){vx=fx;vz=fz;len=1}
-  const out=u.steerVec||(u.steerVec=new THREE.Vector3());return out.set(vx/len,0,vz/len)
+  const sx=-fz*u.flankSign,sz=fx*u.flankSign;let dx=fx,dz=fz;
+  if(role==='flanker'){
+    const forward=dist>u.preferredRange+4?.78:.35;dx=fx*forward+sx*.95;dz=fz*forward+sz*.95
+  }else if(role==='marksman'){
+    if(dist>u.preferredRange+2){dx=fx;dz=fz}
+    else if(dist<u.preferredRange-2){dx=-fx;dz=-fz}
+    else{dx=sx;dz=sz}
+  }else if(role==='raider'){dx=fx+sx*.18;dz=fz+sz*.18}
+  if(u.unstuck>0){dx=sx*1.6-fx*.15;dz=sz*1.6-fz*.15}
+  for(const other of enemies){if(other===e)continue;const ox=pos.x-other.position.x,oz=pos.z-other.position.z,d2=ox*ox+oz*oz;if(d2>0&&d2<12){const k=(12-d2)/12;dx+=ox*k*.13;dz+=oz*k*.13}}
+  for(const shot of shots){const ox=pos.x-shot.mesh.position.x,oz=pos.z-shot.mesh.position.z,d2=ox*ox+oz*oz;if(d2<30&&d2>.001){let svx=shot.v.x,svz=shot.v.z,sl=Math.hypot(svx,svz)||1;svx/=sl;svz/=sl;const cross=svx*oz-svz*ox,dodge=cross>0?1:-1;dx+=-svz*dodge*.75;dz+=svx*dodge*.75}}
+  let len=Math.hypot(dx,dz);if(len<.01){dx=fx;dz=fz;len=1}dx/=len;dz/=len;
+  const out=u.steerVec||(u.steerVec=new THREE.Vector3()),goal=u.navGoal||(u.navGoal=new THREE.Vector3());
+  goal.set(pos.x+dx*12,0,pos.z+dz*12);
+  return navDirection(pos,goal.x,goal.z,1.25,u.flankSign,out,enemies,e,u.lastSteer)
 }
 function updateEnemies(dt,now){
-  for(let ei=enemies.length-1;ei>=0;ei--){const e=enemies[ei],u=e.userData;u.thinkTimer-=dt;if(u.thinkTimer<=0||!u.target||!u.target.parent){u.target=chooseDogTarget(e);u.thinkTimer=.22+Math.random()*.28}
+  for(let ei=enemies.length-1;ei>=0;ei--){const e=enemies[ei],u=e.userData;u.thinkTimer-=dt;u.unstuck=Math.max(0,(u.unstuck||0)-dt);
+    if(u.thinkTimer<=0||!u.target||!u.target.parent){u.target=chooseDogTarget(e);u.thinkTimer=.32+Math.random()*.28}
     const target=u.target||player,tx=target.position.x-e.position.x,tz=target.position.z-e.position.z,dist=Math.hypot(tx,tz);u.fireCooldown-=dt;
-    u.steerTimer=(u.steerTimer||0)-dt;let steer=u.steerVec;const steerCadence=mobilePerf&&renderQuality.ema>.022?.05:0;if(!steer||u.steerTimer<=0){steer=dogSteer(e,target,now);u.steerTimer=steerCadence}
-    const wantsShoot=dist<u.preferredRange+4.0;if(wantsShoot&&u.fireCooldown<=0){fireBone(e,target===home?home:target);u.fireCooldown=Math.max(.42,.82-state.level*.008)+Math.random()*.34}
-    const rush=dist>15?1.28:1,moveScale=(wantsShoot?.72:1)*u.speed*rush*dt,oldX=e.position.x,oldZ=e.position.z;
-    let nx=e.position.x+steer.x*moveScale,nz=e.position.z+steer.z*moveScale;if(blocked(nx,nz,1.25)){u.flankSign*=-1;const ak=u.flankSign*u.speed*dt*1.15;nx=e.position.x-steer.z*ak;nz=e.position.z+steer.x*ak}
+    u.steerTimer=(u.steerTimer||0)-dt;let steer=u.steerVec;const steerCadence=mobilePerf?(renderQuality.ema>.028?.10:.075):.05;
+    if(!steer||u.steerTimer<=0){steer=dogSteer(e,target,now);u.lastSteer.copy(steer);u.steerTimer=steerCadence}
+    const role=u.role||'rusher',fireRange=role==='marksman'?20:u.preferredRange+5.5,hasLos=dist<fireRange&&lineClearXZ(e.position,target.position,.68);
+    if(hasLos&&u.fireCooldown<=0){fireBone(e,target===home?home:target);const base=role==='marksman'?.68:role==='rusher'?.84:.76;u.fireCooldown=Math.max(.38,base-state.level*.006)+Math.random()*.30}
+    const hold=role==='marksman'&&Math.abs(dist-u.preferredRange)<2.4,rush=dist>20?1.22:1,moveScale=(hold?.68:hasLos?.82:1)*u.speed*rush*dt,oldX=e.position.x,oldZ=e.position.z;
+    let nx=e.position.x+steer.x*moveScale,nz=e.position.z+steer.z*moveScale;
+    if(blocked(nx,nz,1.25)){u.unstuck=Math.max(u.unstuck,.55);u.flankSign*=-1;u.steerTimer=0;nx=e.position.x-steer.z*u.flankSign*u.speed*dt;nz=e.position.z+steer.x*u.flankSign*u.speed*dt}
     if(!blocked(nx,e.position.z,1.25))e.position.x=nx;if(!blocked(e.position.x,nz,1.25))e.position.z=nz;
     const moved=Math.hypot(e.position.x-oldX,e.position.z-oldZ);u.gait=(u.gait||0)+moved*10.5;
+    if(moved<.015&&dist>3.5)u.stuckTime=(u.stuckTime||0)+dt;else u.stuckTime=Math.max(0,(u.stuckTime||0)-dt*2.5);
+    if(u.stuckTime>.42){u.stuckTime=0;u.stuckCount=(u.stuckCount||0)+1;u.unstuck=.85;u.flankSign*=-1;u.steerTimer=0}
     const moveYaw=Math.atan2(steer.x,steer.z)+Math.PI,targetYaw=Math.atan2(tx,tz)+Math.PI,desiredYaw=moved>.003?moveYaw:targetYaw;
     e.rotation.y+=normalizeAngle(desiredYaw-e.rotation.y)*(1-Math.exp(-dt*8));
     if(u.head){const localAim=clamp(normalizeAngle(targetYaw-e.rotation.y),-.85,.85);u.head.rotation.y+=normalizeAngle(localAim-u.head.rotation.y)*(1-Math.exp(-dt*9));u.head.rotation.z=Math.sin(now*2.2+u.dodgeSeed)*.025}
@@ -1074,4 +1124,4 @@ function animate(ms){
 }
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.ratio=Math.min(renderQuality.ratio,renderQuality.max);renderer.setPixelRatio(renderQuality.ratio)});
-window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get world(){return {...worldMeta,width:arena.halfW*2,depth:arena.maxZ-arena.minZ}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
+window.__kototanki3d={get ready(){return true},get state(){return {...state}},get player(){return {x:player.position.x,z:player.position.z,aimX:aimFacing.x,aimZ:aimFacing.z,turret:player.userData.turret?.rotation.y||0,head:player.userData.head?.rotation.y||0}},get helper(){return {x:helper.position.x,y:helper.position.y,z:helper.position.z,modelStyle:helper.userData.modelStyle||null}},get allies(){return allies.map(a=>({x:a.position.x,z:a.position.z,fireCooldown:a.userData.fireCooldown,modelStyle:a.userData.modelStyle||null}))},get dogs(){return enemies.map(e=>({x:e.position.x,z:e.position.z,type:e.userData.type,role:e.userData.role||'rusher',stuckCount:e.userData.stuckCount||0,modelStyle:e.userData.modelStyle||null,speed:e.userData.speed,fireCooldown:e.userData.fireCooldown,rotation:e.rotation.y,forwardX:-Math.sin(e.rotation.y),forwardZ:-Math.cos(e.rotation.y),target:e.userData.target===player?'player':e.userData.target===home?'home':e.userData.target?'ally':null,targetX:e.userData.target?.position.x??null,targetZ:e.userData.target?.position.z??null}))},get action(){return {activeDogs:enemies.length,raccoons:raccoons.length,targetKills:state.targetKills,spawnTimer:state.spawnTimer,bones:boneShots.length,mousePoops:mousePoops.length,enemyPoops:enemyPoops.length,shots:shots.length,pickups:pickups.length,hazards:hazards.length,yarns:yarnBalls.length}},get mouse(){return mouseCompanion?{x:mouseCompanion.position.x,y:mouseCompanion.position.y,z:mouseCompanion.position.z,mode:mouseCompanion.userData.mode,fetching:!!mouseCompanion.userData.fetch,modelStyle:mouseCompanion.userData.modelStyle||null,riderVisible:false}:null},get vehicle(){return {kind:player.userData.kind,wheels:player.userData.wheels?.length||0,modelStyle:player.userData.modelStyle||null,revision:'studio-r8',wheelCount:player.userData.tracks?.length||0,wheelSpin:player.userData.tracks?.[0]?.userData?.spin||0,tailPose:player.userData.tailSegments?.[0]?.rotation.z||0,catYaw:player.userData.catYaw||0}},get bones(){return boneShots.map(b=>({x:b.mesh.position.x,y:b.mesh.position.y,z:b.mesh.position.z}))},get controls(){return [...keys]},get sticks(){return {move:{...moveInput},aim:{...aimInput}}},get tuning(){return {...tune}},get camera(){return {yaw:cameraYaw,x:camera.position.x,y:camera.position.y,z:camera.position.z,quality:renderQuality.ratio,qualityMin:renderQuality.min,qualityMax:renderQuality.max,mobilePerf,shadowStride:renderQuality.shadowStride,frameMs:renderQuality.ema*1000,rawFrameMs:motionClock.raw*1000,motionFrameMs:motionClock.dt*1000,jitterMs:motionClock.jitter*1000,homeFade:home?.userData?.fade??1}},get world(){return {...worldMeta,width:arena.halfW*2,depth:arena.maxZ-arena.minZ}},get diagnostics(){return {geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,programs:renderer.info.programs?.length||0,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,lines:renderer.info.render.lines,blockedDogs:enemies.filter(e=>blocked(e.position.x,e.position.z,1.20)).length,blockedAllies:allies.filter(a=>blocked(a.position.x,a.position.z,.65)).length}},rotateCamera(delta){cameraYaw+=delta},setCameraYaw(value){cameraYaw=value;cameraYawVelocity=0},setMove(x,y){moveInput.x=x;moveInput.y=y;moveInput.active=Math.hypot(x,y)>.01},setAim(x,y,active=true){aimInput.x=x;aimInput.y=y;aimInput.active=active},spawnDog(){spawnDog()},spawnRaccoon(){spawnRaccoon(enemies[0]||null)},spawnValerian(){spawnValerian(player.position.clone().add(new THREE.Vector3(1,0,0)))},spawnValerianAt(dx=5,dz=0){spawnValerian(player.position.clone().add(new THREE.Vector3(dx,0,dz)))},spawnYarn(){spawnYarnPickup(player.position.clone().add(new THREE.Vector3(1,0,0)))},launchYarn(){launchYarn()},fireDogBone(){if(!enemies.length)spawnDog();fireBone(enemies[0],player)},start(){initAudio();buildLevel(1);overlay.style.display='none'},next(){buildLevel(Math.min(30,state.level+1))},fire:fireSausage,bomb};
