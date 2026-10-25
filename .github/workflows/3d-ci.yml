@@ -23,6 +23,7 @@ on:
       - feature/runtime-cleanup-r10-20261024
       - feature/smooth-motion-r11-20261024
       - feature/world-progression-r12-20261024
+      - feature/large-map-smart-ai-r13-20261025
   workflow_dispatch:
 permissions:
   contents: read
