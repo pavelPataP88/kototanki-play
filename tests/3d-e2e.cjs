@@ -45,7 +45,7 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
     const shotBase=await page.evaluate(()=>window.__kototanki3d.action.shots);await page.evaluate(()=>window.__kototanki3d.fire());await page.waitForTimeout(45);
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>=shotBase+2);
-    await page.evaluate(()=>window.__kototanki3d.spawnDogNear(0,-7));await page.waitForFunction(()=>window.__kototanki3d.state.coilCooldown>1,{timeout:4000});
+    await page.evaluate(()=>window.__kototanki3d.spawnDogNear(0,-7));const coilPulse=await page.evaluate(()=>window.__kototanki3d.triggerCoil());assert.ok(coilPulse>1);
     const aiProfile=await page.evaluate(()=>{
       const dogs=window.__kototanki3d.dogs,roles=[...new Set(dogs.map(d=>d.role))];
       return {roles,total:dogs.length,totalStuck:dogs.reduce((n,d)=>n+(d.stuckCount||0),0),targets:dogs.map(d=>d.target)};
