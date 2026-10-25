@@ -15,20 +15,35 @@ const {resolve}=require('node:path');
     await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
     await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000}).catch(async e=>{await page.screenshot({path:resolve(__dirname,'..','artifacts','boot-failure.png'),fullPage:true});throw e});
 
+    await page.evaluate(()=>window.__kototanki3d.resetProgress());
+    await page.evaluate(()=>{window.__kototanki3d.upgrade('engine');for(let i=0;i<4;i++)window.__kototanki3d.upgrade('cannon');for(let i=0;i<2;i++)window.__kototanki3d.upgrade('squad');window.__kototanki3d.upgrade('coil')});
+    const garageSaved=await page.evaluate(()=>window.__kototanki3d.garage);
+    assert.equal(garageSaved.upgrades.engine,1);assert.equal(garageSaved.upgrades.cannon,4);assert.equal(garageSaved.upgrades.squad,2);assert.equal(garageSaved.upgrades.coil,1);
+    await page.reload({waitUntil:'networkidle'});await page.waitForFunction(()=>window.__kototanki3d?.ready===true,{timeout:15000});
+    const garageReloaded=await page.evaluate(()=>window.__kototanki3d.garage);
+    assert.deepEqual(garageReloaded.upgrades,garageSaved.upgrades);console.log('GARAGE_PERSISTENCE',JSON.stringify(garageReloaded));
     const mobileRender=await page.evaluate(()=>window.__kototanki3d.camera);
     assert.equal(mobileRender.mobilePerf,true);assert.ok(mobileRender.quality<=1.0);assert.ok(mobileRender.qualityMin<=.70);
     console.log('MOBILE_RENDER_BOOT',JSON.stringify(mobileRender));
     assert.equal(await page.locator('canvas').count(),1);
-    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'true-3d-r8');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'studio-r8');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-Math.PI)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.wheelCount),4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'mouse-reference-r6');
+    assert.equal(await page.locator('#moveStick').count(),1);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.kind),'litterbox');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.modelStyle),'true-3d-r8');assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.revision),'garage-r14');assert.ok(Math.abs((await page.evaluate(()=>window.__kototanki3d.vehicle.catYaw))-Math.PI)<.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.vehicle.wheels))>=4);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.wheelCount),4);assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.modelStyle),'mouse-reference-r6');
     assert.equal(await page.locator('#aimStick').count(),1);
     await page.click('#start');
-    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.deepEqual(await page.evaluate(()=>({d:window.__kototanki3d.diagnostics.blockedDogs,a:window.__kototanki3d.diagnostics.blockedAllies})),{d:0,a:0});assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));assert.ok((await page.evaluate(()=>window.__kototanki3d.allies.every(a=>a.modelStyle==='organic-r8'))));assert.equal(await page.evaluate(()=>window.__kototanki3d.helper.modelStyle),'organic-r8');
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.state.playing),true);assert.deepEqual(await page.evaluate(()=>({d:window.__kototanki3d.diagnostics.blockedDogs,a:window.__kototanki3d.diagnostics.blockedAllies})),{d:0,a:0});assert.equal(await page.evaluate(()=>window.__kototanki3d.mouse?.riderVisible),false);const classicYaw=await page.evaluate(()=>window.__kototanki3d.camera.yaw);assert.ok(Math.abs(classicYaw)<0.03);assert.ok((await page.evaluate(()=>window.__kototanki3d.dogs.every(d=>d.modelStyle==='organic-r3'))));assert.ok((await page.evaluate(()=>window.__kototanki3d.allies.every(a=>a.modelStyle==='organic-r8'))));assert.ok((await page.evaluate(()=>window.__kototanki3d.allies.every(a=>a.scale>=1.08&&a.hp>=3))));assert.equal(await page.evaluate(()=>window.__kototanki3d.helper.modelStyle),'organic-r8');
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.world.width),100);assert.equal(await page.evaluate(()=>window.__kototanki3d.world.depth),100);
+    assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.twinVisible),true);assert.equal(await page.evaluate(()=>window.__kototanki3d.vehicle.coilVisible),true);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.pickups))>=3);
+    const parts0=await page.evaluate(()=>window.__kototanki3d.garage.parts);await page.evaluate(()=>window.__kototanki3d.spawnModule('parts'));
+    await page.waitForFunction(p=>window.__kototanki3d.garage.parts>p,parts0,{timeout:3000});
     await page.waitForFunction(()=>window.__kototanki3d.camera.homeFade<.18,{timeout:5000});const homeFade=await page.evaluate(()=>window.__kototanki3d.camera.homeFade);assert.ok(homeFade<.18);await page.screenshot({path:resolve(__dirname,'..','artifacts','kototanki-studio-r8.png')});
     await page.evaluate(()=>window.__kototanki3d.spawnValerianAt(2.5,0));
     await page.waitForFunction(()=>window.__kototanki3d.state.valerian>0,{timeout:5000});
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
+    const shotBase=await page.evaluate(()=>window.__kototanki3d.action.shots);await page.evaluate(()=>window.__kototanki3d.fire());await page.waitForTimeout(45);
+    assert.ok((await page.evaluate(()=>window.__kototanki3d.action.shots))>=shotBase+2);
+    await page.evaluate(()=>window.__kototanki3d.spawnDogNear(0,-7));await page.waitForFunction(()=>window.__kototanki3d.state.coilCooldown>1,{timeout:4000});
     const aiProfile=await page.evaluate(()=>{
       const dogs=window.__kototanki3d.dogs,roles=[...new Set(dogs.map(d=>d.role))];
       return {roles,total:dogs.length,totalStuck:dogs.reduce((n,d)=>n+(d.stuckCount||0),0),targets:dogs.map(d=>d.target)};
@@ -127,6 +142,7 @@ const {resolve}=require('node:path');
         diag:window.__kototanki3d.diagnostics,
         player:window.__kototanki3d.player,
         world:window.__kototanki3d.world,
+        variants:window.__kototanki3d.dogs.map(d=>d.variant),
         place:document.querySelector('#place').textContent
       }));
       assert.equal(snap.state.level,level);
@@ -134,11 +150,11 @@ const {resolve}=require('node:path');
       assert.equal(snap.diag.blockedAllies,0);
       assert.ok(Number.isFinite(snap.player.x)&&Number.isFinite(snap.player.z));
       assert.ok(Math.abs(snap.player.x)<snap.world.halfW&&snap.player.z>snap.world.minZ&&snap.player.z<snap.world.maxZ);
+      if(level%5===0)assert.ok(snap.variants.includes('alpha'));
       places.add(snap.place);chapters.add(snap.world.chapter);landmarks.add(snap.world.landmark);worlds.push(snap.world);
     }
     assert.equal(places.size,30);assert.equal(chapters.size,6);assert.equal(landmarks.size,6);
-    assert.equal(worlds[0].width,68);assert.equal(worlds[0].depth,86);assert.equal(worlds[29].width,90);assert.equal(worlds[29].depth,122);
-    assert.ok(worlds[29].width-worlds[0].width>=22);assert.ok(worlds[29].depth-worlds[0].depth>=36);
+    assert.ok(worlds.every(w=>w.width===100&&w.depth===100));
     console.log('WORLD_PROGRESSION',JSON.stringify({chapters:[...chapters],landmarks:[...landmarks],first:worlds[0],last:worlds[29]}));
     const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
