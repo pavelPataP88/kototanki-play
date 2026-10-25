@@ -808,11 +808,10 @@ function updateAim(dt){
   }
   const worldYaw=Math.atan2(aimFacing.x,aimFacing.z)+Math.PI,turret=player.userData.turret;
   if(turret){
-    const desiredLocal=worldYaw-player.rotation.y;
-    if(!Number.isFinite(turret.userData.continuousYaw))turret.userData.continuousYaw=turret.rotation.y;
-    const target=unwrapAngleNear(desiredLocal,turret.userData.continuousYaw);
-    turret.userData.continuousYaw=target;
-    turret.rotation.y+=(target-turret.rotation.y)*(1-Math.exp(-dt*16))
+    if(!Number.isFinite(turret.userData.continuousYaw))turret.userData.continuousYaw=worldYaw;
+    else turret.userData.continuousYaw=unwrapAngleNear(worldYaw,turret.userData.continuousYaw);
+    const desiredLocal=turret.userData.continuousYaw-player.rotation.y;
+    turret.rotation.y+=(desiredLocal-turret.rotation.y)*(1-Math.exp(-dt*16))
   }
   if(player.userData.head){
     const local=normalizeAngle(worldYaw-player.rotation.y),catYaw=player.userData.catYaw||0,activeTarget=normalizeAngle(local-catYaw),neutral=Math.sin(performance.now()*.0009)*.12;
