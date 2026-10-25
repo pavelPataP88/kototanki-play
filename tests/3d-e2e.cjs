@@ -80,6 +80,20 @@ const {resolve}=require('node:path');
     assert.ok(Math.hypot(p1.x-p0.x,p1.z-p0.z)>.20);assert.ok(Math.abs(wheel1-wheel0)>.15);assert.ok(mouseRide&&Math.hypot(mouseRide.x-p1.x,mouseRide.z-p1.z)<2.5);await page.waitForFunction(t=>Math.abs(window.__kototanki3d.vehicle.tailPose-t)>.01,tail0,{timeout:3000});
 
     const aim0=await page.evaluate(()=>window.__kototanki3d.player);
+    await page.evaluate(()=>window.__kototanki3d.setCameraYaw(0));
+    const turretSweep=[];
+    for(const [x,y] of [[0,-1],[1,0],[0,1],[-1,0],[0,-1]]){
+      await page.evaluate(([x,y])=>window.__kototanki3d.setAim(x,y,true),[x,y]);await page.waitForTimeout(220);
+      turretSweep.push(await page.evaluate(()=>window.__kototanki3d.player.turretContinuous));
+    }
+    console.log('TURRET_360_PROFILE',JSON.stringify(turretSweep));
+    assert.ok(Math.abs(turretSweep[4]-turretSweep[0])>5.5);
+    await page.evaluate(()=>{window.__kototanki3d.spawnDogNear(5,-14);window.__kototanki3d.setAim(0,1,true)});
+    await page.waitForTimeout(100);
+    const assistShotsBefore=await page.evaluate(()=>window.__kototanki3d.action.shots);await page.evaluate(()=>window.__kototanki3d.fire());await page.waitForTimeout(60);
+    const assistProfile=await page.evaluate(()=>({shots:window.__kototanki3d.shots.slice(-4),count:window.__kototanki3d.action.shots}));
+    console.log('AIM_ASSIST_PROFILE',JSON.stringify(assistProfile));
+    assert.ok(assistProfile.count>=assistShotsBefore+1);assert.ok(assistProfile.shots.some(s=>s.assisted));
     await page.evaluate(()=>window.__kototanki3d.setAim(1,0,true));
     await page.waitForFunction(()=>Math.abs(window.__kototanki3d.player.aimX)>.7,{timeout:3000});
     await page.waitForFunction(t=>Math.abs(window.__kototanki3d.player.turret-t)>.02,aim0.turret,{timeout:5000});
