@@ -29,6 +29,12 @@ const {resolve}=require('node:path');
     assert.ok((await page.evaluate(()=>window.__kototanki3d.state.valerian))>0);
     assert.ok((await page.locator('#boost').textContent()).includes('🌿'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.activeDogs))>=4);
+    const aiProfile=await page.evaluate(()=>{
+      const dogs=window.__kototanki3d.dogs,roles=[...new Set(dogs.map(d=>d.role))];
+      return {roles,total:dogs.length,totalStuck:dogs.reduce((n,d)=>n+(d.stuckCount||0),0),targets:dogs.map(d=>d.target)};
+    });
+    console.log('AI_PROFILE',JSON.stringify(aiProfile));
+    assert.ok(aiProfile.roles.includes('rusher'));assert.ok(aiProfile.roles.includes('flanker'));assert.ok(aiProfile.roles.includes('marksman'));assert.ok(aiProfile.roles.includes('raider'));
     assert.ok((await page.evaluate(()=>window.__kototanki3d.action.hazards))>=4);await page.evaluate(()=>window.__kototanki3d.spawnRaccoon());await page.waitForTimeout(120);assert.ok((await page.evaluate(()=>window.__kototanki3d.action.raccoons))>=1);
     assert.ok((await page.locator('#place').textContent()).includes('·'));
 
@@ -131,7 +137,8 @@ const {resolve}=require('node:path');
       places.add(snap.place);chapters.add(snap.world.chapter);landmarks.add(snap.world.landmark);worlds.push(snap.world);
     }
     assert.equal(places.size,30);assert.equal(chapters.size,6);assert.equal(landmarks.size,6);
-    assert.ok(worlds[29].width-worlds[0].width>=13);assert.ok(worlds[29].depth-worlds[0].depth>=15);
+    assert.equal(worlds[0].width,68);assert.equal(worlds[0].depth,86);assert.equal(worlds[29].width,90);assert.equal(worlds[29].depth,122);
+    assert.ok(worlds[29].width-worlds[0].width>=22);assert.ok(worlds[29].depth-worlds[0].depth>=36);
     console.log('WORLD_PROGRESSION',JSON.stringify({chapters:[...chapters],landmarks:[...landmarks],first:worlds[0],last:worlds[29]}));
     const sweep1=await page.evaluate(()=>window.__kototanki3d.diagnostics);
     console.log('FULL_SWEEP_PROFILE',JSON.stringify({before:sweep0,after:sweep1,uniquePlaces:places.size}));
