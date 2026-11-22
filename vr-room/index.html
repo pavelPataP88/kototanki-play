@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>GOLOVA VR Room v2 — Meta Quest 3S</title>
+<html lang="ru"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>GOLOVA VR Room v3 — стены и физика столкновений</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#060e16;color:#eafefa}
 *{box-sizing:border-box}body{margin:0;overflow:hidden}#stage{position:fixed;inset:0}
@@ -8,19 +8,20 @@ h1{font-size:21px;margin:0 0 6px}small{color:#90b5bd}p{line-height:1.45}button{p
 @media(max-width:540px){#hud{max-width:calc(100vw - 18px);top:9px;left:9px;padding:12px}h1{font-size:17px}}
 </style></head>
 <body><div id="stage"></div><div id="hud">
-<h1>GOLOVA VR Room <span style="color:#5debd8">v2</span></h1>
+<h1>GOLOVA VR Room <span style="color:#5debd8">v3</span></h1>
 <small>Настоящий WebXR для Meta Quest 3S. Демо, не подключено к ChatGPT.</small>
 <div id="badge">Проверяю VR…</div>
 <button id="enter" class="primary" disabled>Войти в VR</button>
 <button id="testSound">🔊 Проверить голос</button>
 <button id="next">Следующая реплика</button>
 <p id="line">Голова ждёт тебя в комнате.</p>
-<div id="audioStatus"></div>
-<div id="help">В VR: <b>левый стик</b> — ходьба; <b>правый стик</b> — поворот по 30°; <b>курок</b> — реплика. Можно смотреть и поворачивать голову. Ходьба ограничена стенами.</div>
+<div id="audioStatus"></div><div id="collisionStatus" role="status" style="font-size:13px;color:#99ffbb">● Столкновения со стенами и столом включены</div>
+<div id="help">В VR: <b>левый стик</b> — ходьба; <b>правый стик</b> — поворот по 30°; <b>курок</b> — реплика. Можно смотреть и поворачивать голову. Твёрдые стены и стол, скольжение вдоль препятствий. В реальном пространстве соблюдай границу Quest.</div>
 <details><summary>Инструкция</summary><p>Открой этот адрес в браузере Meta Quest 3S, нажми «Проверить голос», затем «Войти в VR». В комнате аватар стоит в двух метрах перед тобой.</p></details>
 </div>
 <script type="module">
 import * as THREE from '../vendor/three.module.js';
+import { resolveMove, isBlocked, clampRigOrigin, PLAYER_RADIUS } from './collision.mjs';
 const mount=document.getElementById('stage'), badge=document.getElementById('badge'), bEnter=document.getElementById('enter'), speechInfo=document.getElementById('audioStatus'), lineInfo=document.getElementById('line');
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
@@ -54,6 +55,15 @@ addBox(0,2.44,-3.48,4.06,.04,.05,materials.cyan);
 addBox(-2,1.53,-3.48,.04,1.86,.05,materials.cyan);
 addBox(2,1.53,-3.48,.04,1.86,.05,materials.cyan);
 for(const x of [-3.4,3.4])addBox(x,2.85,0,.035,.055,6.9,x<0?materials.cyan:materials.amber);
+for(const side of [-1,1]){
+ // Wall skirting and vertical frame accents; visual geometry agrees with the closed collision volume.
+ addBox(side*3.46,.13,0,.05,.16,6.82,materials.metal);
+ for(const z of [-2.75,-1.4,0,1.4,2.75])addBox(side*3.44,1.5,z,.07,2.85,.035,materials.metal);
+}
+for(const z of [-3.45,3.45])addBox(0,.12,z,6.82,.15,.055,materials.metal);
+// Ceiling panels and light rails prevent room boundaries from visually disappearing.
+for(const x of [-2.35,0,2.35])addBox(x,3.0,0,.045,.03,6.8,materials.metal);
+addBox(0,1.5,3.43,6.3,.035,.05,materials.cyan);
 const starsG=new THREE.BufferGeometry();const pts=new Float32Array(1200*3);
 for(let i=0;i<1200;i++){pts[3*i]=(Math.random()-.5)*60;pts[3*i+1]=(Math.random()-.3)*40;pts[3*i+2]=-10-Math.random()*27}
 starsG.setAttribute('position',new THREE.BufferAttribute(pts,3));scene.add(new THREE.Points(starsG,new THREE.PointsMaterial({color:0xe4f7ff,size:.1,fog:false})));
@@ -89,13 +99,73 @@ document.getElementById('next').onclick=nextPhrase;
 const ctrlGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),ctrlMat=new THREE.LineBasicMaterial({color:0x4ef8df});
 for(let i=0;i<2;i++){const c=renderer.xr.getController(i);c.add(new THREE.Line(ctrlGeo,ctrlMat));c.addEventListener('select',nextPhrase);rig.add(c)}
 function stick(source){const axes=source?.gamepad?.axes;if(!axes)return [0,0];const a=(axes.length>=4)?axes.slice(2,4):axes.slice(0,2);return [Math.abs(a[0])>.18?a[0]:0,Math.abs(a[1])>.18?a[1]:0]}
-const up=new THREE.Vector3(0,1,0),fwd=new THREE.Vector3(),right=new THREE.Vector3(),headPos=new THREE.Vector3();let snapReady=true;
-function walk(dt){const session=renderer.xr.getSession();if(!session)return;let left=null,rightInput=null;for(const s of session.inputSources){if(s.handedness==='left')left=s;else if(s.handedness==='right')rightInput=s}
-const [sx,sy]=stick(left);if(Math.abs(sx)+Math.abs(sy)>.001){
-const vrCam=renderer.xr.getCamera();vrCam.getWorldDirection(fwd);fwd.y=0;fwd.normalize();right.crossVectors(fwd,up).normalize();
-const v=new THREE.Vector3().addScaledVector(right,sx).addScaledVector(fwd,-sy);if(v.length()>1)v.normalize();v.multiplyScalar(dt*1.35);
-vrCam.getWorldPosition(headPos);const mx=THREE.MathUtils.clamp(headPos.x+v.x,-3.05,3.05)-headPos.x,mz=THREE.MathUtils.clamp(headPos.z+v.z,-3.05,3.05)-headPos.z;rig.position.x+=mx;rig.position.z+=mz}
-const [rx]=stick(rightInput);if(Math.abs(rx)>.65&&snapReady){rig.rotation.y-=Math.sign(rx)*Math.PI/6;snapReady=false}else if(Math.abs(rx)<.2)snapReady=true;
+const up=new THREE.Vector3(0,1,0),fwd=new THREE.Vector3(),right=new THREE.Vector3(),headPos=new THREE.Vector3(),oldHead=new THREE.Vector3(),afterHead=new THREE.Vector3(),moving=new THREE.Vector3();
+let snapReady=true, lastBump=0, collisionUntil=0;
+// Visual and optional haptic feedback on solid collisions; no network requests.
+const wallContact=new THREE.Mesh(new THREE.TorusGeometry(0.28,.02,6,32),new THREE.MeshBasicMaterial({color:0xff724e,transparent:true,opacity:.8,depthWrite:false}));
+wallContact.rotation.x=Math.PI/2;wallContact.position.y=.045;wallContact.visible=false;scene.add(wallContact);
+const collisionInfo=document.getElementById('collisionStatus');
+function bump(source){
+ const now=performance.now();
+ if(now-lastBump<400)return;
+ lastBump=now;
+ collisionUntil=now+270;
+ collisionInfo.textContent='● Упёрся в твёрдое препятствие — двигайся вдоль него';
+ const gp=source?.gamepad;
+ const h=gp?.vibrationActuator||gp?.hapticActuators?.[0];
+ try{h?.pulse?.(0.22,55)?.catch?.(()=>{});}catch{}
+}
+function walk(dt) {
+ const session=renderer.xr.getSession(); if(!session)return;
+ let left=null,rightInput=null;
+ for(const src of session.inputSources){
+  if(src.handedness==='left')left=src;
+  else if(src.handedness==='right')rightInput=src;
+ }
+ // XR pose belongs to the headset; movement belongs to the rig, never to the eye camera.
+ const vrCam=renderer.xr.getCamera();
+ rig.updateMatrixWorld(true);
+ vrCam.getWorldPosition(headPos);
+ const [sx,sy]=stick(left);
+ if(Math.abs(sx)+Math.abs(sy)>.001){
+  vrCam.getWorldDirection(fwd);fwd.y=0;
+  if(fwd.lengthSq()<.0001)fwd.set(0,0,-1);
+  fwd.normalize();
+  right.crossVectors(fwd,up).normalize();
+  moving.set(0,0,0).addScaledVector(right,sx).addScaledVector(fwd,-sy);
+  if(moving.lengthSq()>1)moving.normalize();
+  moving.multiplyScalar(Math.min(dt,.05)*1.25);
+  // Sweep the 28-cm-radius player against solid walls and desk; slide axis-by-axis.
+  const hit=isBlocked(headPos.x,headPos.z)?{dx:0,dz:0,blocked:true}:resolveMove(headPos.x,headPos.z,moving.x,moving.z,PLAYER_RADIUS);
+  // Independent rig-origin safety limit covers an XR headset pose that is stale or recentered.
+  const origin=clampRigOrigin(rig.position.x,rig.position.z,hit.dx,hit.dz,3.02);
+  if(hit.blocked||Math.abs(origin.dx-hit.dx)>.00001||Math.abs(origin.dz-hit.dz)>.00001)bump(left);
+  rig.position.x+=origin.dx;rig.position.z+=origin.dz;
+  rig.updateMatrixWorld(true);
+ }
+ // Snap turn around the headset, not the stage origin: avoid orbiting into a wall.
+ const [rx]=stick(rightInput);
+ if(Math.abs(rx)>.65&&snapReady){
+  vrCam.getWorldPosition(oldHead);
+  const previousRotation=rig.rotation.y;
+  rig.rotation.y-=Math.sign(rx)*Math.PI/6;
+  rig.updateMatrixWorld(true);
+  vrCam.getWorldPosition(afterHead);
+  const adjust=clampRigOrigin(rig.position.x,rig.position.z,oldHead.x-afterHead.x,oldHead.z-afterHead.z,3.02);
+  rig.position.x+=adjust.dx;rig.position.z+=adjust.dz;
+  rig.updateMatrixWorld(true);
+  // Revert rotation if it would leave the solid play area.
+  vrCam.getWorldPosition(afterHead);
+  if(isBlocked(afterHead.x,afterHead.z)){
+    rig.rotation.y=previousRotation;
+    rig.position.x-=adjust.dx;rig.position.z-=adjust.dz;
+    bump(rightInput);
+  }
+  snapReady=false;
+ }else if(Math.abs(rx)<.2)snapReady=true;
+ wallContact.visible=performance.now()<collisionUntil;
+ if(wallContact.visible){vrCam.getWorldPosition(headPos);wallContact.position.set(headPos.x,.045,headPos.z)}
+ else if(performance.now()>collisionUntil+650&&collisionInfo.textContent.includes('Упёрся'))collisionInfo.textContent='● Столкновения со стенами и столом включены';
 }
 let drag=false,px=0,py=0,yaw=0,pitch=0;
 renderer.domElement.addEventListener('pointerdown',e=>{if(renderer.xr.isPresenting)return;drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
